@@ -1,0 +1,8 @@
+# content will be replaced by the CD pipeline
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epis-api-billingui-cm
+data:
+  .env.production: |+
+    APP_SETTINGS_CONTENT

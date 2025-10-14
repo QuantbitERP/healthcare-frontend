@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/components/ui/toggle.tsx", "src/app/sidebarTest/layout.jsx", "src/components/newBill/context/Context.tsx", "src/components/documentUpload/Document.tsx", "src/components/IndividualPatientBillingDetailPage/context/Context.tsx", "src/components/totalBreakdownCard/TotalBreakdownCard.tsx", "src/components/IndividualPatientBillingDetailPage/tableData.tsx", "src/components/concession/Concession.tsx", "src/components/EditableCellsTable/TablePage.jsx", "src/sections/services/columns.jsx", "src/sections/services/data-table.jsx", "src/sections/services/FilterDialogue.jsx", "src/sections/services/ScoreCard.jsx", "src/sections/services/SelectActions.jsx", "src/components/BillingList-table/columns.tsx", "src/sections/ipdBills/columns.jsx", "src/sections/ipdBills/BillingTable.tsx", "src/sections/record_refund/bills-deposits/BillDetailsCard.tsx", "src/sections/record_refund/bills-deposits/BillDetailsEditTable.jsx", "src/sections/ipdBills/FilterDialogue.tsx", "src/sections/ipdBills/SelectActions.jsx", "src/sections/ipdBills/data-table.tsx", "src/sections/record_refund/bills-deposits/data-table.jsx", "src/components/fullBodyCheckup/Card.stories.jsx", "src/components/patientDetailsCardWithTable/PatientDetailsCard.stories.tsx", "src/components/newBill/TableData.tsx", "src/components/recordPayments/RecordPayments.tsx", "src/components/newBill/Body.tsx", "src/components/recordRefund/RecordPayments.tsx", "src/components/BillingList-table/FilterDialogue.tsx", "src/sections/refunds/data-table.tsx"],
+  "exclude": ["node_modules"]
+}

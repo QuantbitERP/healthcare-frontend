@@ -1,0 +1,74 @@
+export type ReportDto = {
+    srNo: number;
+    hospitalName: string;
+    uhid: string;
+    visitType: string;
+    visitNo: string;
+    visitDate: string;
+    billType: string;
+    billNo: string;
+    billDate: string;
+    timeOfBill: string;
+    dischargeDate: string;
+    patientName: string;
+    patientAmount: number;
+    companyAmount: number;
+    billAmount: number;
+    requisitionDateTime: string;
+    requisitionNo: string;
+    serviceGroup: string;
+    serviceDepartment: string;
+    serviceCode: string;
+    serviceName: string;
+    rate: number;
+    quantity: number;
+    serviceAmount: number;
+    serviceMouConcession: number;
+    serviceConcession: number;
+    netServiceAmount: number;
+    consultingDoctor: string;
+    companyType: string;
+    companyName: string;
+    associateCompany: string;
+    wardName: string;
+    bedNo: string;
+    billingClass: string;
+    dischargedBedNo: string;
+    billConcession: number;
+    billDiscountGivenBy: string;
+    billDiscountType: string;
+    grossBillAmount: number;
+    editableServiceName: string;
+    parentServiceCode: string;
+    parentServiceName: string;
+    profileName: string;
+    packageName: string;
+    serviceSubDeptName: string;
+    apportionConcession: number;
+    serviceCancelAmount: number;
+    serviceCancelReason: string;
+    serviceCancelRemark: string;
+    serviceGivenByUser: string;
+    patientBalance: number;
+    companyBalance: number;
+    balanceReceivable: number;
+    financialYear: string;
+    financePostingVoucherNo: string;
+    isBillCancelled: boolean;
+    referenceBillNo: string;
+    referenceBillDateTime: string;
+  };
+  
+  export type ReportResponseDto = {
+    data: {
+      items: ReportDto[];
+    };
+    isError: boolean;
+    errorMessage: string;
+    validationErrors: {
+      field: string;
+      message: string;
+    }[];
+    errorCode: string;
+  };
+  

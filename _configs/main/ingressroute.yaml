@@ -1,0 +1,30 @@
+
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-epis-api-billingui-prefix
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+      - /billingui
+
+---
+
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: epis-api-billingui-route
+  namespace: default
+spec:
+  entryPoints:
+    - web 
+  routes:
+    - match: PathPrefix(`/billingui`)
+      kind: Rule
+      middlewares:
+        - name: strip-epis-api-billingui-prefix
+          namespace: default
+      services:
+        - name: epis-api-billingui-svc
+          port: 3000

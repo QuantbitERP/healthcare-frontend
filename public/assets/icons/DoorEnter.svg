@@ -1,0 +1,13 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="door-enter" clip-path="url(#clip0_1337_853)">
+<path id="Vector" d="M8.66699 8V8.00667" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_2" d="M2 14H14" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M3.33301 14V3.33333C3.33301 2.97971 3.47348 2.64057 3.72353 2.39052C3.97358 2.14048 4.31272 2 4.66634 2H8.66634M11.333 9V14" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_4" d="M13.9997 4.66675H9.33301M9.33301 4.66675L11.333 2.66675M9.33301 4.66675L11.333 6.66675" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_1337_853">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>

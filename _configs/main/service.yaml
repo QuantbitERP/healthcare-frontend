@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: epis-api-billingui
+  name: epis-api-billingui-svc
+spec:
+  ports:
+  - port: 3000 # Cluster-internal port
+    protocol: TCP
+    targetPort: 3000 # Container port
+    nodePort: 30970    # External NodePort (must be in range 30000–32767)
+  selector:
+    app: epis-api-billingui
+

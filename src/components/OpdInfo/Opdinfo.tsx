@@ -1,0 +1,903 @@
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Image from 'next/image';
+import Avatar from 'react-avatar';
+import Button from '../buttons/Button';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import Tags from '@/components/statusTags/Tags';
+
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import PosInfoCardDetails from '../posInfoCard/posInfoCardDetails';
+import { useFrappeApi } from "@/api/api";
+import SelectInput from "@/components/form/Select";
+import Cash from "@/assets/icons/Cash.svg";
+import Dropdown from '../dropdownForPatientCard/Dropdown';
+import axios from "axios";
+import { debounce } from "lodash";
+import { Input } from "@/components/ui/input";
+import { useAlert } from "@/components/AlertContext/AlertContext";
+
+
+interface PatientCardProps {
+    name?: string;
+    age?: string;
+    sex?: 'Male' | 'Female' | string;
+    phone?: string;
+    ABHAID?: string;
+    category?: string;
+    company?: string;
+    visitType?: string;
+    doctor?: string;
+    patientData?: SelectedPatient | null;
+    onPatientChange?: (p: SelectedPatient) => void;
+    selectedWarehouse?: string;
+    setSelectedWarehouse?: (value: string) => void;
+    selectedCustomer?: string;
+    setSelectedCustomer?: (value: string) => void;
+    selectedCompany?: string;
+    setSelectedCompany?: (value: string) => void;
+    selectedBranch?: string;
+    setSelectedBranch?: (value: string) => void;
+    selectedDepartment?: string;
+    setSelectedDepartment?: (value: string) => void;
+    selectedSubDepartment?: string;
+    setSelectedSubDepartment?: (value: string) => void;
+    isReturn: boolean;
+    onReturnStatusChange: (status: boolean) => void;
+}
+
+type SelectOption = { label: string; value: string };
+
+type SelectedPatient = {
+    name: string;
+    age: string;
+    sex: string;
+    phone: string;
+    ABHAID: string;
+    category: string;
+    doctor: string;
+    mrn?: string;
+    displayNo?: string;
+    dept?: string;
+    visitType?: string;
+    company?: string;
+};
+
+const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
+
+const OpdCard: React.FC<PatientCardProps> = ({
+    name = '',
+    age = '22',
+    sex = 'Male',
+    phone = '',
+    ABHAID = '',
+    category = 'Corporate',
+    company = '',
+    visitType = '',
+    doctor = '',
+    patientData = null,
+    onPatientChange,
+    selectedWarehouse = '',
+    setSelectedWarehouse,
+    selectedCustomer = '',
+    setSelectedCustomer,
+    selectedCompany = '',
+    setSelectedCompany,
+    selectedBranch = '',
+    setSelectedBranch,
+    selectedDepartment = '',
+    setSelectedDepartment,
+    // selectedSubDepartment = '',
+    // setSelectedSubDepartment,
+    isReturn,
+    onReturnStatusChange,
+}) => {
+    const [open, setOpen] = useState<boolean>(false);
+    const { fetchWarehouses, fetchBranch, customers, companies, departments } = useFrappeApi();
+    // fetchWarehouseForSubdepartment
+    const { showAlert } = useAlert();
+
+    // State for editable fields
+    const [editedPatient, setEditedPatient] = useState<SelectedPatient>({
+        name: patientData?.name ?? name,
+        age: patientData?.age ?? age,
+        sex: patientData?.sex ?? sex,
+        phone: patientData?.phone ?? phone,
+        ABHAID: patientData?.ABHAID ?? ABHAID,
+        category: patientData?.category ?? category,
+        company: patientData?.company ?? company,
+        visitType: patientData?.visitType ?? visitType,
+        doctor: patientData?.doctor ?? doctor,
+        mrn: patientData?.mrn,
+        displayNo: patientData?.displayNo,
+        dept: patientData?.dept,
+    });
+
+    const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
+    const [branches, setBranches] = useState<{ label: string; value: string }[]>([]);
+    // const [selectedWarehouse, setSelectedWarehouse] = useState<string>(''); // Removed
+    // const [selectedCustomer, setSelectedCustomer] = useState<string>(''); // Removed
+    // const [selectedCompany, setSelectedCompany] = useState<string>(''); // Removed
+    // const [selectedBranch, setSelectedBranch] = useState<string>(''); // Removed
+    // const [selectedDepartment, setSelectedDepartment] = useState<string>(''); // Removed
+    // const [selectedSubDepartment, setSelectedSubDepartment] = useState<string>(''); // Removed
+    const [_loading, setLoading] = useState<boolean>(false);
+    const [selectedValue, setSelectedValue] = useState<string>("fullName"); // Use value, not label
+    const [searchValue, setSearchValue] = useState<string>("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const selectOptions: SelectOption[] = [
+        { label: "UHID", value: "uhid" },
+        { label: "Aadhaar No", value: "aadharCardNo" },
+        { label: "Mobile No", value: "mobile" },
+        { label: "Full Name", value: "fullName" },
+    ];
+
+    const sexOptions: SelectOption[] = [
+        { label: "Male", value: "Male" },
+        { label: "Female", value: "Female" },
+    ];
+
+    const visitTypeOptions: SelectOption[] = [
+        { label: "OP", value: "OP" },
+        { label: "IP", value: "IP" },
+        { label: "Emergency", value: "Emergency" },
+    ];
+
+    // Update internal state when patientData prop changes
+    useEffect(() => {
+        if (patientData) {
+            setEditedPatient({
+                name: patientData.name ?? name,
+                age: patientData.age ?? age,
+                sex: patientData.sex ?? sex,
+                phone: patientData.phone ?? phone,
+                ABHAID: patientData.ABHAID ?? ABHAID,
+                category: patientData.category ?? category,
+                company: patientData.company ?? company,
+                visitType: patientData.visitType ?? visitType,
+                doctor: patientData.doctor ?? doctor,
+                mrn: patientData.mrn,
+                displayNo: patientData.displayNo,
+                dept: patientData.dept,
+            });
+            setSearchValue(`${patientData.name} (${patientData.mrn})`);
+        } else {
+            // Clear patient data when patientData is null
+            setEditedPatient({
+                name: '', age: '', sex: '', phone: '', ABHAID: '',
+                category: '', doctor: '', company: '', visitType: '',
+            });
+            setSearchValue('');
+        }
+    }, [patientData, name, age, sex, phone, ABHAID, category, company, visitType, doctor]);
+
+    const searchPatients = useCallback(
+        debounce(async (value: string, searchType: string) => {
+            if (value.length < 2) {
+                setSearchResults([]);
+                setShowDropdown(false);
+                console.log("Search value too short, clearing results");
+                return;
+            }
+
+            setIsLoading(true);
+
+            try {
+                const apiParam = searchType === "uhid" ? "UHID" : searchType === "aadharCardNo" ? "aadharCardNo" : searchType === "mobile" ? "MobileNo" : searchType === "fullName" ? "FullName" : "aadharCardNo";
+                console.log("API call with param:", apiParam, "and value:", value);
+                const queryParams = new URLSearchParams({
+                    [apiParam]: value,
+                    PageIndex: "1",
+                    PageSize: "10",
+                    IsExpired: "false",
+                });
+
+                const response = await axios.get(`${PATIENT_API_BASE_URL}?${queryParams}`);
+                const patients = response.data.searchPatientDTO || [];
+                console.log("Search results:", patients);
+                setSearchResults(patients);
+                setShowDropdown(patients.length > 0);
+            } catch (error) {
+                console.error("Patient search failed:", error);
+                showAlert('danger', 'Error', 'Search failed. Please try again.');
+                setSearchResults([]);
+                setShowDropdown(false);
+            } finally {
+                setIsLoading(false);
+            }
+        }, 500),
+        []
+    );
+
+    // const handleSelectChange = (value: string) => {
+    //     if (selectOptions.some((option) => option.value === value)) {
+    //         setSelectedValue(value);
+    //         setSearchResults([]);
+
+    //         console.log("Search field changed:", value);
+    //         if (searchValue) {
+    //             searchPatients(searchValue, value);
+    //         }
+    //     } else {
+    //         setSelectedValue("");
+    //         showAlert('warning', 'Warning', 'Invalid search field selected.');
+    //     }
+    // };
+
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value);
+        console.log("Search value:", value, "Selected value:", selectedValue, "Search type for API:", selectedValue === "uhid" ? "UHID" : selectedValue === "aadharCardNo" ? "aadharCardNo" : selectedValue === "mobile" ? "MobileNo" : selectedValue === "fullName" ? "FullName" : "aadharCardNo");
+        if (selectedValue) {
+            searchPatients(value, selectedValue);
+        } else {
+            showAlert('warning', 'Warning', 'Please select a search field (e.g., UHID, Full Name).');
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (!showDropdown || searchResults.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setHighlightedIndex(prev => prev < searchResults.length - 1 ? prev + 1 : 0);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setHighlightedIndex(prev => prev > 0 ? prev - 1 : searchResults.length - 1);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (highlightedIndex >= 0) {
+                    handleSelectPatient(searchResults[highlightedIndex]);
+                }
+                break;
+            case 'Escape':
+                setShowDropdown(false);
+                setHighlightedIndex(-1);
+                inputRef.current?.blur();
+                break;
+        }
+    };
+
+    const clearSearch = () => {
+        setSearchValue('');
+        setSearchResults([]);
+        setShowDropdown(false);
+        setHighlightedIndex(-1);
+        inputRef.current?.focus();
+    };
+
+    const highlightMatch = (text: string = '', query: string = '') => {
+        if (!query.trim()) return text;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escaped})`, 'gi');
+        const parts = String(text).split(regex);
+        return parts.map((part, idx) =>
+            regex.test(part) ? (
+                <mark key={idx} className="bg-blue-200 text-blue-900 font-medium">{part}</mark>
+            ) : (
+                <React.Fragment key={idx}>{part}</React.Fragment>
+            )
+        );
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setShowDropdown(false);
+                setHighlightedIndex(-1);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleSelectPatient = (patient: any) => {
+        const newPatientData = {
+            name: patient.patientFullName || "N/A",
+            age: patient.ageDisplay || "N/A",
+            sex: patient.genderValue || "N/A",
+            phone: patient.mobileNo || patient.phoneNo || "N/A",
+            ABHAID: patient.aadharCardNo || "N/A",
+            category: patient.patientCategory || "N/A",
+            doctor: patient.consultingDoctor || "N/A",
+            mrn: patient.mrn || "N/A",
+            displayNo: patient.displayNo || "N/A",
+            dept: patient.departmentName || "N/A",
+            visitType: patient.patientVisitType || "N/A",
+            company: patient.company || "N/A",
+            Bed: patient.bedName || "N/A",
+        };
+        setEditedPatient(newPatientData);
+        if (onPatientChange) {
+            onPatientChange(newPatientData);
+        }
+        setSearchValue(`${patient.patientFullName} (${patient.mrn})`);
+        setShowDropdown(false);
+        setHighlightedIndex(-1);
+        console.log("Selected patient data:", newPatientData);
+        showAlert('success', 'Success', 'Patient selected successfully');
+    };
+
+    // Handle changes to editable fields
+    const handleFieldChange = (field: keyof SelectedPatient, value: string) => {
+        const updatedPatient = { ...editedPatient, [field]: value };
+        setEditedPatient(updatedPatient);
+        if (onPatientChange) {
+            onPatientChange(updatedPatient);
+        }
+    };
+
+    useEffect(() => {
+        const loadWarehouses = async () => {
+            setLoading(true);
+            try {
+                const warehouseData = await fetchWarehouses();
+                const warehouseOptions = warehouseData.map((warehouse: any) => ({
+                    label: warehouse.name || warehouse.warehouse_name || 'Unnamed Warehouse',
+                    value: warehouse.name,
+                }));
+                setWarehouses(warehouseOptions);
+            } catch (error) {
+                console.error('Error fetching warehouses:', error);
+                setWarehouses([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadWarehouses();
+    }, [fetchWarehouses]);
+
+    // useEffect(() => {
+    //     const loadCustomers = async () => {
+    //         setLoading(true);
+    //         try {
+    //             const customerData = await fetchCustomer();
+    //             const customerOptions = customerData.map((customer: any) => ({
+    //                 label: customer.name || customer.customer_name || 'Unnamed Customer',
+    //                 value: customer.name,
+    //             }));
+    //             // setCustomers(customerOptions); // This line is no longer needed as customers are from context
+    //         } catch (error) {
+    //             console.error('Error fetching customers:', error);
+    //             // setCustomers([]); // This line is no longer needed
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+    //     loadCustomers();
+    // }, [fetchCustomer]);
+
+    // useEffect(() => {
+    //     const loadCompanies = async () => {
+    //         setLoading(true);
+    //         try {
+    //             const companyData = await fetchCompany();
+    //             const companyOptions = companyData.map((company: any) => ({
+    //                 label: company.name || company.company_name || 'Unnamed Company',
+    //                 value: company.name,
+    //             }));
+    //             // setCompanies(companyOptions); // This line is no longer needed
+    //         } catch (error) {
+    //             console.error('Error fetching companies:', error);
+    //             // setCompanies([]); // This line is no longer needed
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+    //     loadCompanies();
+    // }, [fetchCompany]);
+
+    useEffect(() => {
+        const loadBranches = async () => {
+            setLoading(true);
+            try {
+                const branchData = await fetchBranch();
+                const branchOptions = branchData.map((branch: any) => ({
+                    label: branch.name || branch.branch_name || 'Unnamed Branch',
+                    value: branch.name,
+                }));
+                setBranches(branchOptions);
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+                setBranches([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadBranches();
+    }, [fetchBranch]);
+
+    // useEffect(() => {
+    //     const loadDepartments = async () => {
+    //         setLoading(true);
+    //         try {
+    //             const departmentData = await fetchDepatment();
+    //             const departmentOptions = departmentData.map((department: any) => ({
+    //                 label: department.name || department.department_name || 'Unnamed Department',
+    //                 value: department.name,
+    //             }));
+    //             // setDepartments(departmentOptions); // This line is no longer needed
+    //         } catch (error) {
+    //             console.error('Error fetching departments:', error);
+    //             // setDepartments([]); // This line is no longer needed
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+    //     loadDepartments();
+    // }, [fetchDepatment]);
+
+    // useEffect(() => {
+    //     const loadSubDepartments = async () => {
+    //         setLoading(true);
+    //         try {
+    //             const subDepartmentData = await fetchSubDepatment();
+    //             const subDepartmentOptions = subDepartmentData.map((subDepartment: any) => ({
+    //                 label: subDepartment.name || subDepartment.sub_department_name || 'Unnamed Sub Department',
+    //                 value: subDepartment.name,
+    //             }));
+    //             // setSubDepartments(subDepartmentOptions); // This line is no longer needed
+    //         } catch (error) {
+    //             console.error('Error fetching sub departments:', error);
+    //             // setSubDepartments([]); // This line is no longer needed
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+    //     loadSubDepartments();
+    // }, [fetchSubDepatment]);
+
+    const handleWarehouseChange = useCallback(
+        (value: string) => {
+            setSelectedWarehouse?.(value);
+        },
+        [setSelectedWarehouse]
+    );
+
+    const handleCustomerChange = useCallback(
+        (value: string) => {
+            setSelectedCustomer?.(value);
+        },
+        [setSelectedCustomer]
+    );
+
+    const handleCompanyChange = useCallback(
+        (value: string) => {
+            setSelectedCompany?.(value);
+        },
+        [setSelectedCompany]
+    );
+
+    const handleBranchChange = useCallback(
+        (value: string) => {
+            setSelectedBranch?.(value);
+        },
+        [setSelectedBranch]
+    );
+
+    const handleDepartmentChange = useCallback(
+        (value: string) => {
+            setSelectedDepartment?.(value);
+        },
+        [setSelectedDepartment]
+    );
+
+    // const handleSubDepartmentChange = async (value: string) => {
+    //     setSelectedSubDepartment?.(value);
+
+
+    //     if (value) {
+    //         try {
+    //             const warehouse = await fetchWarehouseForSubdepartment(value);
+    //             if (warehouse) {
+    //                 setSelectedWarehouse?.(warehouse);
+    //                 console.log("Warehouse set automatically to:", warehouse);
+    //             } else {
+    //                 setSelectedWarehouse?.('');
+    //                 console.warn("No warehouse found for sub-department:", value);
+    //             }
+    //         } catch (error) {
+    //             console.error("Error fetching warehouse for sub-department:", error);
+    //             setSelectedWarehouse?.('');
+    //         }
+    //     } else {
+    //         setSelectedWarehouse?.('');
+    //     }
+    // };
+
+    const handleSelectChange = (value: string) => {
+        if (value) {
+            // Find the actual value from the label if needed
+            const option = selectOptions.find(opt => opt.label === value);
+            const actualValue = option ? option.value : value;
+            setSelectedValue(actualValue);
+            setSearchResults([]);
+
+            console.log("Search field changed:", value, "Setting selectedValue to:", actualValue);
+            if (searchValue) {
+                searchPatients(searchValue, actualValue);
+            }
+        } else {
+            setSelectedValue("");
+            showAlert('danger', 'Error', 'Invalid search field selected.');
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <div className='flex flex-col w-[280px] h-fit gap-4 p-4 rounded-lg border border-[#D9D9E0] bg-[#FFF] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]'>
+                <div className='flex flex-col gap-2'>
+                    <div className='w-full flex flex-col gap-2'>
+                        <span className='w-[208px] text-[#60646C] text-xs font-normal'>Visit Information</span>
+                        <div className='flex flex-row gap-2 items-center'>
+                            <Avatar name={editedPatient.name.charAt(0)} size="24" round={true} textSizeRatio={2} />
+                            {/* <Input
+                                value={editedPatient.name}
+                                onChange={(e) => handleFieldChange('name', e.target.value)}
+                                className='text-[#0D74CE] text-sm font-semibold'
+                            /> */}
+                        </div>
+                    </div>
+                    <div className='flex flex-row gap-2'>
+                        <Tags variant="tag" tagText="Medical Legal Case" type="cyan" border />
+                        <Tags variant="tag" tagText="No Coverage" type="warning" border />
+                    </div>
+                </div>
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="w-full">
+                        <div className="flex flex-col gap-2 w-full">
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <div className='flex flex-row gap-1'>
+                                    <Image src={Cash} width={16} height={16} alt='Cash' />
+                                    <span className='w-full text-[#1C2024] text-xs font-normal'>Patient</span>
+                                </div>
+                                <div className='flex flex-row h-8 items-center justify-between'>
+                                    <Dropdown
+                                        reasons={selectOptions.map(customer => ({
+                                            key: customer.value,
+                                            value: customer.label,
+                                        }))}
+                                        value={selectedValue}
+                                        onChange={(v: string) => handleSelectChange(v)}
+                                        placeholder="Select Search Type"
+                                        disabled={customers.length === 0}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    {/* <InfoRow
+                        icon="/assets/icons/Cake.svg"
+                        label="Age / Gender"
+                        value={searchValue}
+                        selectValue={editedPatient.sex}
+                        onChange={(value) => handleFieldChange('age', value)}
+                        onSelectChange={(value) => handleFieldChange('sex', value)}
+                        selectOptions={sexOptions}
+                    /> */}
+                    <div ref={searchRef} className="relative w-full">
+                        <div className="relative">
+                            <Input
+                                ref={inputRef}
+                                value={searchValue}
+                                onChange={(e) => handleSearchChange(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => {
+                                    if (searchResults.length > 0) setShowDropdown(true);
+                                }}
+                                placeholder="Search Patients"
+                                className="w-full pr-10"
+                            />
+                            {searchValue && (
+                                <button
+                                    type="button"
+                                    onClick={clearSearch}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-700 transition-colors"
+                                    aria-label="Clear search"
+                                >
+                                    <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                        <path fillRule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.415L11.414 10l4.95 4.95a1 1 0 01-1.414 1.415L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.415L8.586 10l-4.95-4.95A1 1 0 115.05 3.636L10 8.586z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            )}
+                            {isLoading && (
+                                <div className="absolute inset-y-0 right-8 pr-3 flex items-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                </div>
+                            )}
+                        </div>
+                        {showDropdown && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                                {searchResults.length > 0 ? (
+                                    <>
+                                        <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+                                            Found {searchResults.length} patient{searchResults.length !== 1 ? 's' : ''}
+                                        </div>
+                                        <ul className="max-h-64 overflow-y-auto">
+                                            {searchResults.map((patient, index) => (
+                                                <li
+                                                    key={patient.mrn || patient.id || index}
+                                                    className={`px-3 py-3 cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors ${index === highlightedIndex ? 'bg-blue-50 border-blue-100' : 'hover:bg-gray-50'}`}
+                                                    onClick={() => handleSelectPatient(patient)}
+                                                    onMouseEnter={() => setHighlightedIndex(index)}
+                                                >
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center space-x-2 mb-1">
+                                                                <p className="text-sm font-medium text-gray-900 truncate">
+                                                                    {highlightMatch(patient.patientFullName || 'N/A', searchValue)}
+                                                                </p>
+                                                                {patient.patientVisitType && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        {patient.patientVisitType}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                                                                <span>MRN: {highlightMatch(patient.mrn || 'N/A', searchValue)}</span>
+                                                                <span>Age: {patient.ageDisplay || 'N/A'}</span>
+                                                                <span>Visit ID: {patient.visitID || 'N/A'}</span>
+                                                                <span>Visit Date: {patient.visitDateTime || 'N/A'}</span>
+                                                                <span>Gender: {patient.genderValue || 'N/A'}</span>
+                                                                {patient.mobileNo && <span>Mobile: {highlightMatch(patient.mobileNo, searchValue)}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                ) : (
+                                    <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                                        No patients found
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className='flex flex-col gap-2'>
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className='flex flex-row h-8 items-center justify-between'>
+                            <div className='flex flex-row gap-1'>
+                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <span className='w-full text-[#1C2024] text-xs font-normal'>Store / Department</span>
+                            </div>
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <Dropdown
+                                    reasons={warehouses.map(warehouse => ({
+                                        key: warehouse.value,
+                                        value: warehouse.label,
+                                    }))}
+                                    value={selectedWarehouse}
+                                    onChange={handleWarehouseChange}
+                                    placeholder="Select warehouse"
+                                    disabled={warehouses.length === 0}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <InfoRow
+                        icon="/assets/icons/Cake.svg"
+                        label="Age / Gender"
+                        value={editedPatient.age}
+                        selectValue={editedPatient.sex}
+                        onChange={(value) => handleFieldChange('age', value)}
+                        onSelectChange={(value) => handleFieldChange('sex', value)}
+                        selectOptions={sexOptions}
+                    />
+                    <InfoRow
+                        icon="/assets/icons/Phone.svg"
+                        label="Contact"
+                        value={editedPatient.phone}
+                        onChange={(value) => handleFieldChange('phone', value)}
+                    />
+                    <InfoRow
+                        icon="/assets/icons/Id.svg"
+                        label="ABHA ID"
+                        value={editedPatient.ABHAID}
+                        onChange={(value) => handleFieldChange('ABHAID', value)}
+                    />
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className='flex flex-row h-8 items-center justify-between'>
+                            <div className='flex flex-row gap-1'>
+                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <span className='w-full text-[#1C2024] text-xs font-normal'>Customer</span>
+                            </div>
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <Dropdown
+                                    reasons={customers.map(customer => ({
+                                        key: customer.value,
+                                        value: customer.label,
+                                    }))}
+                                    value={selectedCustomer}
+                                    onChange={handleCustomerChange}
+                                    placeholder="Self Paid"
+                                    disabled={customers.length === 0}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className='flex flex-row h-8 items-center justify-between'>
+                            <div className='flex flex-row gap-1'>
+                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <span className='w-full text-[#1C2024] text-xs font-normal'>Company</span>
+                            </div>
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <Dropdown
+                                    reasons={companies.map(company => ({
+                                        key: company.value,
+                                        value: company.label,
+                                    }))}
+                                    value={selectedCompany}
+                                    onChange={handleCompanyChange}
+                                    placeholder="Select company"
+                                    disabled={companies.length === 0}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className='flex flex-row h-8 items-center justify-between'>
+                            <div className='flex flex-row gap-1'>
+                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <span className='w-full text-[#1C2024] text-xs font-normal'>Hospital</span>
+                            </div>
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <Dropdown
+                                    reasons={branches.map(branch => ({
+                                        key: branch.value,
+                                        value: branch.label,
+                                    }))}
+                                    value={selectedBranch}
+                                    onChange={handleBranchChange}
+                                    placeholder="Select Hospital"
+                                    disabled={branches.length === 0}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className='flex flex-row h-8 items-center justify-between'>
+                            <div className='flex flex-row gap-1'>
+                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <span className='w-full text-[#1C2024] text-xs font-normal'>Patient Department</span>
+                            </div>
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <Dropdown
+                                    reasons={departments.map(department => ({
+                                        key: department.value,
+                                        value: department.label,
+                                    }))}
+                                    value={selectedDepartment}
+                                    onChange={handleDepartmentChange}
+                                    placeholder="Select department"
+                                    disabled={departments.length === 0}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {/* <div className="flex flex-col gap-2 w-full">
+                        <div className='flex flex-row h-8 items-center justify-between'>
+                            <div className='flex flex-row gap-1'>
+                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <span className='w-full text-[#1C2024] text-xs font-normal'>Sub Department</span>
+                            </div>
+                            <div className='flex flex-row h-8 items-center justify-between'>
+                                <Dropdown
+                                    reasons={subDepartments.map(subDepartment => ({
+                                        key: subDepartment.value,
+                                        value: subDepartment.label,
+                                    }))}
+                                    value={selectedSubDepartment}
+                                    onChange={handleSubDepartmentChange}
+                                    placeholder="Select sub-department"
+                                    disabled={subDepartments.length === 0}
+                                />
+                            </div>
+                        </div>
+                    </div> */}
+                    <InfoRow
+                        icon="/assets/icons/Building.svg"
+                        label="Customer Name"
+                        value={editedPatient.name || ''}
+                        onChange={(value) => handleFieldChange('name', value)}
+                    />
+                    <InfoRow
+                        icon="/assets/icons/DoorEnter.svg"
+                        label="Visit Type"
+                        value={editedPatient.visitType}
+                        selectValue={editedPatient.visitType}
+                        onSelectChange={(value) => handleFieldChange('visitType', value)}
+                        selectOptions={visitTypeOptions}
+                        disabled={!patientData}
+                    />
+                    <InfoRow
+                        icon="/assets/icons/FirstAidKit.svg"
+                        label="Consulting Doctor"
+                        value={editedPatient.doctor}
+                        onChange={(value) => handleFieldChange('doctor', value)}
+                    />
+                    <DialogTrigger asChild>
+                        <div className='w-fit h-fit flex justify-start'>
+                            <Button size="link-size" type="link-secondary" variant="link-button" className="cursor-pointer">
+                                Show more
+                            </Button>
+                        </div>
+                    </DialogTrigger>
+                </div>
+            </div>
+
+            <DialogContent
+                className="w-full max-w-none h-full max-h-none p-0 rounded-t-lg shadow-none border-none 
+             mx-auto transition-transform duration-300 
+             data-[state=open]:animate-slide-up 
+             bg-n z-[10000] [&>button]:hidden"
+            >
+                <VisuallyHidden>
+                    <DialogTitle>Patient Requisition Details</DialogTitle>
+                </VisuallyHidden>
+                <PosInfoCardDetails
+                    name={editedPatient.name}
+                    age={editedPatient.age}
+                    sex={editedPatient.sex}
+                    phone={editedPatient.phone}
+                    ABHAID={editedPatient.ABHAID}
+                    category={editedPatient.category}
+                    company={editedPatient.company}
+                    doctor={editedPatient.doctor}
+                    onClose={() => setOpen(false)}
+                    isReturn={isReturn}
+                    onReturnStatusChange={onReturnStatusChange}
+                />
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+export default OpdCard;
+
+interface InfoRowProps {
+    icon: string;
+    label: string;
+    value: string | undefined;
+    selectValue?: string;
+    onChange?: (value: string) => void;
+    onSelectChange?: (value: string) => void;
+    selectOptions?: SelectOption[];
+    disabled?: boolean;
+}
+
+const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, selectValue, onChange, onSelectChange, selectOptions }) => (
+    <div className='flex flex-row h-8 items-center justify-between border-none border-0 border-input-none'>
+        <div className='flex flex-row gap-1'>
+            <Image src={icon} width={16} height={16} alt={label} />
+            <span className='text-[#1C2024] text-xs font-normal'>{label}</span>
+        </div>
+        {selectOptions ? (
+            <SelectInput
+                placeholder={`Select ${label}`}
+                value={selectValue || ''}
+                data={selectOptions}
+                onValueChange={onSelectChange}
+                className="text-[#1C2024] text-xs font-semibold w-[120px] border-none border-0 border-input-none"
+            />
+        ) : (
+            <Input
+                value={value || ''}
+                onChange={(e) => onChange && onChange(e.target.value)}
+                className='text-[#1C2024] text-xs font-semibold w-[120px]'
+            />
+        )}
+    </div>
+);

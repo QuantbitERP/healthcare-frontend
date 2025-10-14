@@ -1,0 +1,50 @@
+import PatientRefundCard from "./PatientCard";
+
+export default {
+    title: "Components/PatientRefundCard",
+    component: PatientRefundCard,
+    tags: ['autodocs'],
+    parameters: {
+        layout: 'centered',
+    },
+    argTypes: {
+        name: {
+            control: "text",
+            description: "Name",
+            defaultValue: "Neha Deshmukh",
+        },
+        age: {
+            control: "text",
+            description: "age",
+            defaultValue: "28",
+        },
+        sex: {
+            control: "text",
+            description: "sex",
+            defaultValue: "Female",
+        },
+        phone: {
+            control: "text",
+            description: "phone",
+            defaultValue: "+91-9096396014",
+        },
+        ABHAID: {
+            control: "text",
+            description: "phone",
+            defaultValue: "12-2456-7544-2485",
+        },
+
+    }
+}
+
+const Template = (args) => <PatientRefundCard {...args} />
+
+export const Card = Template.bind({});
+
+Card.args = {
+    name: 'Vishal Dhayarkar',
+    age: "22",
+    sex: "Male",
+    phone: "+91-9096396014",
+    ABHAID: "12-2456-7544-2485"
+}

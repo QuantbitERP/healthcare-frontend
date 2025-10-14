@@ -1,0 +1,13 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="gender-male" clip-path="url(#clip0_1464_11778)">
+<path id="Vector" d="M3.33398 9.33333C3.33398 10.2174 3.68517 11.0652 4.3103 11.6904C4.93542 12.3155 5.78326 12.6667 6.66732 12.6667C7.55137 12.6667 8.39922 12.3155 9.02434 11.6904C9.64946 11.0652 10.0007 10.2174 10.0007 9.33333C10.0007 8.44928 9.64946 7.60143 9.02434 6.97631C8.39922 6.35119 7.55137 6 6.66732 6C5.78326 6 4.93542 6.35119 4.3103 6.97631C3.68517 7.60143 3.33398 8.44928 3.33398 9.33333Z" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_2" d="M12.6664 3.33337L9.06641 6.93337" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M12.6673 3.33337H9.33398" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_4" d="M12.666 3.33337V6.66671" stroke="#60646C" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_1464_11778">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>

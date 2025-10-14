@@ -1,0 +1,86 @@
+@import "tailwindcss";
+/* Button Sizes */
+
+.button {
+  @apply flex flex-row w-full h-fit  justify-center items-center rounded-lg focus-visible:ring-2 
+         focus-visible:ring-offset-2 focus-visible:outline-none whitespace-nowrap cursor-pointer;
+}
+.button-left {
+  @apply w-fit h-full border-r flex items-center justify-center overflow-hidden rounded-l-lg cursor-pointer;
+}
+.button-right {
+  @apply w-fit h-full flex items-center justify-center overflow-hidden rounded-r-lg cursor-pointer;
+}
+
+.primary-button-left {
+  @apply bg-[#0090FF] text-[#FFFFFF]  disabled:bg-[#E8E8EC] disabled:text-[#1C202480] border-[#0173CC] hover:bg-[#0588F0] active:bg-[#0588F0] pl-4 pr-4;
+}
+.primary-button-right {
+  @apply bg-[#0090FF] text-[#FFFFFF]  disabled:bg-[#E8E8EC] disabled:text-[#1C202480] hover:bg-[#0588F0] active:bg-[#0588F0]  p-2;
+}
+.primary-button-ring {
+  @apply focus-visible:ring-[#0090FF];
+}
+
+.secondary-button-left {
+  @apply bg-white text-[#000000] border-[1px] border-[#D9D9E0] focus-visible:ring-[#0090FF] disabled:border-[#B9BBC6] disabled:text-[#000000] disabled:bg-white hover:bg-[#E8E8EC] hover:border-[#B9BBC6] active:bg-[#E8E8EC] pl-4 pr-4 border-r-0;
+}
+.secondary-button-right {
+  @apply bg-white text-[#000000] border-[1px] border-[#D9D9E0] focus-visible:ring-[#0090FF] disabled:border-[#B9BBC6] disabled:text-[#000000] disabled:bg-white hover:bg-[#E8E8EC] hover:border-[#B9BBC6] active:bg-[#E8E8EC] p-2;
+}
+.secondary-button-ring {
+  @apply focus-visible:ring-[#0090FF];
+}
+
+.primary-outlined-button-left {
+  @apply border-[#5EB1EF] hover:bg-[#E6F4FE] active:bg-[#E6F4FE] pl-4 pr-4 bg-white text-[#0D74CE] border disabled:border-[#D9D9E0] disabled:text-[#0000004D] disabled:bg-white border-r-0;
+}
+.primary-outlined-button-right {
+  @apply hover:bg-[#E6F4FE] active:bg-[#E6F4FE]  p-2 bg-white text-[#0D74CE] border border-[#5EB1EF] disabled:border-[#D9D9E0] disabled:text-[#0000004D] disabled:bg-white;
+}
+.primary-outlined-button-ring {
+  @apply focus-visible:ring-[#8EC8F6] focus-visible:ring-offset-0;
+}
+
+.danger-button-left {
+  @apply bg-[#E5484D] text-[#FFFFFF] disabled:bg-[#EB8E90] disabled:text-[#FFFFFF] border-[#fff] hover:bg-[#DC3E42] active:bg-[#DC3E42] pl-4 pr-4;
+}
+.danger-button-right {
+  @apply bg-[#E5484D] text-[#FFFFFF] disabled:bg-[#EB8E90] disabled:text-[#FFFFFF] hover:bg-[#DC3E42] active:bg-[#DC3E42]  p-2;
+}
+.danger-button-ring {
+  @apply focus-visible:ring-[#E5484D];
+}
+
+/* button size */
+.xsmall {
+  @apply w-fit h-[24px] font-medium  text-xs leading-4 gap-0;
+  /* pl-3 pr-3 pt-1 pb-1 rounded-[4px] */
+}
+.small {
+  @apply w-fit h-[32px] font-medium  text-xs leading-4 gap-0;
+  /* pl-3 pr-3 pt-2 pb-2 */
+}
+
+.medium {
+  @apply w-fit h-[40px] font-medium  text-sm leading-5 gap-0;
+  /* pl-5 pr-5 pt-2 pb-2 */
+}
+.medium-left {
+  @apply w-fit h-[40px] font-medium  text-sm leading-5;
+  /* pl-5 pr-5 pt-2 pb-2 */
+}
+.medium-right {
+  @apply w-fit h-[40px] font-medium  text-sm leading-5;
+  /* pl-5 pr-5 pt-2 pb-2 */
+}
+
+.large {
+  @apply w-fit h-[48px] font-medium  text-base leading-6 gap-0;
+  /* pl-5 pr-5 pt-3 pb-3 */
+}
+
+.xlarge {
+  @apply w-fit h-[52px] font-medium  text-base leading-6 gap-0;
+  /* pl-6 pr-6 pt-3 pb-3 */
+}

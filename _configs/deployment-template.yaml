@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: epis-api-billingui
+  name: epis-api-billingui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: epis-api-billingui
+  template:
+    metadata:
+      labels:
+        app: epis-api-billingui
+    spec:
+      containers:
+        - image: gitlab.mipl.dev:5050/phase1/infra/dockerepis/billingui:IMAGE_TAG
+          name: billingui
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: 200m
+            requests:
+              cpu: 100m
+          volumeMounts:
+            - mountPath: /app/dpkey
+              name: epis-api-billingui-data
+            - mountPath: "/app/.env.production"
+              subPath: .env.production
+              name: epis-api-billingui-env-local
+              readOnly: true
+      volumes:
+        - name: epis-api-billingui-data
+          persistentVolumeClaim:
+            claimName: epis-api-billingui-pvc
+        - name: epis-api-billingui-env-local
+          configMap:
+            name: epis-api-billingui-cm
+      imagePullSecrets:
+        - name: registry-credentials

@@ -1,0 +1,64 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+export type ServicewiseBillReportDto = {
+    srNo?: number;
+    hospitalName?: string | null;
+    uhid?: string | null;
+    visitType?: string | null;
+    visitNo?: string | null;
+    visitDate?: string | null;
+    billType?: string | null;
+    billNo?: string | null;
+    billDate?: string | null;
+    timeOfBill?: string | null;
+    dischargeDate?: string | null;
+    patientName?: string | null;
+    patientAmount?: number | null;
+    companyAmount?: number | null;
+    billAmount?: number | null;
+    requisitionDateTime?: string | null;
+    requisitionNo?: string | null;
+    serviceGroup?: string | null;
+    serviceDepartment?: string | null;
+    serviceCode?: string | null;
+    serviceName?: string | null;
+    rate?: number | null;
+    quantity?: number | null;
+    serviceAmount?: number | null;
+    serviceMouConcession?: number | null;
+    serviceConcession?: number | null;
+    netServiceAmount?: number | null;
+    consultingDoctor?: string | null;
+    companyType?: string | null;
+    companyName?: string | null;
+    associateCompany?: string | null;
+    wardName?: string | null;
+    bedNo?: string | null;
+    billingClass?: string | null;
+    dischargedBedNo?: string | null;
+    billConcession?: number | null;
+    billDiscountGivenBy?: string | null;
+    billDiscountType?: string | null;
+    grossBillAmount?: number | null;
+    editableServiceName?: string | null;
+    parentServiceCode?: string | null;
+    parentServiceName?: string | null;
+    profileName?: string | null;
+    packageName?: string | null;
+    serviceSubDeptName?: string | null;
+    apportionConcession?: number | null;
+    serviceCancelAmount?: number | null;
+    serviceCancelReason?: string | null;
+    serviceCancelRemark?: string | null;
+    serviceGivenByUser?: string | null;
+    patientBalance?: number | null;
+    companyBalance?: number | null;
+    balanceReceivable?: number | null;
+    financialYear?: string | null;
+    financePostingVoucherNo?: string | null;
+    isBillCancelled?: boolean;
+    referenceBillNo?: string | null;
+    referenceBillDateTime?: string | null;
+};
+

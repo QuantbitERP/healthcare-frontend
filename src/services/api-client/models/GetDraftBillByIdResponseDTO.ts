@@ -1,0 +1,73 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+
+import type { GetBillConcession } from './GetBillConcession';
+import type { GetDraftBillService } from './GetDraftBillService';
+export type GetDraftBillByIdResponseDTO = {
+    id?: string |null;
+    billId?: string | null;
+    visittype?: number|null;
+    visitDate?: string | null;
+    visitTime?: string | null;
+    patientid?: string|null;
+    patientMrn?: string | null;
+    patientName?: string | null;
+    patientGender?: string | null;
+    patientAgeYears?: number | null;
+    patientAgeMonths?: number | null;
+    patientAgeDays?: number | null;
+    patientMobileno?: string | null;
+    patientAddress?: string | null;
+    patientRegistrationDate?: string | null;
+    abhaId?: string | null;
+    adharCardNo?: string | null;
+    hospitalid?: string|null;
+    refferalDoctorId?: string | null;
+    billcompanyid?: string | null;
+    billcompanyTypeid?: string | null;
+    schemeCompanyName?: string | null;
+    schemeCompanyTypeName?: string | null;
+    tempDocumentNo?: string | null;
+    tempDocumentdate?: string | null;
+    services?: Array<GetDraftBillService> | null;
+    billDiscountPercent?: number|null;
+    billDiscountAmount?: number|null;
+    billTotalAmount?: number | null;
+    amountInWords?: string | null;
+    billInsuranceAmount?: number | null;
+    billPatientPayableAmount?: number | null;
+    totalDepositBeforeBill?: number | null;
+    utilizedDeposit?: number | null;
+    totalDepositAfterBill?: number | null;
+    totalServiceAmount?: number | null;
+    totalServiceInlineDiscount?: number | null;
+    totalServiceMouDiscount?: number | null;
+    totalServiceDiscount?: number | null;
+    totalServiceGstAmount?: number;
+    totalServiceCGstAmount?: number;
+    totalServiceSGstAmount?: number;
+    netServiceAmount?: number;
+    version?: number|null;
+    createdBy?: string | null;
+    billTime?: string|null;
+    createddate?: string|null;
+    modifiedBy?: string | null;
+    referredDr?: string | null;
+    isactive?: boolean| null;
+    billConcession?: Array<GetBillConcession> | null;
+    billGstId?: string | null;
+    billCGstAmount?: number;
+    billSGstAmount?: number;
+    billGstAmount?: number;
+    outstandingAmount?: number | null;
+    patientOutstandingAmount?: number | null;
+    companyOutstandingAmount?: number | null;
+    excessCollectedAmount?: number | null;
+    paidBy?: number;
+    paidByName?: string | null;
+    sponsoredbyName?: string | null;
+    billDocumentNumber?:string | null;
+    billConcessionDetails?: Array<GetBillConcession> | null;
+};
+

@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+.alert {
+  @apply w-full h-12 rounded-lg px-2 py-3 border flex flex-row items-center gap-0 text-sm;
+}
+
+.secondary {
+  @apply border-[#B9BBC6] bg-[#F9F9FB] text-[#1C2024];
+}
+
+.success {
+  @apply border-[#ADDDC0] bg-[#F4FBF6] text-[#218358];
+}
+.primary {
+  @apply border-[#5EB1EF] bg-[#F4FAFF] text-[#3E63DD];
+}
+.warning {
+  @apply border-[#EC9455] bg-[#FEFCFB] text-[#CC4E00];
+}
+.danger {
+  @apply border-[#EB8E90] bg-[#FFF7F7] text-[#E5484D];
+}

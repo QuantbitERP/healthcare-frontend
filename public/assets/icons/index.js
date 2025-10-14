@@ -1,0 +1,10 @@
+export { default as TextSize } from "./TextSize.svg";
+export { default as Underline } from "./Underline.svg";
+export { default as Bold } from "./Bold.svg";
+export { default as Italic } from "./Italic.svg";
+export { default as Link } from "./Link.svg";
+export { default as Attachment } from "./Attachment.svg";
+export { default as CutText } from "./CutText.svg";
+export { default as CopyText } from "./CopyText.svg";
+export { default as Redo } from "./Redo.svg";
+export { default as Undo } from "./Undo.svg";
