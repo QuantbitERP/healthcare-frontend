@@ -85,7 +85,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
     transactions: '0',
   });
 
-  const FRAPPE_BASE_URL = 'http://103.219.1.138:4430';
+  const FRAPPE_BASE_URL = 'https://192.168.7.221:4422';
 
   // Fetch concession types and users (unchanged)
   useEffect(() => {
