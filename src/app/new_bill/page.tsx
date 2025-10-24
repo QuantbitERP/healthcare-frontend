@@ -33,7 +33,7 @@ import ClosingEntryModal from '@/components/pos/ClosingEntryModal';
 import ViewPosInvoicesModal from '@/components/pos/ViewPosInvoicesModal'; // New Import
 import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import CreateReturnEntryModal from '@/components/return/CreateReturnEntryModal';
-
+import { useAlert } from "@/components/AlertContext/AlertContext";
 
 interface AlertState {
   show: boolean;
@@ -87,7 +87,7 @@ interface ItemSearchProps {
   onNoBatchesFound?: (item: Item) => void;
   selectedWarehouse?: string; // Add selectedWarehouse to the interface
   selectedCompany?: string; // Add selectedCompany to the interface
-  showAlert: (variant: AlertState['variant'], heading: string, content: string) => void;
+  // showAlert: (variant: AlertState['variant'], heading: string, content: string) => void;
   selectedClassification?: string;
   isGeneric?: boolean;
 }
@@ -120,7 +120,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   onNoBatchesFound,
   selectedWarehouse,
   selectedCompany, // Destructure selectedCompany
-  showAlert, // Destructure selectedWarehouse
+  // showAlert, // Destructure selectedWarehouse
   selectedClassification,
   isGeneric,
 }) => {
@@ -135,6 +135,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const [itemBatches, setItemBatches] = useState<any[]>([]); // To store batches for the highlighted item
   const [quantity, setQuantity] = useState<number>(1); // New state for quantity
   const [currentRate, setCurrentRate] = useState<number | null>(null); // New state for current rate
+  const { showAlert } = useAlert();
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -2925,7 +2926,7 @@ export default function NewBill() {
                   onNoBatchesFound={handleNoBatchesFound}
                   selectedWarehouse={selectedWarehouse}
                   selectedCompany={selectedCompany}
-                  showAlert={showAlert}
+                  // showAlert={showAlert}
                   selectedClassification={selectedSaleType}
                   isGeneric={isGeneric}
                   className="pt-2"// Pass getBatchQty as a prop

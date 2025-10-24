@@ -105,8 +105,13 @@ export default function POS() {
                 type="primary-button"
                 size="button-medium"
                 onClick={() => handleClick("/new_bill")}
-              >
-                + New OPD Sale Bill
+              > + New OPD Sale Bill
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={() => handleClick("/ipd_bill")}
+              > + New IPD Bill
               </Button>
 
               <Button
