@@ -3267,7 +3267,5 @@ export default function NewBill() {
     );
 }
 
-function showAlert(arg0: string, arg1: string, arg2: string) {
-    throw new Error("Function not implemented.");
-}
+
 
