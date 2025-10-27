@@ -2773,7 +2773,7 @@ export default function NewBill() {
 
     return (
 
-        <div className="bg-gray-50 min-h-screen pl-6">
+        <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
             {/* Alert Component */}
             {alert.show && (
                 <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] max-w-md">
@@ -2789,7 +2789,7 @@ export default function NewBill() {
                 </div>
             )}
             <ToastContainer aria-label="Notifications" />
-            <div className="my-16">
+            <div className="my-16 px-4 md:px-6">
                 <PageHeader
                     parentTitle="POS"
                     parentLink="/pos"
@@ -2812,9 +2812,9 @@ export default function NewBill() {
             </div>
 
             {/* Main Content */}
-            <div className="flex flex-row gap-0.5 py-6">
+            <div className="flex flex-col lg:flex-row gap-0.5 py-6 px-4 mx-2 md:px-4 pb-24">
                 {/* Left Panel - Patient Search and Cards */}
-                <div className="flex flex-col gap-6 flex-shrink-0">
+                <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
 
                     {/* <div className="flex flex-col items-center space-y-4">
             <div className="w-full">
@@ -2903,14 +2903,14 @@ export default function NewBill() {
                 </div>
 
                 {/* Right Panel - Item Details */}
-                <div className="flex-1 space-y-6">
+                <div className="flex-1 min-w-0 space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Item Details</CardTitle>
                         </CardHeader>
 
-                        <CardContent className="space-y-3">
-                            <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <CardContent className="space-y-3 overflow-x-auto">
+                            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
                                 <RenderFormElement
                                     inputType="select"
@@ -2929,12 +2929,13 @@ export default function NewBill() {
                                     onNoBatchesFound={handleNoBatchesFound}
                                     selectedWarehouse={selectedWarehouse}
                                     selectedCompany={selectedCompany}
+                                    // showAlert={showAlert}
                                     selectedClassification={selectedSaleType}
                                     isGeneric={isGeneric}
                                     className="pt-2"// Pass getBatchQty as a prop
                                 />
 
-                                <div className="flex items-center space-x-2 col-span-2">
+                                <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
                                     <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
                                     <Label htmlFor="terms">Generic</Label>
                                     <Button type="primary-button" size="button-medium" onClick={() => {
@@ -2953,22 +2954,24 @@ export default function NewBill() {
                                         size="button-medium"
                                         onClick={() => setShowDocumentUpload(true)}
                                     >
-                                        Upload Document
+                                        Upload
                                     </Button>
-
-                                    <div className="ml-4 w-full">
-                                        <RenderFormElement
-                                            inputType="input"
-                                            InputValueType="text"
-                                            value={toLocation}
-                                            onChange={setToLocation}
-                                            placeholder="Barcode"
+                                    {/* IPD Effect Checkbox */}
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <Checkbox
+                                            id="ipd-effect"
+                                            checked={isIpdEffect}
+                                            onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
                                         />
-
+                                        <Label
+                                            htmlFor="ipd-effect"
+                                            className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
+                                        >
+                                            IPD Effect
+                                        </Label>
                                     </div>
-
-
                                 </div>
+
                                 <RenderFormElement
                                     inputType="select"
                                     value={selectedKit}
@@ -2978,7 +2981,7 @@ export default function NewBill() {
                                 />
 
                                 {/* Global Discount Input */}
-                                <div className="mt-4 mb-4 flex items-center gap-3 ">
+                                <div className="flex flex-row items-center gap-3">
                                     <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Discount %:</Label>
                                     <Input
                                         type="number"
@@ -3024,24 +3027,22 @@ export default function NewBill() {
                                         </div>
                                     </div>
 
-                                    {/* IPD Effect Checkbox */}
-                                    <div className="flex items-center gap-2 pl-6">
-                                        <Checkbox
-                                            id="ipd-effect"
-                                            checked={isIpdEffect}
-                                            onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
-                                        />
-                                        <Label
-                                            htmlFor="ipd-effect"
-                                            className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
-                                        >
-                                            IPD Effect
-                                        </Label>
-                                    </div>
 
                                     {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
+                                    <div className="w-full mt-0 pt-0 sm:w-auto flex-1 min-w-[150px]">
+                                        <RenderFormElement
+                                            inputType="input"
+                                            InputValueType="text"
+                                            value={toLocation}
+                                            onChange={setToLocation}
+                                            placeholder="Barcode"
+                                        />
+
+                                    </div>
                                 </div>
+
                             </div>
+
                             <HorizontallyScrollableTable
                                 items={items}
                                 setItems={setItems}
@@ -3066,8 +3067,8 @@ export default function NewBill() {
                 </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 w-full h-16 px-6 flex justify-between items-center border-y border-[#D9D9E0] bg-white z-10">
-                <div className="w-fit h-fit flex items-center gap-4">
+            <div className="fixed bottom-0 left-0 w-full min-h-16 px-4 md:px-6 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 border-y border-[#D9D9E0] bg-white z-10">
+                <div className="w-full sm:w-fit h-fit flex items-center gap-4 justify-center sm:justify-start">
                     <Popover>
                         <PopoverTrigger asChild>
                             <Image
@@ -3086,7 +3087,7 @@ export default function NewBill() {
                     </Popover>
                     <Button type="secondary-button" size="button-medium">Preview & Print</Button>
                 </div>
-                <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
+                <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
                     <Button type="secondary-button" size="button-medium">Reset</Button>
                     <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
                         Save as Draft
@@ -3266,6 +3267,4 @@ export default function NewBill() {
         </div>
     );
 }
-
-
 

@@ -356,26 +356,34 @@ interface EditableTableProps {
   getBatchQty?: (itemCode: string, batchNo: string, warehouse: string) => Promise<number>;
   selectedWarehouse?: string;
   calculateItemTaxAndTotals?: (item: Item) => Item;
+  recalculateTotals?: (itemsList: Item[]) => void;
 }
 
-const EditableTable = ({ 
-  items, 
-  setItems, 
-  fetchItemBatches, 
-  fetchSubstituteItems, 
-  fetchItemPrice, 
-  getBatchQty, 
+const EditableTable = ({
+  items,
+  setItems,
+  fetchItemBatches,
+  fetchSubstituteItems,
+  fetchItemPrice,
+  getBatchQty,
   selectedWarehouse,
-  calculateItemTaxAndTotals 
+  calculateItemTaxAndTotals,
+  recalculateTotals
 }: EditableTableProps) => {
 
   const handleRemoveItemFromDetails = (itemId: string) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
+    setItems(prev => {
+      const updated = prev.filter(item => item.id !== itemId);
+      if (recalculateTotals) {
+        recalculateTotals(updated);
+      }
+      return updated;
+    });
   };
 
   const updateCell = (rowIndex: number, columnId: string, value: any) => {
-    setItems(old =>
-      old.map((row, index) => {
+    setItems(old => {
+      const updated = old.map((row, index) => {
         if (index === rowIndex) {
           let parsedValue = value;
 
@@ -414,8 +422,14 @@ const EditableTable = ({
           return updatedRow;
         }
         return row;
-      })
-    );
+      });
+
+      if (recalculateTotals) {
+        recalculateTotals(updated);
+      }
+
+      return updated;
+    });
   };
 
   const table = useReactTable<Item>({
@@ -456,9 +470,9 @@ const EditableTable = ({
 
               setItems(prev => prev.map(i => {
                 if (i.id === item.id) {
-                  const updatedItem = { 
-                    ...i, 
-                    batchNo: selectedBatchNo, 
+                  const updatedItem = {
+                    ...i,
+                    batchNo: selectedBatchNo,
                     batch: selectedBatchNo,
                     expiryDate: selectedBatch.expiry_date,
                     batchStockQty: newBatchQty,
@@ -528,7 +542,7 @@ const EditableTable = ({
               // Fetch batches for the substitute item
               const batches = await fetchItemBatches(selectedItemCode);
               const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
-              
+
               if (sortedBatches.length > 0) {
                 const firstBatch = sortedBatches[0];
                 const newRate = await fetchItemPrice(selectedItemCode, firstBatch.name, 'Standard Selling');
@@ -537,8 +551,8 @@ const EditableTable = ({
 
                 setItems(prev => prev.map(i => {
                   if (i.id === item.id) {
-                    const updatedItem = { 
-                      ...i, 
+                    const updatedItem = {
+                      ...i,
                       itemCode: selectedItemCode,
                       itemName: selectedSubstitute.alternative_item_name || selectedItemCode,
                       batchNo: firstBatch.name,
@@ -559,8 +573,8 @@ const EditableTable = ({
                 const newRate = await fetchItemPrice(selectedItemCode, null, 'Standard Selling');
                 setItems(prev => prev.map(i => {
                   if (i.id === item.id) {
-                    const updatedItem = { 
-                      ...i, 
+                    const updatedItem = {
+                      ...i,
                       itemCode: selectedItemCode,
                       itemName: selectedSubstitute.alternative_item_name || selectedItemCode,
                       batchNo: '',
@@ -658,10 +672,10 @@ const EditableTable = ({
         cell: ({ row }) => {
           const item = row.original as Item;
           // Display batch-specific quantity if available, otherwise show general stock qty
-          const displayQty = item.batchStockQty !== undefined && item.batchStockQty !== null 
-            ? item.batchStockQty 
+          const displayQty = item.batchStockQty !== undefined && item.batchStockQty !== null
+            ? item.batchStockQty
             : item.stockQty;
-          
+
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
               {displayQty}

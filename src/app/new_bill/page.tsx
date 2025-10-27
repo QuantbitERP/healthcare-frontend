@@ -878,6 +878,7 @@ export default function NewBill() {
   const [selectedInvoiceForReturn, setSelectedInvoiceForReturn] = useState<any>(null);
   const [loadedInvoiceName, setLoadedInvoiceName] = useState<string | null>(null);
   const [loadedInvoiceDocstatus, setLoadedInvoiceDocstatus] = useState<number>(0);
+  const [isLoadingFromPosInvoice, setIsLoadingFromPosInvoice] = useState<boolean>(false);
 
   // Global discount state
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
@@ -908,9 +909,14 @@ export default function NewBill() {
     approvalNo: string;
   }>>([]);
 
-  // Recalculate totals whenever items change
-  useEffect(() => {
-    const calculatedItems = items.map(calculateItemTaxAndTotals);
+  // Function to recalculate totals
+  const recalculateTotals = (itemsList: Item[]) => {
+    // Skip recalculation if loading from POS invoice
+    if (isLoadingFromPosInvoice) {
+      return;
+    }
+
+    const calculatedItems = itemsList.map(calculateItemTaxAndTotals);
 
     const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
     const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmt, 0);
@@ -923,7 +929,7 @@ export default function NewBill() {
     setTotalCgstAmount(newTotalCgstAmount);
     setTotalSgstAmount(newTotalSgstAmount);
     setTotalIgstAmount(newTotalIgstAmount);
-  }, [items]);
+  };
 
   const clearPatient = () => {
     setPatientData(null);
@@ -1271,7 +1277,9 @@ export default function NewBill() {
           taxTemplate: taxDetails.taxTemplate,
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
-        return [...prevItems, newItemWithCalculations];
+        const updatedItems = [...prevItems, newItemWithCalculations];
+        recalculateTotals(updatedItems);
+        return updatedItems;
       });
       showAlert("success", "Success", "Item added successfully");
     } catch (error) {
@@ -2272,11 +2280,15 @@ export default function NewBill() {
     });
 
     setItems(updatedItems);
+    recalculateTotals(updatedItems);
     showAlert("success", "Success", `Applied ${globalDiscountPercent}% discount to all item rates.`);
   };
 
   const handleLoadInvoice = async (invoice: any) => {
     try {
+      // Set flag to prevent recalculation
+      setIsLoadingFromPosInvoice(true);
+
       // Fetch full invoice details including all child tables
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -2291,11 +2303,13 @@ export default function NewBill() {
 
       if (!response.ok) {
         showAlert("danger", "Error", "Failed to load invoice details.");
+        setIsLoadingFromPosInvoice(false);
         return;
       }
 
       const data = await response.json();
       const fullInvoice = data.data;
+      console.log(fullInvoice)
 
       // Store loaded invoice details
       setLoadedInvoiceName(fullInvoice.name);
@@ -2400,9 +2414,15 @@ export default function NewBill() {
             taxTemplate: invItem.item_tax_template || "",
           };
 
-          // Calculate tax amounts based on item amount
+          // Use exact values from invoice instead of calculating
           const itemAmount = Math.abs(invItem.base_amount || 0);
           const itemAmountAfterDiscount = itemAmount - Math.abs(invItem.discount_amount || 0);
+
+          // Use exact tax amounts from invoice item
+          const cgstAmount = Math.abs(invItem.cgst_amount || 0);
+          const sgstAmount = Math.abs(invItem.sgst_amount || 0);
+          const igstAmount = Math.abs(invItem.igst_amount || 0);
+          const totalAmount = Math.abs(invItem.amount || 0);
 
           const item: Item = {
             id: `${invItem.item_code}-${invItem.batch_no || 'no-batch'}-${Date.now()}-${Math.random()}`,
@@ -2425,15 +2445,12 @@ export default function NewBill() {
             discountPercent: invItem.discount_percentage || 0,
             discountAmt: Math.abs(invItem.discount_amount || 0),
             cgstPercent: taxDetails.cgstRate,
-            cgstAmt: itemAmountAfterDiscount * (taxDetails.cgstRate / 100),
+            cgstAmt: cgstAmount, // Use exact amount from invoice
             sgstPercent: taxDetails.sgstRate,
-            sgstAmt: itemAmountAfterDiscount * (taxDetails.sgstRate / 100),
+            sgstAmt: sgstAmount, // Use exact amount from invoice
             igstPercent: taxDetails.igstRate,
-            igstAmt: itemAmountAfterDiscount * (taxDetails.igstRate / 100),
-            totalAmt: itemAmountAfterDiscount +
-              (itemAmountAfterDiscount * (taxDetails.cgstRate / 100)) +
-              (itemAmountAfterDiscount * (taxDetails.sgstRate / 100)) +
-              (itemAmountAfterDiscount * (taxDetails.igstRate / 100)),
+            igstAmt: igstAmount, // Use exact amount from invoice
+            totalAmt: totalAmount, // Use exact total from invoice
             totalPckgAmt: 0,
             kitName: "",
             packageName: "",
@@ -2443,6 +2460,31 @@ export default function NewBill() {
         }
       }
       setItems(loadedItems);
+
+      // Manually set totals from the invoice to avoid recalculation
+      setTotalBillAmount(Math.abs(fullInvoice.rounded_total || fullInvoice.grand_total || 0));
+      setTotalDiscountAmount(Math.abs(fullInvoice.discount_amount || 0));
+
+      // Calculate tax totals from invoice taxes
+      let cgstTotal = 0;
+      let sgstTotal = 0;
+      let igstTotal = 0;
+      if (fullInvoice.taxes && Array.isArray(fullInvoice.taxes)) {
+        fullInvoice.taxes.forEach((tax: any) => {
+          const accountHead = tax.account_head || "";
+          const taxAmount = Math.abs(tax.tax_amount || 0);
+          if (accountHead.includes("CGST")) {
+            cgstTotal += taxAmount;
+          } else if (accountHead.includes("SGST")) {
+            sgstTotal += taxAmount;
+          } else if (accountHead.includes("IGST")) {
+            igstTotal += taxAmount;
+          }
+        });
+      }
+      setTotalCgstAmount(cgstTotal);
+      setTotalSgstAmount(sgstTotal);
+      setTotalIgstAmount(igstTotal);
 
       // Load payments
       if (fullInvoice.payments && Array.isArray(fullInvoice.payments)) {
@@ -2459,10 +2501,14 @@ export default function NewBill() {
         setRecordedPayments(loadedPayments);
       }
 
+      // Reset flag after all data is loaded
+      setIsLoadingFromPosInvoice(false);
+
       showAlert("success", "Success", `Invoice ${invoice.name} loaded successfully!`);
     } catch (error) {
       console.error("Error loading invoice:", error);
       showAlert("danger", "Error", "Failed to load invoice. Please try again.");
+      setIsLoadingFromPosInvoice(false);
     }
   };
 
@@ -2770,7 +2816,7 @@ export default function NewBill() {
 
   return (
 
-    <div className="bg-gray-50 min-h-screen pl-6">
+    <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
       {/* Alert Component */}
       {alert.show && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] max-w-md">
@@ -2786,7 +2832,7 @@ export default function NewBill() {
         </div>
       )}
       <ToastContainer aria-label="Notifications" />
-      <div className="my-16">
+      <div className="my-16 px-4 md:px-6">
         <PageHeader
           parentTitle="POS"
           parentLink="/pos"
@@ -2809,9 +2855,9 @@ export default function NewBill() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-row gap-0.5 py-6">
+      <div className="flex flex-col lg:flex-row gap-0.5 py-6 px-4 mx-2 md:px-4 pb-24">
         {/* Left Panel - Patient Search and Cards */}
-        <div className="flex flex-col gap-6 flex-shrink-0">
+        <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
 
           {/* <div className="flex flex-col items-center space-y-4">
             <div className="w-full">
@@ -2900,14 +2946,14 @@ export default function NewBill() {
         </div>
 
         {/* Right Panel - Item Details */}
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 min-w-0 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Item Details</CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-3">
-              <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4">
+            <CardContent className="space-y-3 overflow-x-auto">
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
                 <RenderFormElement
                   inputType="select"
@@ -2932,7 +2978,7 @@ export default function NewBill() {
                   className="pt-2"// Pass getBatchQty as a prop
                 />
 
-                <div className="flex items-center space-x-2 col-span-2">
+                <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
                   <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
                   <Label htmlFor="terms">Generic</Label>
                   <Button type="primary-button" size="button-medium" onClick={() => {
@@ -2951,22 +2997,10 @@ export default function NewBill() {
                     size="button-medium"
                     onClick={() => setShowDocumentUpload(true)}
                   >
-                    Upload Document
+                    Upload
                   </Button>
-
-                  <div className="ml-4 w-full">
-                    <RenderFormElement
-                      inputType="input"
-                      InputValueType="text"
-                      value={toLocation}
-                      onChange={setToLocation}
-                      placeholder="Barcode"
-                    />
-
-                  </div>
-
-
                 </div>
+
                 <RenderFormElement
                   inputType="select"
                   value={selectedKit}
@@ -2976,7 +3010,7 @@ export default function NewBill() {
                 />
 
                 {/* Global Discount Input */}
-                <div className="mt-4 mb-4 flex items-center gap-3 ">
+                <div className="flex flex-row items-center gap-3">
                   <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Discount %:</Label>
                   <Input
                     type="number"
@@ -2997,8 +3031,20 @@ export default function NewBill() {
                     Apply Discount
                   </Button>
                   {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
+                  <div className="w-full sm:w-auto flex-1 min-w-[150px]">
+                    <RenderFormElement
+                      inputType="input"
+                      InputValueType="text"
+                      value={toLocation}
+                      onChange={setToLocation}
+                      placeholder="Barcode"
+                    />
+
+                  </div>
                 </div>
+
               </div>
+
               <HorizontallyScrollableTable
                 items={items}
                 setItems={setItems}
@@ -3008,6 +3054,7 @@ export default function NewBill() {
                 getBatchQty={getBatchQty}
                 selectedWarehouse={selectedWarehouse}
                 calculateItemTaxAndTotals={calculateItemTaxAndTotals}
+                recalculateTotals={recalculateTotals}
               />
             </CardContent>
           </Card>
@@ -3023,8 +3070,8 @@ export default function NewBill() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full h-16 px-6 flex justify-between items-center border-y border-[#D9D9E0] bg-white z-10">
-        <div className="w-fit h-fit flex items-center gap-4">
+      <div className="fixed bottom-0 left-0 w-full min-h-16 px-4 md:px-6 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 border-y border-[#D9D9E0] bg-white z-10">
+        <div className="w-full sm:w-fit h-fit flex items-center gap-4 justify-center sm:justify-start">
           <Popover>
             <PopoverTrigger asChild>
               <Image
@@ -3043,7 +3090,7 @@ export default function NewBill() {
           </Popover>
           <Button type="secondary-button" size="button-medium">Preview & Print</Button>
         </div>
-        <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
+        <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
           <Button type="secondary-button" size="button-medium">Reset</Button>
           <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
             Save as Draft
