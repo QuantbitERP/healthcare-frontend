@@ -2416,7 +2416,7 @@ export default function NewBill() {
 
           // Use exact values from invoice instead of calculating
           const itemAmount = Math.abs(invItem.base_amount || 0);
-          const itemAmountAfterDiscount = itemAmount - Math.abs(invItem.discount_amount || 0);
+          // const itemAmountAfterDiscount = itemAmount - Math.abs(invItem.discount_amount || 0);
 
           // Use exact tax amounts from invoice item
           const cgstAmount = Math.abs(invItem.cgst_amount || 0);
