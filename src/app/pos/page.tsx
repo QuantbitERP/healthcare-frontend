@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import POSProfileSelector from "@/components/pos/POSProfileSelector";
 
 export default function POS() {
-  const API_BASE_URL = "https://192.168.7.221:4422/api/resource";
+  const API_BASE_URL = "http://103.219.1.138:4430/api/resource";
   const selectOptions = [
     { label: "Invoice ID", value: "name" },
     { label: "Customer Name", value: "customer" },

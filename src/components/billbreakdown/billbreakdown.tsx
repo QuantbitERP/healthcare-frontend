@@ -14,21 +14,6 @@ interface BillBreakdownProps {
   posProfile?: string;
   employeeId?: string; // Added
   employeeBalance?: number; // Added
-  onRecordPayments?: (data: {
-    paidBy: string;
-    payeeName: string;
-    pendingAmount: number;
-    payments: Array<{
-      id: number;
-      paymentMode: string;
-      transactionNo: string;
-      bankName: string;
-      branchName: string;
-      paidAmount: string;
-      paymentDate: string;
-      approvalNo: string;
-    }>;
-  }) => void;
   onRoundOffChange?: (data: {
     isRoundedOff: boolean;
     rounded_total: number;
@@ -57,7 +42,6 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
   posProfile,
   employeeId = '', // Default to empty string
   employeeBalance = 0, // Default to 0
-  onRecordPayments,
   onRoundOffChange,
 }) => {
   const { apiKey, apiSecret } = useAuth();
@@ -85,7 +69,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
     transactions: '0',
   });
 
-  const FRAPPE_BASE_URL = 'https://192.168.7.221:4422';
+  const FRAPPE_BASE_URL = 'http://103.219.1.138:4430';
 
   // Fetch concession types and users (unchanged)
   useEffect(() => {
@@ -319,6 +303,31 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
               ₹{totalBillAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
+          <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRoundedOff}
+                  onChange={(e) => setIsRoundedOff(e.target.checked)}
+                  className="w-4 h-4 text-[#0D74CE] border-gray-300 rounded focus:ring-[#0D74CE] focus:ring-2 cursor-pointer"
+                />
+                <span className="text-[#1C2024] text-xs font-normal">Round Off</span>
+              </label>
+              {isRoundedOff && (
+                <span className="text-[#60646C] text-xs font-normal">
+                  {calculateRoundOffValues().rounding_adjustment >= 0 ? '' : ''}
+                </span>
+              )}
+            </div>
+            {isRoundedOff && (
+              <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
+                
+                <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
+                <span className="text-[#1C2024] text-xs font-bold">
+                  ₹{calculateRoundOffValues().grand_total.toLocaleString()}
+                </span>
+              </div>
+            )}
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
@@ -385,33 +394,10 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             <div className="flex justify-between items-center">
               <h3 className="text-[#1C2024] text-xs font-semibold">Outstanding Amount</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                ₹{calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₹{calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isRoundedOff}
-                  onChange={(e) => setIsRoundedOff(e.target.checked)}
-                  className="w-4 h-4 text-[#0D74CE] border-gray-300 rounded focus:ring-[#0D74CE] focus:ring-2 cursor-pointer"
-                />
-                <span className="text-[#1C2024] text-xs font-normal">Round Off</span>
-              </label>
-              {isRoundedOff && (
-                <span className="text-[#60646C] text-xs font-normal">
-                  {calculateRoundOffValues().rounding_adjustment >= 0 ? '' : ''}
-                </span>
-              )}
-            </div>
-            {isRoundedOff && (
-              <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
-                <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
-                <span className="text-[#1C2024] text-xs font-bold">
-                  ₹{calculateRoundOffValues().grand_total.toLocaleString()}
-                </span>
-              </div>
-            )}
+            
             <div className="flex items-center justify-between">
               <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Transactions</span>
               <div className="flex items-center space-x-2">
@@ -470,13 +456,14 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
         onClose={() => setShowRecordPayment(false)}
         onSubmit={(data) => {
           setRecordedPayments(data.payments || []);
-          onRecordPayments?.(data);
           setShowRecordPayment(false);
         }}
         posProfile={posProfile}
         apiKey={apiKey || undefined}
         apiSecret={apiSecret || undefined}
         outstandingAmount={calculateRoundOffValues().grand_total}
+        payments={recordedPayments}
+        setPayments={setRecordedPayments}
       />
 
       <TotalBreakdownModal

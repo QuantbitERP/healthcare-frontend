@@ -44,7 +44,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPrescriptions = useCallback(async (search?: string, dateRange?: DateRange) => {

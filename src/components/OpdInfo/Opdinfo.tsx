@@ -62,7 +62,7 @@ type SelectedPatient = {
     company?: string;
 };
 
-const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
+const PATIENT_API_BASE_URL = "http://192.168.7.196:8085/masterdata/search-patient";
 
 const OpdCard: React.FC<PatientCardProps> = ({
     name = '',
@@ -92,7 +92,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
     onReturnStatusChange,
 }) => {
     const [open, setOpen] = useState<boolean>(false);
-    const { fetchWarehouses, fetchBranch, customers, companies, departments } = useFrappeApi();
+    const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors, doctors } = useFrappeApi();
     // fetchWarehouseForSubdepartment
     const { showAlert } = useAlert();
 
@@ -479,8 +479,15 @@ const OpdCard: React.FC<PatientCardProps> = ({
     const handleBranchChange = useCallback(
         (value: string) => {
             setSelectedBranch?.(value);
+            if (value) {
+                fetchDoctors(value); // Fetch doctors when branch changes
+            } else {
+                // Clear doctors if no branch is selected
+                // You might want to clear the selected doctor as well
+                // setEditedPatient(prev => ({ ...prev, doctor: '' }));
+            }
         },
-        [setSelectedBranch]
+        [setSelectedBranch, fetchDoctors] // Add fetchDoctors to dependency array
     );
 
     const handleDepartmentChange = useCallback(
@@ -688,12 +695,19 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     </div>
                     <InfoRow
                         icon="/assets/icons/Cake.svg"
-                        label="Age / Gender"
+                        label="Gender"
                         value={editedPatient.age}
                         selectValue={editedPatient.sex}
-                        onChange={(value) => handleFieldChange('age', value)}
+                        // onChange={(value) => handleFieldChange('age', value)}
                         onSelectChange={(value) => handleFieldChange('sex', value)}
                         selectOptions={sexOptions}
+                    />
+                    {/* This is the new row for Age only */}
+                    <InfoRow
+                        icon="/assets/icons/Cake.svg"
+                        label="Age"
+                        value={editedPatient.age}
+                        onChange={(value) => handleFieldChange('age', value)}
                     />
                     <InfoRow
                         icon="/assets/icons/Phone.svg"
@@ -827,6 +841,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         label="Consulting Doctor"
                         value={editedPatient.doctor}
                         onChange={(value) => handleFieldChange('doctor', value)}
+                        selectOptions={doctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
+                        selectValue={editedPatient.doctor}
+                        onSelectChange={(value) => handleFieldChange('doctor', value)}
                     />
                     <DialogTrigger asChild>
                         <div className='w-fit h-fit flex justify-start'>

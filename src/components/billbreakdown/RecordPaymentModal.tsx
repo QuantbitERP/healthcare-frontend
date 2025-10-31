@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, IndianRupee, Plus, Trash2 } from 'lucide-react';
+import { X, IndianRupee } from 'lucide-react';
 import Button from '../buttons/Button';
+import PaymentTable from './PaymentTable'; // Import the new PaymentTable
 
-interface PaymentMethod {
-  name: string;
-  mode_of_payment: string;
+interface Payment {
+  id: number;
+  paymentMode: string;
+  transactionNo: string;
+  bankName: string;
+  branchName: string;
+  paidAmount: string;
+  paymentDate: string;
+  approvalNo: string;
 }
 
 interface RecordPaymentModalProps {
@@ -14,130 +21,33 @@ interface RecordPaymentModalProps {
     paidBy: string;
     payeeName: string;
     pendingAmount: number;
-    payments: Array<{
-      id: number;
-      paymentMode: string;
-      transactionNo: string;
-      bankName: string;
-      branchName: string;
-      paidAmount: string;
-      paymentDate: string;
-      approvalNo: string;
-    }>
+    payments: Payment[]; // Use the Payment interface
   }) => void;
   posProfile?: string;
   apiKey?: string;
   apiSecret?: string;
   outstandingAmount?: number;
+  payments: Payment[]; // Payments are now controlled by parent
+  setPayments: React.Dispatch<React.SetStateAction<Payment[]>>; // Setter is now controlled by parent
 }
 
-const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose, onSubmit, posProfile, apiKey, apiSecret, outstandingAmount }) => {
+const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose, onSubmit, posProfile, apiKey, apiSecret, outstandingAmount, payments, setPayments }) => {
   const [paidBy, setPaidBy] = useState('Self');
   const [payeeName, setPayeeName] = useState('');
   const [pendingAmount, setPendingAmount] = useState('0');
-  const [payments, setPayments] = useState<any[]>([]);
-  const [expandedCells, setExpandedCells] = useState<{ [key: string]: boolean }>({});
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  // Set pending amount when modal opens or outstanding amount changes
+  // payments and setPayments are now props
+
   useEffect(() => {
     if (isOpen && outstandingAmount !== undefined) {
       setPendingAmount(outstandingAmount.toString());
+      // No longer clearing payments here, as parent controls it.
+      // setPayments([]); 
+      setPaidBy('Self');
+      setPayeeName('');
     }
   }, [isOpen, outstandingAmount]);
 
-  // Fetch payment methods from POS Profile
-  useEffect(() => {
-    if (isOpen && posProfile && apiKey && apiSecret) {
-      const fetchPaymentMethods = async () => {
-        try {
-          const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Profile/${posProfile}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `token ${apiKey}:${apiSecret}`,
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const posProfileData = data.data;
-
-            // Extract payment methods from POS Profile
-            if (posProfileData.payments && Array.isArray(posProfileData.payments)) {
-              const methods = posProfileData.payments.map((payment: any) => ({
-                name: payment.mode_of_payment,
-                mode_of_payment: payment.mode_of_payment,
-              }));
-              setPaymentMethods(methods);
-            } else {
-              // Fallback to default payment methods if none found in POS Profile
-              setPaymentMethods([
-                { name: 'Cash', mode_of_payment: 'Cash' },
-                { name: 'Card', mode_of_payment: 'Card' },
-                { name: 'UPI', mode_of_payment: 'UPI' },
-                { name: 'Cheque', mode_of_payment: 'Cheque' },
-              ]);
-            }
-          } else {
-            console.error('Failed to fetch POS Profile for payment methods');
-            // Fallback to default payment methods
-            setPaymentMethods([
-              { name: 'Cash', mode_of_payment: 'Cash' },
-              { name: 'Card', mode_of_payment: 'Card' },
-              { name: 'UPI', mode_of_payment: 'UPI' },
-              { name: 'Cheque', mode_of_payment: 'Cheque' },
-            ]);
-          }
-        } catch (error) {
-          console.error('Error fetching payment methods:', error);
-          // Fallback to default payment methods
-          setPaymentMethods([
-            { name: 'Cash', mode_of_payment: 'Cash' },
-            { name: 'Card', mode_of_payment: 'Card' },
-            { name: 'UPI', mode_of_payment: 'UPI' },
-            { name: 'Cheque', mode_of_payment: 'Cheque' },
-          ]);
-        }
-      };
-
-      fetchPaymentMethods();
-    } else if (isOpen && (!posProfile || !apiKey || !apiSecret)) {
-      // Fallback to default payment methods if no POS profile or credentials provided
-      setPaymentMethods([
-        { name: 'Cash', mode_of_payment: 'Cash' },
-        { name: 'Card', mode_of_payment: 'Card' },
-        { name: 'UPI', mode_of_payment: 'UPI' },
-        { name: 'Cheque', mode_of_payment: 'Cheque' },
-      ]);
-    }
-  }, [isOpen, posProfile, apiKey, apiSecret]);
-
   if (!isOpen) return null;
-
-  const handleAddPayment = () => {
-    setPayments([...payments, {
-      id: Date.now(),
-      paymentMode: '',
-      transactionNo: '',
-      bankName: '',
-      branchName: '',
-      paidAmount: '',
-      paymentDate: '',
-      approvalNo: ''
-    }]);
-  };
-
-  const handleCellClick = (paymentId: number, field: string) => {
-    setExpandedCells(prev => ({ ...prev, [`${paymentId}-${field}`]: !prev[`${paymentId}-${field}`] }));
-  };
-
-  const handleRemovePayment = (paymentId: number) => {
-    setPayments(payments.filter(p => p.id !== paymentId));
-  };
-
-  const getInputWidth = (paymentId: number, field: string) => {
-    return expandedCells[`${paymentId}-${field}`] ? '320px' : 'auto';
-  };
 
   return (
     <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
@@ -206,205 +116,15 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
 
           </div>
 
-          {/* Payment Table */}
-          <div className="border border-gray-200 rounded-lg">
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="w-8 p-3 text-left">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[120px]">Payment Mode</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[180px]">Card/Cheque/Trans. No.</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Bank Name</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Branch Name</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[120px]">Paid Amount</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Payment Date</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[120px]">Approval No</th>
-                    <th className="px-3 py-3 text-left text-sm font-medium text-gray-500">Remove</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((payment) => (
-                    <tr key={payment.id} className="border-t border-gray-200">
-                      <td className="p-3">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'paymentMode') }}>
-                        <select
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-paymentMode`] ? '320px' : '120px',
-                            width: expandedCells[`${payment.id}-paymentMode`] ? '320px' : '100%'
-                          }}
-                          value={payment.paymentMode}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, paymentMode: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'paymentMode')}
-                          onBlur={() => handleCellClick(payment.id, 'paymentMode')}
-                        >
-                          <option value="">Select</option>
-                          {paymentMethods.map((method) => (
-                            <option key={method.mode_of_payment} value={method.mode_of_payment}>
-                              {method.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'transactionNo') }}>
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-transactionNo`] ? '320px' : '180px',
-                            width: expandedCells[`${payment.id}-transactionNo`] ? '320px' : '100%'
-                          }}
-                          placeholder="Transaction No"
-                          value={payment.transactionNo}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, transactionNo: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'transactionNo')}
-                          onBlur={() => handleCellClick(payment.id, 'transactionNo')}
-                        />
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'bankName') }}>
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-bankName`] ? '320px' : '140px',
-                            width: expandedCells[`${payment.id}-bankName`] ? '320px' : '100%'
-                          }}
-                          placeholder="Bank Name"
-                          value={payment.bankName}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, bankName: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'bankName')}
-                          onBlur={() => handleCellClick(payment.id, 'bankName')}
-                        />
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'branchName') }}>
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-branchName`] ? '320px' : '140px',
-                            width: expandedCells[`${payment.id}-branchName`] ? '320px' : '100%'
-                          }}
-                          placeholder="Branch Name"
-                          value={payment.branchName}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, branchName: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'branchName')}
-                          onBlur={() => handleCellClick(payment.id, 'branchName')}
-                        />
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'paidAmount') }}>
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-paidAmount`] ? '320px' : '120px',
-                            width: expandedCells[`${payment.id}-paidAmount`] ? '320px' : '100%'
-                          }}
-                          placeholder="Amount"
-                          value={payment.paidAmount}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, paidAmount: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'paidAmount')}
-                          onBlur={() => handleCellClick(payment.id, 'paidAmount')}
-                        />
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'paymentDate') }}>
-                        <input
-                          type="date"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-paymentDate`] ? '320px' : '140px',
-                            width: expandedCells[`${payment.id}-paymentDate`] ? '320px' : '100%'
-                          }}
-                          value={payment.paymentDate}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, paymentDate: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'paymentDate')}
-                          onBlur={() => handleCellClick(payment.id, 'paymentDate')}
-                        />
-                      </td>
-                      <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'approvalNo') }}>
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                          style={{
-                            minWidth: expandedCells[`${payment.id}-approvalNo`] ? '320px' : '120px',
-                            width: expandedCells[`${payment.id}-approvalNo`] ? '320px' : '100%'
-                          }}
-                          placeholder="Approval No"
-                          value={payment.approvalNo}
-                          onChange={(e) => {
-                            const updatedPayments = payments.map(p =>
-                              p.id === payment.id ? { ...p, approvalNo: e.target.value } : p
-                            );
-                            setPayments(updatedPayments);
-                          }}
-                          onFocus={() => handleCellClick(payment.id, 'approvalNo')}
-                          onBlur={() => handleCellClick(payment.id, 'approvalNo')}
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <button
-                          onClick={() => handleRemovePayment(payment.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-4 border-t border-gray-200">
-              <button
-                onClick={handleAddPayment}
-                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add New</span>
-              </button>
-            </div>
-          </div>
+          {/* Payment Table Component */}
+          <PaymentTable
+            payments={payments}
+            setPayments={setPayments}
+            posProfile={posProfile}
+            apiKey={apiKey}
+            apiSecret={apiSecret}
+            totalBillAmount={parseFloat(pendingAmount) || 0} // Pass the pending amount as totalBillAmount
+          />
         </div>
 
         {/* Footer */}

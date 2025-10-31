@@ -19,7 +19,7 @@ import PageHeader from "@/components/billbreakdown/PageHeader";
 import RenderFormElement from "@/components/form/RenderFormElement";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import Image from "next/image";
-import BillBreakdown from "@/components/billbreakdown/billbreakdown";
+import IpdBillbreakDown from "@/components/billbreakdown/IpdBillbrekadown";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
 import { Search, X, Plus } from 'lucide-react';
 import OpdCard from "@/components/OpdInfo/Opdinfo";
@@ -140,7 +140,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
-    const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+    const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
 
     const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean): Promise<Item[]> => {
         try {
@@ -590,7 +590,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                                                             // min="1"
                                                             className="block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                                                         />
-                                                        <label htmlFor="rate-input" className="sr-only">Rate</label>
+                                                        {/* <label htmlFor="rate-input" className="sr-only">Rate</label>
                                                         <Input
                                                             id="rate-input"
                                                             type="number"
@@ -600,7 +600,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                                                             min="0"
                                                             step="any"
                                                             className="block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md mt-2"
-                                                        />
+                                                        /> */}
                                                     </div>
                                                 )}
                                             </div>
@@ -684,13 +684,15 @@ const calculateItemTaxAndTotals = (item: Item): CalculatedItem => {
 export default function NewBill() {
     const [remarks, setRemarks] = useState('');
 
+    const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+
     const router = useRouter();
     const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
     const { classifications, fetchUserDefaultCompany } = useFrappeApi();
 
-    const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+    const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
     // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-    const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+    const ITEM_DETAILS_API_URL = 'http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
     // Function to fetch item batches filtered by warehouse and company
     const fetchItemBatches = async (itemCode: string) => {
@@ -711,7 +713,7 @@ export default function NewBill() {
             };
 
             // Call the new API method that filters by warehouse and company
-            const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+            const response = await fetch('http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -746,7 +748,7 @@ export default function NewBill() {
                 'Content-Type': 'application/json',
                 'Authorization': `token ${apiKey}:${apiSecret}`,
             };
-            const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+            const resp = await fetch('http://103.219.1.138:4430/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -911,6 +913,11 @@ export default function NewBill() {
         approvalNo: string;
     }>>([]);
 
+    const handleClearFile = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevents the modal from opening
+        setSelectedDocument(null);
+    };
+
     // Recalculate totals whenever items change
     useEffect(() => {
         const calculatedItems = items.map(calculateItemTaxAndTotals);
@@ -1006,7 +1013,7 @@ export default function NewBill() {
                     'Content-Type': 'application/json',
                     'Authorization': `token ${apiKey}:${apiSecret}`,
                 };
-                const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+                const taxTemplateResponse = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
                     method: 'POST',
                     headers: taxTemplateHeaders,
                     credentials: 'include',
@@ -1028,7 +1035,7 @@ export default function NewBill() {
                     'Content-Type': 'application/json',
                     'Authorization': `token ${apiKey}:${apiSecret}`,
                 };
-                const taxAccountsResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+                const taxAccountsResponse = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
                     method: 'POST',
                     headers: taxAccountsHeaders,
                     credentials: 'include',
@@ -1066,7 +1073,7 @@ export default function NewBill() {
                     'Authorization': `token ${apiKey}:${apiSecret}`,
                 };
 
-                const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+                const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
                     method: 'POST',
                     headers,
                     credentials: 'include',
@@ -1108,7 +1115,7 @@ export default function NewBill() {
                 };
 
                 const response = await fetch(
-                    'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+                    'http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
                     {
                         method: 'POST',
                         headers,
@@ -1159,7 +1166,7 @@ export default function NewBill() {
                 'Authorization': `token ${apiKey}:${apiSecret}`,
             };
 
-            const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+            const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -1490,7 +1497,7 @@ export default function NewBill() {
 
         try {
             console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-            const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+            const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1503,15 +1510,32 @@ export default function NewBill() {
 
             if (response.ok) {
                 const result = await response.json();
-                showAlert("success", "Success", "POS Invoice saved as draft successfully!");
-                console.log("Draft saved:", result);
-                // clearPatient();
-                // router.push("/pos");
+            
+                if (result.message?.status === "error") {
+                    // When backend returns error status
+                    showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
+                    console.error("Draft save error:", result);
+                } 
+                else if (result.message?.status === "success") {
+                    // When draft saved successfully
+                    showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+                    console.log("Draft saved:", result);
+                    // clearPatient();
+                    // router.push("/pos");
+                } 
+                else {
+                    // Unknown or unexpected response structure
+                    showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
+                    console.warn("Unexpected result:", result);
+                }
+            
             } else {
-                const errorData = await response.json();
+                // HTTP-level error (non-2xx)
+                const errorData = await response.json().catch(() => ({}));
                 console.error("Failed to save draft:", response.status, errorData);
-                showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error'}`);
+                showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
             }
+            
         } catch (error) {
             console.error("Error saving draft:", error);
             showAlert("danger", "Error", "Error saving draft. Please try again.");
@@ -1588,6 +1612,12 @@ export default function NewBill() {
     useEffect(() => {
         console.log("patientData updated:", patientData);
     }, [patientData]);
+
+    useEffect(() => {
+        if (transactionType === 'credit') {
+            setIsIpdEffect(true);
+        }
+    }, [transactionType]);
 
     const handleSelectRequisition = async (requisition: any) => {
         console.log("Selected requisition:", requisition);
@@ -2500,7 +2530,7 @@ export default function NewBill() {
 
                 // Print the invoice
                 const company = selectedCompany || result.data?.company || '';
-                const printUrl = 'https://192.168.7.221:4422/printview?' +
+                const printUrl = 'http://103.219.1.138:4430/printview?' +
                     'doctype=POS Invoice&' +
                     'name=' + encodeURIComponent(loadedInvoiceName) + '&' +
                     'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2682,7 +2712,7 @@ export default function NewBill() {
 
             try {
                 console.log("Final payload for creating submitted invoice:", finalPayload);
-                const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+                const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2713,7 +2743,7 @@ export default function NewBill() {
 
                 // Print the invoice
                 const company = selectedCompany || patientData.company || '';
-                const printUrl = 'https://192.168.7.221:4422/printview?' +
+                const printUrl = 'http://103.219.1.138:4430/printview?' +
                     'doctype=POS Invoice&' +
                     'name=' + encodeURIComponent(invoiceName) + '&' +
                     'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2747,7 +2777,7 @@ export default function NewBill() {
                 'Authorization': `token ${apiKey}:${apiSecret}`,
             };
 
-            const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+            const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -2889,16 +2919,14 @@ export default function NewBill() {
                             </div>
                         )}
                     </div>
-                    <BillBreakdown
+                    <IpdBillbreakDown
                         totalBillAmount={totalBillAmount}
                         totalDiscountAmount={totalDiscountAmount}
                         totalCgstAmount={totalCgstAmount}
                         totalSgstAmount={totalSgstAmount}
                         totalIgstAmount={totalIgstAmount}
                         posProfile={posProfile || undefined}
-                        onRecordPayments={(data) => {
-                            setRecordedPayments(data.payments || []);
-                        }}
+
                     />
                 </div>
 
@@ -2956,19 +2984,16 @@ export default function NewBill() {
                                     >
                                         Upload
                                     </Button>
-                                    {/* IPD Effect Checkbox */}
-                                    <div className="flex items-center gap-2 pl-2">
-                                        <Checkbox
-                                            id="ipd-effect"
-                                            checked={isIpdEffect}
-                                            onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
+
+                                    {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
+                                    <div className="w-full mt-0 pt-0 sm:w-auto flex-1 min-w-[150px]">
+                                        <RenderFormElement
+                                            inputType="input"
+                                            InputValueType="text"
+                                            value={toLocation}
+                                            onChange={setToLocation}
+                                            placeholder="Barcode"
                                         />
-                                        <Label
-                                            htmlFor="ipd-effect"
-                                            className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
-                                        >
-                                            IPD Effect
-                                        </Label>
                                     </div>
                                 </div>
 
@@ -3027,18 +3052,22 @@ export default function NewBill() {
                                         </div>
                                     </div>
 
-
-                                    {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                                    <div className="w-full mt-0 pt-0 sm:w-auto flex-1 min-w-[150px]">
-                                        <RenderFormElement
-                                            inputType="input"
-                                            InputValueType="text"
-                                            value={toLocation}
-                                            onChange={setToLocation}
-                                            placeholder="Barcode"
+                                    {/* IPD Effect Checkbox */}
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <Checkbox
+                                            id="ipd-effect"
+                                            checked={isIpdEffect}
+                                            onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
                                         />
-
+                                        <Label
+                                            htmlFor="ipd-effect"
+                                            className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
+                                        >
+                                            IPD Effect
+                                        </Label>
                                     </div>
+
+
                                 </div>
 
                             </div>
@@ -3133,7 +3162,10 @@ export default function NewBill() {
             {showDocumentUpload && (
                 <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-100">
                     <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
-                        <Document setOpen={setShowDocumentUpload} />
+                        <Document
+                            setOpen={setShowDocumentUpload}
+                            onFileSelect={(file) => setSelectedDocument(file)} // Pass the file to state
+                        />
                     </div>
                 </div>
             )}
@@ -3175,7 +3207,7 @@ export default function NewBill() {
                     invoice={selectedInvoiceForReturn}
                     onSubmit={async (returnData) => {
                         try {
-                            const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+                            const response = await fetch('http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',

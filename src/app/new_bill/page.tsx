@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import Document from "@/components/documentUpload/Document";
+import Document from "@/components/documentUpload/Document"; // <-- Make sure this import is here
 import PageHeader from "@/components/billbreakdown/PageHeader";
 import RenderFormElement from "@/components/form/RenderFormElement";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -34,7 +34,7 @@ import ViewPosInvoicesModal from '@/components/pos/ViewPosInvoicesModal'; // New
 import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import CreateReturnEntryModal from '@/components/return/CreateReturnEntryModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
-
+import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -49,7 +49,7 @@ export interface Item {
   substituteItem: string;
   itemCode: string;
   itemName: string;
-  uom: string;         // Changed from unit to uom, moved up
+  uom: string;      // Changed from unit to uom, moved up
   stockQty: number;
   orderedQty: number;
   saleQty: number;
@@ -135,13 +135,14 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const [itemBatches, setItemBatches] = useState<any[]>([]); // To store batches for the highlighted item
   const [quantity, setQuantity] = useState<number>(1); // New state for quantity
   const [currentRate, setCurrentRate] = useState<number | null>(null); // New state for current rate
+  const [selectedManualBatches, setSelectedManualBatches] = useState<{ [batchNo: string]: number }>({}); // New state for manually selected batches
   const { showAlert } = useAlert();
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
 
   const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean): Promise<Item[]> => {
     try {
@@ -231,6 +232,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           setItemBatches([]); // Clear batches on new search term
           setSelectedBatch(null); // Clear selected batch
           setSubSearchTerm(''); // Reset sub search on new generic search
+          setSelectedManualBatches({}); // Clear manually selected batches
         } catch (error) {
           console.error('Search error:', error);
           setSuggestions([]);
@@ -284,6 +286,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       } else {
         setItemBatches([]);
         setSelectedBatch(null);
+        setSelectedManualBatches({}); // Clear manually selected batches when clicking outside
       }
     };
 
@@ -295,6 +298,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
         setHighlightedIndex(-1);
+        setSelectedManualBatches({}); // Clear manually selected batches when clicking outside
       }
     };
 
@@ -319,13 +323,14 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
         if (highlightedIndex >= 0) {
           const item = suggestions[highlightedIndex];
           // Distribute quantity across batches
-          handleDistributedQuantitySelection(item, quantity);
+          handleDistributedQuantitySelection(item, quantity, Object.keys(selectedManualBatches));
         }
         break;
       case 'Escape':
         setShowSuggestions(false);
         setHighlightedIndex(-1);
         inputRef.current?.blur();
+        setSelectedManualBatches({}); // Clear manually selected batches
         break;
     }
   };
@@ -374,7 +379,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     setCurrentRate(null); // Reset currentRate after selection
   };
 
-  const handleDistributedQuantitySelection = async (item: Item, totalRequestedQty: number) => {
+  const handleDistributedQuantitySelection = async (item: Item, totalRequestedQty: number, selectedBatchesManual: string[] = []) => {
     if (!selectedWarehouse) {
       showAlert("danger", "Error", "Please select a warehouse first.");
       return;
@@ -402,28 +407,62 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     const batches = await fetchItemBatches(item.itemCode); // Ensure batches are fresh
     const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
 
-    if (sortedBatches.length === 0) {
-      showAlert("warning", "Warning", `Only ${totalRequestedQty - remainingQty} of ${totalRequestedQty} quantity could be fulfilled.`);
-      if (onNoBatchesFound) {
-        onNoBatchesFound(item);
+    let batchesToAllocateFrom = sortedBatches;
+
+    if (selectedBatchesManual.length > 0) {
+      // If specific batches are selected, filter to only those and prioritize quantity from selectedManualBatches
+      batchesToAllocateFrom = sortedBatches.filter(batch => selectedBatchesManual.includes(batch.name));
+
+      for (const batch of batchesToAllocateFrom) {
+        if (remainingQty <= 0) break;
+
+        const manuallySetQty = selectedManualBatches[batch.name];
+        if (manuallySetQty !== undefined && manuallySetQty > 0) {
+          const qtyToTake = Math.min(remainingQty, manuallySetQty, batch.batch_qty);
+          if (qtyToTake > 0) {
+            await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
+            remainingQty -= qtyToTake;
+          }
+        }
       }
-      return;
-    }
+      // If there's still remainingQty and we've only allocated from manually selected with specific quantities
+      // and not all of totalRequestedQty has been fulfilled, then try to allocate remaining to selected batches
+      // that were only chosen for allocation, but not given a specific quantity.
+      if (remainingQty > 0) {
+        for (const batch of batchesToAllocateFrom) {
+          if (remainingQty <= 0) break;
+          const qtyToTake = Math.min(remainingQty, batch.batch_qty);
+          if (qtyToTake > 0) {
+            await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
+            remainingQty -= qtyToTake;
+          }
+        }
+      }
 
-    for (const batch of sortedBatches) {
-      if (remainingQty <= 0) break;
+    } else {
+      // Original FEFO logic if no manual batches selected
+      for (const batch of sortedBatches) {
+        if (remainingQty <= 0) break;
 
-      const batchAvailableQty = batch.batch_qty;
-      const qtyToTake = Math.min(remainingQty, batchAvailableQty);
+        const batchAvailableQty = batch.batch_qty;
+        const qtyToTake = Math.min(remainingQty, batchAvailableQty);
 
-      if (qtyToTake > 0) {
-        await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
-        remainingQty -= qtyToTake;
+        if (qtyToTake > 0) {
+          await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
+          remainingQty -= qtyToTake;
+        }
       }
     }
 
     if (remainingQty > 0) {
-
+      if (selectedBatchesManual.length > 0) {
+        showAlert("warning", "Warning", `Only ${totalRequestedQty - remainingQty} of ${totalRequestedQty} quantity could be fulfilled from selected batches.`);
+      } else {
+        showAlert("warning", "Warning", `Only ${totalRequestedQty - remainingQty} of ${totalRequestedQty} quantity could be fulfilled.`);
+      }
+      if (onNoBatchesFound) {
+        onNoBatchesFound(item);
+      }
     } else {
       showAlert("success", "Success", `Successfully added ${totalRequestedQty} quantity across batches.`);
     }
@@ -434,6 +473,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     setSelectedBatch(null); // Clear selected batch after selection
     setItemBatches([]); // Clear batches
     setQuantity(1); // Reset quantity after selection
+    setSelectedManualBatches({}); // Clear manually selected batches
     inputRef.current?.focus();
   };
 
@@ -444,6 +484,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     setShowSuggestions(false);
     setHighlightedIndex(-1);
     inputRef.current?.focus();
+    setSelectedManualBatches({}); // Clear manually selected batches
   };
 
   const highlightMatch = (text: string, query: string) => {
@@ -527,7 +568,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                       }`}
                     // Add onClick to the li element for direct item selection
                     onClick={() => { // Modified onClick to handle quantity distribution
-                      handleDistributedQuantitySelection(item, quantity);
+                      handleDistributedQuantitySelection(item, quantity, Object.keys(selectedManualBatches));
                     }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                   >
@@ -543,7 +584,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                         </div>
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
                           <span>Code: {highlightMatch(item.itemCode, isGeneric ? subSearchTerm : searchTerm)}</span>
-                          <span>Stock: {item.stockQty}</span>
+                          {/* <span>Stock: {item.stockQty}</span> */}
                           {item.batch && <span>Batch: {item.batch}</span>}
                           {currentRate !== null ? ( // Show currentRate if available
                             <span>Rate: ₹{currentRate.toFixed(2)}</span>
@@ -551,34 +592,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                             item.rate !== null && <span>Rate: ₹{item.rate.toFixed(2)}</span> // Fallback to item.rate
                           )}
                         </div>
-                        {itemBatches.length > 0 && highlightedIndex === index && selectedWarehouse && selectedCompany && (
-                          <div className="mt-2" onClick={(e) => e.stopPropagation()}> {/* Prevent li onClick when clicking inside batch dropdown */}
-                            <label htmlFor="batch-select" className="sr-only">Select Batch</label>
-                            <select
-                              id="batch-select"
-                              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                              value={selectedBatch || ''}
-                              onChange={(e) => {
-                                setSelectedBatch(e.target.value);
-                                const selectedBatchData = itemBatches.find(b => b.name === e.target.value);
-                                if (selectedBatchData) {
-                                  // If a specific batch is selected from dropdown, only add that batch with the specified quantity
-                                  handleConfirmedSelectItem(item, selectedBatchData.name, selectedBatchData.expiry_date, quantity, selectedBatchData.batch_qty);
-                                } else {
-                                  // If 'Select a Batch' is chosen, but a quantity is entered, distribute it
-                                  handleDistributedQuantitySelection(item, quantity);
-                                }
-                              }}
-                            >
-                              <option value="">Select a Batch</option>
-                              {itemBatches.map((batch) => (
-                                <option key={batch.name} value={batch.name}>
-                                  {batch.name} (Exp: {batch.expiry_date} | Qty: {batch.batch_qty})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+
                         {highlightedIndex === index && selectedWarehouse && selectedCompany && ( // Show quantity input when item is highlighted, only if warehouse and company are selected
                           <div className="mt-2" onClick={(e) => e.stopPropagation()}> {/* Prevent li onClick when clicking inside quantity input */}
                             <label htmlFor="quantity-input" className="sr-only">Quantity</label>
@@ -587,21 +601,63 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                               type="number"
                               value={quantity}
                               onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                              placeholder="Enter Quantity"
+                              placeholder="Enter Quantity" // Changed placeholder to indicate total quantity
                               // min="1"
                               className="block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                             />
-                            <label htmlFor="rate-input" className="sr-only">Rate</label>
-                            <Input
-                              id="rate-input"
-                              type="number"
-                              value={currentRate !== null ? currentRate : ''}
-                              onChange={(e) => setCurrentRate(parseFloat(e.target.value) || null)}
-                              placeholder="Enter Rate"
-                              min="0"
-                              step="any"
-                              className="block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md mt-2"
-                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              * If specific batches are selected above, the quantity will be split among them.
+                                Otherwise, it will be split using FEFO across all available batches.
+                            </p>
+                          </div>
+                        )}
+                                                {itemBatches.length > 0 && highlightedIndex === index && selectedWarehouse && selectedCompany && (
+                          <div className="mt-2 p-2 border rounded-md bg-gray-50" onClick={(e) => e.stopPropagation()}> {/* Prevent li onClick when clicking inside batch dropdown */}
+                            <h4 className="text-xs font-semibold text-gray-700 mb-2">Select Batches:</h4>
+                            <ul className="space-y-1 max-h-40 overflow-y-auto">
+                              {itemBatches.map((batch) => (
+                                <li key={batch.name} className="flex items-center justify-between text-xs text-gray-600">
+                                  <label htmlFor={`batch-${batch.name}`} className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      id={`batch-${batch.name}`}
+                                      checked={!!selectedManualBatches[batch.name]}
+                                      onChange={(e) => {
+                                        const isChecked = e.target.checked;
+                                        setSelectedManualBatches(prev => {
+                                          const newState = { ...prev };
+                                          if (isChecked) {
+                                            newState[batch.name] = batch.batch_qty > 0 ? 1 : 0; // Default to 1 or 0 if batch qty is 0
+                                          } else {
+                                            delete newState[batch.name];
+                                          }
+                                          return newState;
+                                        });
+                                      }}
+                                      className="form-checkbox h-4 w-4 text-blue-600 rounded"
+                                    />
+                                    <span>{batch.name} (Exp: {batch.expiry_date} | Qty: {batch.batch_qty})</span>
+                                  </label>
+                                  {!!selectedManualBatches[batch.name] && (
+                                    <Input
+                                      type="number"
+                                      value={selectedManualBatches[batch.name] || 0}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value) || 0;
+                                        setSelectedManualBatches(prev => ({
+                                          ...prev,
+                                          [batch.name]: Math.min(Math.max(0, val), batch.batch_qty) // Clamp between 0 and available batch qty
+                                        }));
+                                      }}
+                                      min="0"
+                                      max={batch.batch_qty}
+                                      className="w-20 text-xs py-1 px-2"
+                                      onClick={(e) => e.stopPropagation()} // Prevent checkbox toggle
+                                    />
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                       </div>
@@ -610,7 +666,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                           className="h-4 w-4 text-gray-400 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent li onClick from firing
-                            handleDistributedQuantitySelection(item, quantity); // Use the new handler
+                            handleDistributedQuantitySelection(item, quantity, Object.keys(selectedManualBatches)); // Use the new handler
                           }}
                         />
                       </div>
@@ -685,13 +741,18 @@ const calculateItemTaxAndTotals = (item: Item): CalculatedItem => {
 export default function NewBill() {
   const [remarks, setRemarks] = useState('');
 
+  // --- START: Added state for file upload ---
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+  // --- END: Added state for file upload ---
+
   const router = useRouter();
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
   const { classifications, fetchUserDefaultCompany } = useFrappeApi();
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-  const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+  const ITEM_DETAILS_API_URL = 'http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
   // Function to fetch item batches filtered by warehouse and company
   const fetchItemBatches = async (itemCode: string) => {
@@ -712,7 +773,7 @@ export default function NewBill() {
       };
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -747,7 +808,7 @@ export default function NewBill() {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
-      const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+      const resp = await fetch('http://103.219.1.138:4430/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -860,7 +921,7 @@ export default function NewBill() {
   const [showPosProfileSelector, setShowPosProfileSelector] = useState(false);
   const [showPatientRequisitionList, setShowPatientRequisitionList] = useState(false);
   const [showPrescriptionList, setShowPrescriptionList] = useState(false);
-  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  // const [showDocumentUpload, setShowDocumentUpload] = useState(false); // This state is now managed above
   const [kitOptions, setKitOptions] = useState<{ label: string; value: string }[]>([]);
   const [showAlternativeItemsPopover, setShowAlternativeItemsPopover] = useState(false);
   const [itemSeekingAlternatives, setItemSeekingAlternatives] = useState<Item | null>(null);
@@ -882,6 +943,10 @@ export default function NewBill() {
 
   // Global discount state
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
+
+  const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('cash');
+
+  const [isOpdEffect, setIsOpdEffect] = useState(false);
 
   // New state variables for tax details
   const [taxTemplate, setTaxTemplate] = useState<string>('');
@@ -908,6 +973,13 @@ export default function NewBill() {
     paymentDate: string;
     approvalNo: string;
   }>>([]);
+
+  // --- START: Added function to clear file ---
+  const handleClearFile = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents the modal from opening
+    setSelectedDocument(null);
+  };
+  // --- END: Added function to clear file ---
 
   // Function to recalculate totals
   const recalculateTotals = (itemsList: Item[]) => {
@@ -1009,7 +1081,7 @@ export default function NewBill() {
           'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
-        const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+        const taxTemplateResponse = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
           headers: taxTemplateHeaders,
           credentials: 'include',
@@ -1031,7 +1103,7 @@ export default function NewBill() {
           'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
-        const taxAccountsResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+        const taxAccountsResponse = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
           method: 'POST',
           headers: taxAccountsHeaders,
           credentials: 'include',
@@ -1069,7 +1141,7 @@ export default function NewBill() {
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
 
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+        const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -1111,7 +1183,7 @@ export default function NewBill() {
         };
 
         const response = await fetch(
-          'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+          'http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
           {
             method: 'POST',
             headers,
@@ -1162,7 +1234,7 @@ export default function NewBill() {
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
 
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+      const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1275,6 +1347,8 @@ export default function NewBill() {
           sgstPercent: taxDetails.sgstRate,
           igstPercent: taxDetails.igstRate,
           taxTemplate: taxDetails.taxTemplate,
+          // Add alternateBatches only if it's an alternative item
+          alternateBatches: item.substituteItem ? "1" : "",
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         const updatedItems = [...prevItems, newItemWithCalculations];
@@ -1289,23 +1363,23 @@ export default function NewBill() {
   };
 
   // const handleRemoveItemFromDetails = (itemId: string) => {
-  //   setItems(prevItems => prevItems.filter(item => item.id !== itemId));
-  //   showAlert("success", "Success", "Item removed successfully");
+  //    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+  //    showAlert("success", "Success", "Item removed successfully");
   // };
 
   // const handleUpdateQuantity = (itemId: string, newQty: number) => {
-  //   if (newQty <= 0) {
-  //     handleRemoveItemFromDetails(itemId);
-  //     return;
-  //   }
-  //   setItems(prevItems =>
-  //     prevItems.map(item =>
-  //       item.id === itemId
-  //         ? calculateItemTaxAndTotals({ ...item, orderedQty: newQty })
-  //         : item
-  //     )
-  //   );
-  //   showAlert("success", "Success", "Quantity updated successfully");
+  //    if (newQty <= 0) {
+  //       handleRemoveItemFromDetails(itemId);
+  //       return;
+  //    }
+  //    setItems(prevItems =>
+  //       prevItems.map(item =>
+  //          item.id === itemId
+  //             ? calculateItemTaxAndTotals({ ...item, orderedQty: newQty })
+  //             : item
+  //       )
+  //    );
+  //    showAlert("success", "Success", "Quantity updated successfully");
   // };
 
   // Save as Draft functionality
@@ -1329,15 +1403,15 @@ export default function NewBill() {
 
     // // Check if POS session is open
     // try {
-    //   const isPosOpen = await checkOpenPOS(posProfile);
-    //   if (!isPosOpen) {
-    //     showAlert("danger", "Error", "No open POS session found for the selected profile.");
-    //     return;
-    //   }
+    //    const isPosOpen = await checkOpenPOS(posProfile);
+    //    if (!isPosOpen) {
+    //       showAlert("danger", "Error", "No open POS session found for the selected profile.");
+    //       return;
+    //    }
     // } catch (error) {
-    //   console.error("Error checking POS session:", error);
-    //   showAlert("danger", "Error", "Failed to verify POS session. Please try again.");
-    //   return;
+    //    console.error("Error checking POS session:", error);
+    //    showAlert("danger", "Error", "Failed to verify POS session. Please try again.");
+    //    return;
     // }
 
     const payload = {
@@ -1495,7 +1569,7 @@ export default function NewBill() {
 
     try {
       console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+      const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1508,15 +1582,32 @@ export default function NewBill() {
 
       if (response.ok) {
         const result = await response.json();
-        showAlert("success", "Success", "POS Invoice saved as draft successfully!");
-        console.log("Draft saved:", result);
-        // clearPatient();
-        // router.push("/pos");
-      } else {
-        const errorData = await response.json();
+    
+        if (result.message?.status === "error") {
+            // When backend returns error status
+            showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
+            console.error("Draft save error:", result);
+        } 
+        else if (result.message?.status === "success") {
+            // When draft saved successfully
+            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+            console.log("Draft saved:", result);
+            // clearPatient();
+            // router.push("/pos");
+        } 
+        else {
+            // Unknown or unexpected response structure
+            showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
+            console.warn("Unexpected result:", result);
+        }
+    
+    } else {
+        // HTTP-level error (non-2xx)
+        const errorData = await response.json().catch(() => ({}));
         console.error("Failed to save draft:", response.status, errorData);
-        showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error'}`);
-      }
+        showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
+    }
+    
     } catch (error) {
       console.error("Error saving draft:", error);
       showAlert("danger", "Error", "Error saving draft. Please try again.");
@@ -1593,6 +1684,12 @@ export default function NewBill() {
   useEffect(() => {
     console.log("patientData updated:", patientData);
   }, [patientData]);
+
+  useEffect(() => {
+    if (transactionType === 'credit') {
+      setIsOpdEffect(true);
+    }
+  }, [transactionType]);
 
   const handleSelectRequisition = async (requisition: any) => {
     console.log("Selected requisition:", requisition);
@@ -1687,8 +1784,8 @@ export default function NewBill() {
           // Trigger alternative selection flow instead of adding without batch
           const originalItemForAlt: Item = {
             id: `${itemCode}-alt-${Date.now()}`,
-            alternateBatches: "",
-            substituteItem: "",
+            alternateBatches: "1", // Indicate it's an alternative item
+            substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
             uom: reqItem.unit,
@@ -1734,8 +1831,8 @@ export default function NewBill() {
 
             const itemToAdd: Item = {
               id: `${itemCode}-${batch.name}-${Date.now()}`,
-              alternateBatches: "",
-              substituteItem: "",
+              alternateBatches: "1", // Indicate it's an alternative item
+              substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
               itemCode: itemCode,
               itemName: reqItem.item_name,
               uom: reqItem.unit,
@@ -1773,8 +1870,8 @@ export default function NewBill() {
           showAlert("warning", "Warning", `Only ${requestedQty - remainingQtyToAllocate} of ${requestedQty} quantity for item ${itemCode} could be fulfilled from batches. Showing alternatives for remaining ${remainingQtyToAllocate}.`);
           const originalItemForAltPartial: Item = {
             id: `${itemCode}-alt-${Date.now()}`,
-            alternateBatches: "",
-            substituteItem: "",
+            alternateBatches: "1", // Indicate it's an alternative item
+            substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
             uom: reqItem.unit,
@@ -1907,8 +2004,8 @@ export default function NewBill() {
           showAlert("warning", "Warning", `No batches available for item ${itemCode} from prescription. Showing alternatives...`);
           const originalItemForAlt: Item = {
             id: `${itemCode}-alt-${Date.now()}`,
-            alternateBatches: "",
-            substituteItem: "",
+            alternateBatches: "1", // Indicate it's an alternative item
+            substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
             uom: reqItem.unit,
@@ -1933,7 +2030,7 @@ export default function NewBill() {
             igstAmt: 0,
             totalAmt: 0,
             totalPckgAmt: 0,
-            kitName: "",
+            kitName: "", // Add kitName
             packageName: "",
             binLocation: "",
           };
@@ -1954,8 +2051,8 @@ export default function NewBill() {
 
             const itemToAdd: Item = {
               id: `${itemCode}-${batch.name}-${Date.now()}`,
-              alternateBatches: "",
-              substituteItem: "",
+              alternateBatches: "1", // Indicate it's an alternative item
+              substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
               itemCode: itemCode,
               itemName: reqItem.item_name,
               uom: reqItem.unit,
@@ -1993,8 +2090,8 @@ export default function NewBill() {
           showAlert("warning", "Warning", `Only ${requestedQty - remainingQtyToAllocate} of ${requestedQty} quantity for item ${itemCode} could be fulfilled from batches. Showing alternatives for remaining ${remainingQtyToAllocate}.`);
           const originalItemForAltPartial: Item = {
             id: `${itemCode}-alt-${Date.now()}`,
-            alternateBatches: "",
-            substituteItem: "",
+            alternateBatches: "1", // Indicate it's an alternative item
+            substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
             uom: reqItem.unit,
@@ -2223,6 +2320,7 @@ export default function NewBill() {
       batchStockQty: batchStockQty,
       rate: itemRate,
       substituteItem: itemSeekingAlternatives.itemCode,
+      alternateBatches: "1", // Indicate it's an alternative item
     };
     await handleAddItemToDetails(itemToAdd);
     setItemSeekingAlternatives(null);
@@ -2543,7 +2641,7 @@ export default function NewBill() {
 
         // Print the invoice
         const company = selectedCompany || result.data?.company || '';
-        const printUrl = 'https://192.168.7.221:4422/printview?' +
+        const printUrl = 'http://103.219.1.138:4430/printview?' +
           'doctype=POS Invoice&' +
           'name=' + encodeURIComponent(loadedInvoiceName) + '&' +
           'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2661,7 +2759,7 @@ export default function NewBill() {
           total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount,
           tax_amount_after_discount_amount: totalCgstAmount,
           base_tax_amount: totalCgstAmount,
-          base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount,
+          base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           base_tax_amount_after_discount_amount: totalCgstAmount,
           item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
             if (item.cgstAmt !== 0) {
@@ -2680,10 +2778,10 @@ export default function NewBill() {
           rate: taxBaseAmount !== 0 ? (totalSgstAmount / taxBaseAmount) * 100 : 0,
           gst_tax_type: "sgst",
           tax_amount: totalSgstAmount,
-          total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount,
+          total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           tax_amount_after_discount_amount: totalSgstAmount,
           base_tax_amount: totalSgstAmount,
-          base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount,
+          base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           base_tax_amount_after_discount_amount: totalSgstAmount,
           item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
             if (item.sgstAmt !== 0) {
@@ -2702,10 +2800,10 @@ export default function NewBill() {
           rate: taxBaseAmount !== 0 ? (totalIgstAmount / taxBaseAmount) * 100 : 0,
           gst_tax_type: "igst",
           tax_amount: totalIgstAmount,
-          total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount,
+          total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           tax_amount_after_discount_amount: totalIgstAmount,
           base_tax_amount: totalIgstAmount,
-          base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount,
+          base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           base_tax_amount_after_discount_amount: totalIgstAmount,
           item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
             if (item.igstAmt !== 0) {
@@ -2725,7 +2823,7 @@ export default function NewBill() {
 
       try {
         console.log("Final payload for creating submitted invoice:", finalPayload);
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+        const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2756,7 +2854,7 @@ export default function NewBill() {
 
         // Print the invoice
         const company = selectedCompany || patientData.company || '';
-        const printUrl = 'https://192.168.7.221:4422/printview?' +
+        const printUrl = 'http://103.219.1.138:4430/printview?' +
           'doctype=POS Invoice&' +
           'name=' + encodeURIComponent(invoiceName) + '&' +
           'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2790,7 +2888,7 @@ export default function NewBill() {
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
 
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+      const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -2860,50 +2958,50 @@ export default function NewBill() {
         <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
 
           {/* <div className="flex flex-col items-center space-y-4">
-            <div className="w-full">
-              <SelectInput
-                placeholder="Select Search Type"
-                value={selectedValue}
-                data={selectOptions}
-                onValueChange={(v: string) => handleSelectChange(v)}
-                className="text-[#60646C] text-xs font-normal w-full"
-              />
-            </div>
-            <div className="relative w-full">
-              <Input
-                value={searchValue}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search Patients"
-                className="w-full"
-              />
-              {isLoading && <div className="loading-text">Searching...</div>}
-              {showDropdown && (
-                <div className="autocomplete-dropdown">
-                  {searchResults.length === 0 ? (
-                    <div className="dropdown-item no-results">No patients found</div>
-                  ) : (
-                    searchResults.map((patient) => (
-                      <div
-                        key={patient.id}
-                        className="dropdown-item"
-                        onClick={() => handleSelectPatient(patient)}
-                      >
-                        <div className="patient-dropdown-item">
-                          <div className="patient-name">{patient.patientFullName || "N/A"}</div>
-                          <div className="patient-details">
-                            <span>MRN: {patient.mrn || "N/A"}</span>
-                            <span>Age: {patient.ageDisplay || "N/A"}</span>
-                            <span>Gender: {patient.genderValue || "N/A"}</span>
-                            {patient.mobileNo && <span>Mobile: {patient.mobileNo}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          </div> */}
+             <div className="w-full">
+               <SelectInput
+                 placeholder="Select Search Type"
+                 value={selectedValue}
+                 data={selectOptions}
+                 onValueChange={(v: string) => handleSelectChange(v)}
+                 className="text-[#60646C] text-xs font-normal w-full"
+               />
+             </div>
+             <div className="relative w-full">
+               <Input
+                 value={searchValue}
+                 onChange={(e) => handleSearchChange(e.target.value)}
+                 placeholder="Search Patients"
+                 className="w-full"
+               />
+               {isLoading && <div className="loading-text">Searching...</div>}
+               {showDropdown && (
+                 <div className="autocomplete-dropdown">
+                   {searchResults.length === 0 ? (
+                     <div className="dropdown-item no-results">No patients found</div>
+                   ) : (
+                     searchResults.map((patient) => (
+                       <div
+                         key={patient.id}
+                         className="dropdown-item"
+                         onClick={() => handleSelectPatient(patient)}
+                       >
+                         <div className="patient-dropdown-item">
+                           <div className="patient-name">{patient.patientFullName || "N/A"}</div>
+                           <div className="patient-details">
+                             <span>MRN: {patient.mrn || "N/A"}</span>
+                             <span>Age: {patient.ageDisplay || "N/A"}</span>
+                             <span>Gender: {patient.genderValue || "N/A"}</span>
+                             {patient.mobileNo && <span>Mobile: {patient.mobileNo}</span>}
+                           </div>
+                         </div>
+                       </div>
+                     ))
+                   )}
+                 </div>
+               )}
+             </div>
+           </div> */}
 
           <div>
             <OpdCard
@@ -2939,9 +3037,7 @@ export default function NewBill() {
             totalSgstAmount={totalSgstAmount}
             totalIgstAmount={totalIgstAmount}
             posProfile={posProfile || undefined}
-            onRecordPayments={(data) => {
-              setRecordedPayments(data.payments || []);
-            }}
+          // onRecordPayments prop is removed
           />
         </div>
 
@@ -2992,13 +3088,47 @@ export default function NewBill() {
                   <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
                     Prescription
                   </Button>
+
+                  {/* --- START: Modified Upload Button --- */}
                   <Button
-                    type="primary-button"
+                    type={selectedDocument ? "secondary-button" : "primary-button"} // Changes style
                     size="button-medium"
-                    onClick={() => setShowDocumentUpload(true)}
+                    onClick={() => setShowDocumentUpload(true)} // Still opens the modal
                   >
-                    Upload
+                    {selectedDocument ? (
+                      // --- Show file name if selected ---
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="truncate max-w-[150px]"
+                          title={selectedDocument.name}
+                        >
+                          {selectedDocument.name}
+                        </span>
+                        <X
+                          className="h-4 w-4 text-gray-600 cursor-pointer hover:text-red-500"
+                          onClick={handleClearFile} // Add clear handler
+                        />
+                      </div>
+                    ) : (
+                      // --- Default text ---
+                      'Upload'
+                    )}
                   </Button>
+                  {/* --- END: Modified Upload Button --- */}
+
+
+                  {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
+                  <div className="w-full sm:w-auto flex-1 min-w-[150px]">
+                    <RenderFormElement
+                      inputType="input"
+                      InputValueType="text"
+                      value={toLocation}
+                      onChange={setToLocation}
+                      placeholder="Barcode"
+                    />
+                  </div>
+
+
                 </div>
 
                 <RenderFormElement
@@ -3030,17 +3160,47 @@ export default function NewBill() {
                   >
                     Apply Discount
                   </Button>
-                  {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                  <div className="w-full sm:w-auto flex-1 min-w-[150px]">
-                    <RenderFormElement
-                      inputType="input"
-                      InputValueType="text"
-                      value={toLocation}
-                      onChange={setToLocation}
-                      placeholder="Barcode"
-                    />
 
+                  {/* Transaction Type Toggle*/}
+                  <div className="flex items-center gap-2 ml-2">
+                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
+                    <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
+                      <button
+                        onClick={() => setTransactionType('cash')}
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        Cash
+                      </button>
+                      <button
+                        onClick={() => setTransactionType('credit')}
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        Credit
+                      </button>
+                    </div>
                   </div>
+
+                  {/* OPD Effect Checkbox */}
+                  <div className="flex items-center gap-2 pl-2">
+                    <Checkbox
+                      id="Opd-effect"
+                      checked={isOpdEffect}
+                      onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
+                    />
+                    <Label
+                      htmlFor="Opd-effect"
+                      className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
+                    >
+                      OPD Effect
+                    </Label>
+                  </div>
+
                 </div>
 
               </div>
@@ -3067,6 +3227,15 @@ export default function NewBill() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+          {/* Payment Table Component for New Bill Page */}
+          <PaymentTable
+            payments={recordedPayments}
+            setPayments={setRecordedPayments}
+            posProfile={posProfile ?? undefined}
+            apiKey={apiKey ?? undefined}
+            apiSecret={apiSecret ?? undefined}
+            totalBillAmount={totalBillAmount}
+          />
         </div>
       </div>
 
@@ -3133,13 +3302,18 @@ export default function NewBill() {
         />
       )}
 
+      {/* --- START: Modified Modal Call --- */}
       {showDocumentUpload && (
         <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-100">
           <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
-            <Document setOpen={setShowDocumentUpload} />
+            <Document
+              setOpen={setShowDocumentUpload}
+              onFileSelect={(file) => setSelectedDocument(file)} // Pass the file to state
+            />
           </div>
         </div>
       )}
+      {/* --- END: Modified Modal Call --- */}
 
 
       {showAlternativeItemsPopover && itemSeekingAlternatives && (
@@ -3178,7 +3352,7 @@ export default function NewBill() {
           invoice={selectedInvoiceForReturn}
           onSubmit={async (returnData) => {
             try {
-              const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+              const response = await fetch('http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -3212,62 +3386,61 @@ export default function NewBill() {
       )}
 
       <style jsx>{`
-        .autocomplete-dropdown {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          max-height: 300px;
-          overflow-y: auto;
-          z-index: 1000;
-        }
-        .dropdown-item {
-          padding: 8px 12px;
-          cursor: pointer;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        .dropdown-item:hover {
-          background-color: #f5f5f5;
-        }
-        .dropdown-item:last-child {
-          border-bottom: none;
-        }
-        .dropdown-item.no-results {
-          color: #666;
-          font-style: italic;
-          cursor: default;
-        }
-        .dropdown-item.no-results:hover {
-          background-color: white;
-        }
-        .patient-dropdown-item {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .patient-name {
-          font-weight: 600;
-          color: #333;
-        }
-        .patient-details {
-          font-size: 12px;
-          color: #666;
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-        .loading-text {
-          font-size: 12px;
-          color: #666;
-          font-style: italic;
-          margin-left: 8px;
-        }
-      `}</style>
+         .autocomplete-dropdown {
+           position: absolute;
+           top: 100%;
+           left: 0;
+           right: 0;
+           background: white;
+           border: 1px solid #ddd;
+           border-radius: 4px;
+           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+           max-height: 300px;
+           overflow-y: auto;
+           z-index: 1000;
+         }
+         .dropdown-item {
+           padding: 8px 12px;
+           cursor: pointer;
+           border-bottom: 1px solid #f0f0f0;
+         }
+         .dropdown-item:hover {
+           background-color: #f5f5f5;
+         }
+         .dropdown-item:last-child {
+           border-bottom: none;
+         }
+         .dropdown-item.no-results {
+           color: #666;
+           font-style: italic;
+           cursor: default;
+         }
+         .dropdown-item.no-results:hover {
+           background-color: white;
+         }
+         .patient-dropdown-item {
+           display: flex;
+           flex-direction: column;
+           gap: 4px;
+         }
+         .patient-name {
+           font-weight: 600;
+           color: #333;
+         }
+         .patient-details {
+           font-size: 12px;
+           color: #666;
+           display: flex;
+           gap: 12px;
+           flex-wrap: wrap;
+         }
+         .loading-text {
+           font-size: 12px;
+           color: #666;
+           font-style: italic;
+           margin-left: 8px;
+         }
+       `}</style>
     </div>
   );
 }
-

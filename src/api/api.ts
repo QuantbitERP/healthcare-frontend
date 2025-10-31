@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext"; // Adjust the import path as needed
 
-const FRAPPE_BASE_URL = "https://192.168.7.221:4422";
+const FRAPPE_BASE_URL = "http://103.219.1.138:4430";
 
 const buildFrappeApiUrl = (resource: string, fields: string[], filters?: any[]) => {
   const baseUrl = `${FRAPPE_BASE_URL}/api/resource/${encodeURIComponent(resource)}`;
@@ -71,6 +71,7 @@ export const useFrappeApi = () => {
   const [departments, setDepartments] = useState<any[]>([]);
   const [localBranches, setLocalBranches] = useState<any[]>([]);
   const [subDepartments, setSubDepartments] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
 
   // Fetch warehouses
   const fetchWarehouses = useCallback(async () => {
@@ -540,6 +541,55 @@ export const useFrappeApi = () => {
     }
   }, [isAuthenticated, apiKey, apiSecret]);
 
+  // Fetch doctors
+  const fetchDoctors = useCallback(async (branch: string) => {
+    if (!isAuthenticated) {
+      console.error("Not authenticated. Cannot fetch doctors.");
+      throw new Error("Authentication required to fetch doctors.");
+    }
+
+    if (!branch) {
+        console.warn("Branch not selected. Cannot fetch doctors.");
+        setDoctors([]);
+        return [];
+    }
+
+    const url = `${FRAPPE_BASE_URL}/api/method/quantbit_hims_integration.quantbit_hims_integration.doctor_api.get_doctor_list`;
+
+    try {
+      console.log(`Fetching doctors for branch: ${branch}...`);
+      const authHeader = `token ${apiKey}:${apiSecret}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ branch: branch }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const doctorData = data.message.data.items.map((doctor: any) => ({
+        name: doctor.value,
+        label: doctor.value,
+        value: doctor.key, // Assuming 'name' is the unique identifier for the doctor
+      }));
+      console.log("Doctors loaded successfully:", doctorData);
+      setDoctors(doctorData);
+      return doctorData;
+    } catch (error) {
+      console.error(`Error fetching doctors for branch ${branch}:`, error);
+      setDoctors([]);
+      return [];
+    }
+  }, [isAuthenticated, apiKey, apiSecret]);
+
   // Automatically fetch data on mount if authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -567,6 +617,7 @@ export const useFrappeApi = () => {
     fetchSubDepatment,
     fetchUserDefaultCompany,
     fetchWarehouseForSubdepartment,
+    fetchDoctors,
     buildFrappeApiUrl,
     warehouses,
     branches,
@@ -576,6 +627,7 @@ export const useFrappeApi = () => {
     customers,
     localBranches,
     departments,
-    subDepartments
+    subDepartments,
+    doctors
   };
 };

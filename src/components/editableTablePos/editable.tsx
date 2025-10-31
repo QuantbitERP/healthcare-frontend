@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+"use client";
+import React, { useState, useEffect } from 'react';
 
 import {
   useReactTable,
@@ -7,8 +8,9 @@ import {
   flexRender,
   RowData,
 } from "@tanstack/react-table";
+import { Checkbox } from "@/components/ui/checkbox";
+import BulkAction from "../bulkAction/BulkAction";
 
-// Define the Item interface
 interface Item {
   id: string;
   alternateBatches: string;
@@ -42,104 +44,6 @@ interface Item {
   binLocation: string;
 }
 
-// Sample data
-// const sampleItems: Item[] = [
-//   {
-//     id: '1',
-//     alternateBatches: '',
-//     substituteItem: '',
-//     itemCode: 'ITM001',
-//     itemName: 'Paracetamol 500mg',
-//     uom: 'Tablet',
-//     stockQty: 100,
-//     orderedQty: 50,
-//     saleQty: 50,
-//     batch: 'B001',
-//     batchNo: 'BN001',
-//     expiryDate: '2025-12-31',
-//     batchStockQty: 100,
-//     rate: 2.50,
-//     taxTemplate: 'GST',
-//     description: 'Pain relief medication',
-//     itemAmount: 125.00,
-//     discountPercent: 5,
-//     discountAmt: 6.25,
-//     cgstPercent: 9,
-//     cgstAmt: 11.25,
-//     sgstPercent: 9,
-//     sgstAmt: 11.25,
-//     igstPercent: 0,
-//     igstAmt: 0,
-//     totalAmt: 141.25,
-//     totalPckgAmt: 0.00,
-//     packageName: 'Standard Package',
-//     binLocation: 'Bin 1'
-//   },
-//   {
-//     id: '2',
-//     alternateBatches: '',
-//     substituteItem: '',
-//     itemCode: 'ITM002',
-//     itemName: 'Amoxicillin 250mg Capsule',
-//     uom: 'Capsule',
-//     stockQty: 75,
-//     orderedQty: 30,
-//     saleQty: 30,
-//     batch: 'B002',
-//     batchNo: 'BN002',
-//     expiryDate: '2026-06-15',
-//     batchStockQty: 75,
-//     rate: 5.00,
-//     taxTemplate: 'GST',
-//     description: 'Antibiotic medication',
-//     itemAmount: 150.00,
-//     discountPercent: 10,
-//     discountAmt: 15.00,
-//     cgstPercent: 9,
-//     cgstAmt: 13.50,
-//     sgstPercent: 9,
-//     sgstAmt: 13.50,
-//     igstPercent: 0,
-//     igstAmt: 0,
-//     totalAmt: 162.00,
-//     totalPckgAmt: 0.00,
-//     packageName: 'Standard Package',
-//     binLocation: 'Bin 1'
-//   },
-//   {
-//     id: '3',
-//     alternateBatches: '',
-//     substituteItem: '',
-//     itemCode: 'ITM003',
-//     itemName: 'Vitamin D3 60000 IU',
-//     uom: 'Capsule',
-//     stockQty: 200,
-//     orderedQty: 25,
-//     saleQty: 25,
-//     batch: 'B003',
-//     batchNo: 'BN003',
-//     expiryDate: '2025-09-30',
-//     batchStockQty: 200,
-//     rate: 15.00,
-//     taxTemplate: 'GST',
-//     description: 'Vitamin supplement',
-//     itemAmount: 375.00,
-//     discountPercent: 0,
-//     discountAmt: 0,
-//     cgstPercent: 9,
-//     cgstAmt: 33.75,
-//     sgstPercent: 9,
-//     sgstAmt: 33.75,
-//     igstPercent: 0,
-//     igstAmt: 0,
-//     totalAmt: 442.50,
-//     totalPckgAmt: 0.00,
-//     packageName: 'Standard Package',
-//     binLocation: 'Bin 1'
-//   }
-// ];
-
-// Editable Cell Component
 const EditableCell = ({
   value: initialValue,
   row,
@@ -204,21 +108,22 @@ const EditableCell = ({
   );
 };
 
-// Button component
 const Button = ({
   onClick,
   children,
   size = "button-small",
   type = "secondary-button",
-  className = ""
+  className = "",
+  disabled
 }: {
   onClick: () => void;
   children: React.ReactNode;
   size?: string;
   type?: string;
   className?: string;
+  disabled?: boolean;
 }) => {
-  const baseClasses = "px-3 py-1 rounded text-sm font-medium transition-colors";
+  const baseClasses = "px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const sizeClasses = size === "button-small" ? "text-xs px-2 py-1" : "px-3 py-2";
   const typeClasses = type === "secondary-button"
     ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
@@ -228,17 +133,18 @@ const Button = ({
     <button
       onClick={onClick}
       className={`${baseClasses} ${sizeClasses} ${typeClasses} ${className}`}
+      disabled={disabled}
     >
       {children}
     </button>
   );
 };
 
-// Column Visibility Dropdown Component
 const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const columnLabels: { [key: string]: string } = {
+    select: "Select",
     alternateBatches: "Alternate Batches",
     substituteItem: "Substitute Item",
     itemCode: "Item Code",
@@ -269,7 +175,7 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
 
   const toggleAllColumns = (visible: boolean) => {
     table.getAllLeafColumns().forEach((column: any) => {
-      if (column.id !== 'actions') { // Keep actions column always visible
+      if (column.id !== 'actions' && column.id !== 'select') {
         column.toggleVisibility(visible);
       }
     });
@@ -280,9 +186,10 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
       <Button
         onClick={() => setIsOpen(!isOpen)}
         type="secondary-button"
-        className="w-fit h-8 cursor-pointer flex flex-row gap-1 rounded border border-gray-300 bg-[rgb(13,116,206)] px-2 py-2 text-xs text-blue-600 focus:ring-blue-500"      >
+        className="w-fit h-8 cursor-pointer flex flex-row items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-blue-600 focus:ring-blue-500"
+      >
         <span>Show Columns</span>
-        <span className="ml-1">{isOpen ? '▲' : '▼'}</span>
+        <span className="ml-1 text-gray-500">{isOpen ? '▲' : '▼'}</span>
       </Button>
 
       {isOpen && (
@@ -307,7 +214,7 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
 
           <div className="p-2">
             {table.getAllLeafColumns().map((column: any) => {
-              if (column.id === 'actions') return null; // Don't show actions in the list
+              if (column.id === 'actions' || column.id === 'select') return null;
 
               return (
                 <label
@@ -341,10 +248,12 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     </div>
   );
 };
-/* eslint-disable */
+
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
     updateCell: (rowIndex: number, columnId: string, value: any) => void;
+    // updateRow?: () => void; // Added Optional
+    // updateData?: () => void; // Added Optional
   }
 }
 interface EditableTableProps {
@@ -371,6 +280,13 @@ const EditableTable = ({
   recalculateTotals
 }: EditableTableProps) => {
 
+  const [rowSelection, setRowSelection] = useState({});
+  const [showRowActions, setShowRowActions] = useState(false);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
   const handleRemoveItemFromDetails = (itemId: string) => {
     setItems(prev => {
       const updated = prev.filter(item => item.id !== itemId);
@@ -387,7 +303,6 @@ const EditableTable = ({
         if (index === rowIndex) {
           let parsedValue = value;
 
-          // Parse numeric values
           if (['stockQty', 'orderedQty', 'saleQty', 'rate', 'itemAmount', 'discountPercent', 'discountAmt',
             'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt'].includes(columnId)) {
             parsedValue = parseFloat(value) || 0;
@@ -398,9 +313,7 @@ const EditableTable = ({
             [columnId]: parsedValue,
           };
 
-          // Handle bidirectional discount calculation
           if (columnId === 'discountAmt') {
-            // When discount amount is entered, calculate discount percentage
             const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
             const baseAmount = updatedRow.orderedQty * rate;
             if (baseAmount > 0) {
@@ -412,7 +325,6 @@ const EditableTable = ({
             }
           }
 
-          // Recalculate totals if rate, quantity, discount, or tax percentages change
           if (['rate', 'orderedQty', 'saleQty', 'discountPercent', 'discountAmt', 'cgstPercent', 'sgstPercent', 'igstPercent'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow);
@@ -435,6 +347,24 @@ const EditableTable = ({
   const table = useReactTable<Item>({
     data: items,
     columns: [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            className="flex items-center justify-center"
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center w-full h-full">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+            />
+          </div>
+        ),
+        size: 40,
+      },
       {
         accessorKey: "alternateBatches",
         header: "Alternate Batches",
@@ -465,25 +395,28 @@ const EditableTable = ({
 
             try {
               const newRate = await fetchItemPrice(item.itemCode, selectedBatchNo, 'Standard Selling');
-              // Use batch_qty from the fetched batch list instead of API call
               const newBatchQty = selectedBatch.batch_qty || 0;
 
-              setItems(prev => prev.map(i => {
-                if (i.id === item.id) {
-                  const updatedItem = {
-                    ...i,
-                    batchNo: selectedBatchNo,
-                    batch: selectedBatchNo,
-                    expiryDate: selectedBatch.expiry_date,
-                    batchStockQty: newBatchQty,
-                    stockQty: newBatchQty,
-                    rate: newRate || i.rate
-                  };
-                  // Recalculate totals if function is available
-                  return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem) : updatedItem;
-                }
-                return i;
-              }));
+              setItems(prev => {
+                const updatedItems = prev.map(i => {
+                  if (i.id === item.id) {
+                    const updatedItem = {
+                      ...i,
+                      batchNo: selectedBatchNo,
+                      batch: selectedBatchNo,
+                      expiryDate: selectedBatch.expiry_date,
+                      batchStockQty: newBatchQty,
+                      stockQty: newBatchQty,
+                      rate: newRate !== null ? newRate : i.rate
+                    };
+                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem) : updatedItem;
+                  }
+                  return i;
+                });
+                if (recalculateTotals) recalculateTotals(updatedItems);
+                return updatedItems;
+              });
+
             } catch (error) {
               console.error('Error updating batch:', error);
             }
@@ -500,7 +433,7 @@ const EditableTable = ({
               >
                 <option value="">Current: {item.batchNo || 'No Batch'}</option>
                 {loading && <option disabled>Loading...</option>}
-                {batches.map((batch) => (
+                {batches.map((batch: any) => (
                   <option key={batch.name} value={batch.name}>
                     {batch.name} (Exp: {batch.expiry_date}, Qty: {batch.batch_qty})
                   </option>
@@ -539,58 +472,44 @@ const EditableTable = ({
             if (!selectedSubstitute) return;
 
             try {
-              // Fetch batches for the substitute item
               const batches = await fetchItemBatches(selectedItemCode);
               const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
 
-              if (sortedBatches.length > 0) {
-                const firstBatch = sortedBatches[0];
-                const newRate = await fetchItemPrice(selectedItemCode, firstBatch.name, 'Standard Selling');
-                // Use batch_qty from the fetched batch list instead of API call
-                const newBatchQty = firstBatch.batch_qty || 0;
+              let firstBatch = sortedBatches.length > 0 ? sortedBatches[0] : null;
+              let newRate: number | null = null;
+              let newBatchQty = 0;
 
-                setItems(prev => prev.map(i => {
+              if (firstBatch) {
+                newRate = await fetchItemPrice(selectedItemCode, firstBatch.name, 'Standard Selling');
+                newBatchQty = firstBatch.batch_qty || 0;
+              } else {
+                newRate = await fetchItemPrice(selectedItemCode, null, 'Standard Selling');
+                console.warn(`Substitute item ${selectedItemCode} has no available batches.`);
+              }
+
+              setItems(prev => {
+                const updatedItems = prev.map(i => {
                   if (i.id === item.id) {
                     const updatedItem = {
                       ...i,
                       itemCode: selectedItemCode,
                       itemName: selectedSubstitute.alternative_item_name || selectedItemCode,
-                      batchNo: firstBatch.name,
-                      batch: firstBatch.name,
-                      expiryDate: firstBatch.expiry_date,
+                      batchNo: firstBatch ? firstBatch.name : '',
+                      batch: firstBatch ? firstBatch.name : '',
+                      expiryDate: firstBatch ? firstBatch.expiry_date : '',
                       batchStockQty: newBatchQty,
                       stockQty: newBatchQty,
-                      rate: newRate || i.rate,
-                      substituteItem: item.itemCode // Store original item code
-                    };
-                    // Recalculate totals if function is available
-                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem) : updatedItem;
-                  }
-                  return i;
-                }));
-              } else {
-                // No batches available for substitute
-                const newRate = await fetchItemPrice(selectedItemCode, null, 'Standard Selling');
-                setItems(prev => prev.map(i => {
-                  if (i.id === item.id) {
-                    const updatedItem = {
-                      ...i,
-                      itemCode: selectedItemCode,
-                      itemName: selectedSubstitute.alternative_item_name || selectedItemCode,
-                      batchNo: '',
-                      batch: '',
-                      expiryDate: '',
-                      batchStockQty: 0,
-                      stockQty: 0,
-                      rate: newRate || i.rate,
+                      rate: newRate !== null ? newRate : i.rate,
                       substituteItem: item.itemCode
                     };
-                    // Recalculate totals if function is available
                     return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem) : updatedItem;
                   }
                   return i;
-                }));
-              }
+                });
+                if (recalculateTotals) recalculateTotals(updatedItems);
+                return updatedItems;
+              });
+
             } catch (error) {
               console.error('Error updating substitute item:', error);
             }
@@ -599,7 +518,7 @@ const EditableTable = ({
           return (
             <div className="min-w-[200px]">
               <select
-                value={item.substituteItem || ''}
+                value={''}
                 onChange={handleSubstituteChange}
                 onFocus={loadSubstitutes}
                 disabled={!fetchSubstituteItems || !item.itemCode}
@@ -621,49 +540,28 @@ const EditableTable = ({
         accessorKey: "itemCode",
         header: "Item Code",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} />
         ),
       },
       {
         accessorKey: "itemName",
         header: "Item Name",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} />
         ),
       },
       {
         accessorKey: "batchNo",
         header: "Batch No.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} />
         ),
       },
       {
         accessorKey: "expiryDate",
         header: "Expiry Date",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="date"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="date" />
         ),
       },
       {
@@ -671,251 +569,134 @@ const EditableTable = ({
         header: "Stock Qty",
         cell: ({ row }) => {
           const item = row.original as Item;
-          // Display batch-specific quantity if available, otherwise show general stock qty
-          const displayQty = item.batchStockQty !== undefined && item.batchStockQty !== null
-            ? item.batchStockQty
-            : item.stockQty;
-
-          return (
-            <div className="px-2 py-1 min-h-[32px] flex items-center">
-              {displayQty}
-              {item.batchNo && (
-                <span className="ml-1 text-xs text-gray-500">
-                  (Batch: {item.batchNo})
-                </span>
-              )}
-            </div>
-          );
+          const displayQty = item.batchStockQty !== undefined && item.batchStockQty !== null ? item.batchStockQty : item.stockQty;
+          return <div className="px-2 py-1 min-h-[32px] flex items-center">{displayQty}</div>;
         },
       },
       {
         accessorKey: "orderedQty",
         header: "Ordered Qty",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "saleQty",
         header: "Sale Qty",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "rate",
         header: "Unit Sale Rate",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "uom",
         header: "UOM",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} />
         ),
       },
       {
         accessorKey: "itemAmount",
         header: "Item Amount",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "discountPercent",
         header: "Discount (%)",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "discountAmt",
         header: "Discount Amt.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "cgstPercent",
         header: "CGST (%)",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "cgstAmt",
         header: "CGST Amt.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "sgstPercent",
         header: "SGST (%)",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "sgstAmt",
         header: "SGST Amt.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "igstPercent",
         header: "IGST (%)",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "igstAmt",
         header: "IGST Amt.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "totalAmt",
         header: "Total Amt.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "kitName",
         header: "KIT Name",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue() || ''}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue() || ''} row={row} column={column} table={table} />
         ),
       },
       {
         accessorKey: "totalPckgAmt",
         header: "Total Pckg Amt.",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue()}
-            row={row}
-            column={column}
-            table={table}
-            type="number"
-          />
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
       },
       {
         accessorKey: "packageName",
         header: "Package Name",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue() || ''}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue() || ''} row={row} column={column} table={table} />
         ),
       },
       {
         accessorKey: "binLocation",
         header: "Bin Location",
         cell: ({ getValue, row, column, table }) => (
-          <EditableCell
-            value={getValue() || ''}
-            row={row}
-            column={column}
-            table={table}
-          />
+          <EditableCell value={getValue() || ''} row={row} column={column} table={table} />
         ),
       },
       {
@@ -925,11 +706,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="flex space-x-2">
-              <Button
-                onClick={() => handleRemoveItemFromDetails(item.id)}
-                size="button-small"
-                type="secondary-button"
-              >
+              <Button onClick={() => handleRemoveItemFromDetails(item.id)} size="button-small" type="secondary-button">
                 Remove
               </Button>
             </div>
@@ -937,6 +714,13 @@ const EditableTable = ({
         },
       },
     ],
+    state: {
+      rowSelection,
+      pagination,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     meta: {
@@ -945,6 +729,28 @@ const EditableTable = ({
       updateData: () => { },
     },
   });
+
+  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+
+  useEffect(() => {
+    setShowRowActions(selectedRows.length > 0);
+  }, [selectedRows]);
+
+  const deselectRows = () => {
+    setShowRowActions(false);
+    table.toggleAllPageRowsSelected(false);
+  };
+
+  const handleDelete = () => {
+    const selectedIds = selectedRows.map((row) => row.id);
+    const updatedItems = items.filter((item: Item) => !selectedIds.includes(item.id));
+    setItems(updatedItems);
+
+    if (recalculateTotals) {
+      recalculateTotals(updatedItems);
+    }
+    deselectRows();
+  };
 
   const addNewItem = () => {
     const newItem: Item = {
@@ -989,7 +795,18 @@ const EditableTable = ({
         <ColumnVisibilityDropdown table={table} />
       </div>
 
-      {/* Horizontally Scrollable Table Container */}
+      <div className="flex justify-center items-center mb-2">
+        <BulkAction
+          modalProps={{
+            open: showRowActions,
+            setOpen: deselectRows,
+          }}
+          deselectRows={deselectRows}
+          rows={selectedRows.map((row) => row.id)}
+          onDelete={handleDelete}
+        />
+      </div>
+
       <div className="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
         <table className="min-w-full divide-y divide-gray-200 bg-white">
           <thead className="bg-gray-50">
@@ -998,11 +815,9 @@ const EditableTable = ({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[120px]"
+                    className={`px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap ${header.id === 'select' ? 'w-12 text-center' : 'min-w-[120px]'}`}
                   >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -1010,9 +825,16 @@ const EditableTable = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {table.getRowModel().rows.map((row, index) => (
-              <tr key={row.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+              <tr key={row.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${row.getIsSelected() ? 'bg-blue-50' : ''}`} >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-2 py-1 whitespace-nowrap text-sm text-gray-900 min-w-[120px]">
+                  <td
+                    key={cell.id}
+                    className={`px-2 py-1 whitespace-nowrap text-sm text-gray-900 ${cell.column.id === 'select'
+                      ? 'w-12'
+                      : 'min-w-[120px]'
+                      }`}
+
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -1024,36 +846,39 @@ const EditableTable = ({
 
       <Button
         onClick={addNewItem}
-        type="button"
-        className="primary-button mt-4"
+        type="button" // Changed from primary-button to type="button" assuming Button handles primary styling
+        className="primary-button mt-4" // Keep className if it exists
       >
         + Add New Item
       </Button>
 
-      {/* Pagination Controls */}
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center space-x-2">
           <Button
             onClick={() => table.setPageIndex(0)}
             type="secondary-button"
+            disabled={!table.getCanPreviousPage()}
           >
             {'<<'}
           </Button>
           <Button
             onClick={() => table.previousPage()}
             type="secondary-button"
+            disabled={!table.getCanPreviousPage()}
           >
             {'<'}
           </Button>
           <Button
             onClick={() => table.nextPage()}
             type="secondary-button"
+            disabled={!table.getCanNextPage()}
           >
             {'>'}
           </Button>
           <Button
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             type="secondary-button"
+            disabled={!table.getCanNextPage()}
           >
             {'>>'}
           </Button>
@@ -1083,3 +908,4 @@ const EditableTable = ({
 };
 
 export default EditableTable;
+
