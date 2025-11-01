@@ -140,7 +140,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
-    const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
+    const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
 
     const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean): Promise<Item[]> => {
         try {
@@ -690,9 +690,9 @@ export default function NewBill() {
     const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
     const { classifications, fetchUserDefaultCompany } = useFrappeApi();
 
-    const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
+    const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
     // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-    const ITEM_DETAILS_API_URL = 'http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+    const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
     // Function to fetch item batches filtered by warehouse and company
     const fetchItemBatches = async (itemCode: string) => {
@@ -713,7 +713,7 @@ export default function NewBill() {
             };
 
             // Call the new API method that filters by warehouse and company
-            const response = await fetch('http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+            const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -748,7 +748,7 @@ export default function NewBill() {
                 'Content-Type': 'application/json',
                 'Authorization': `token ${apiKey}:${apiSecret}`,
             };
-            const resp = await fetch('http://103.219.1.138:4430/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+            const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -1013,7 +1013,7 @@ export default function NewBill() {
                     'Content-Type': 'application/json',
                     'Authorization': `token ${apiKey}:${apiSecret}`,
                 };
-                const taxTemplateResponse = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+                const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
                     method: 'POST',
                     headers: taxTemplateHeaders,
                     credentials: 'include',
@@ -1035,7 +1035,7 @@ export default function NewBill() {
                     'Content-Type': 'application/json',
                     'Authorization': `token ${apiKey}:${apiSecret}`,
                 };
-                const taxAccountsResponse = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+                const taxAccountsResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
                     method: 'POST',
                     headers: taxAccountsHeaders,
                     credentials: 'include',
@@ -1073,7 +1073,7 @@ export default function NewBill() {
                     'Authorization': `token ${apiKey}:${apiSecret}`,
                 };
 
-                const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+                const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
                     method: 'POST',
                     headers,
                     credentials: 'include',
@@ -1115,7 +1115,7 @@ export default function NewBill() {
                 };
 
                 const response = await fetch(
-                    'http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+                    'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
                     {
                         method: 'POST',
                         headers,
@@ -1166,7 +1166,7 @@ export default function NewBill() {
                 'Authorization': `token ${apiKey}:${apiSecret}`,
             };
 
-            const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+            const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -1497,7 +1497,7 @@ export default function NewBill() {
 
         try {
             console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-            const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+            const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2530,7 +2530,7 @@ export default function NewBill() {
 
                 // Print the invoice
                 const company = selectedCompany || result.data?.company || '';
-                const printUrl = 'http://103.219.1.138:4430/printview?' +
+                const printUrl = 'https://192.168.7.221:4422/printview?' +
                     'doctype=POS Invoice&' +
                     'name=' + encodeURIComponent(loadedInvoiceName) + '&' +
                     'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2712,7 +2712,7 @@ export default function NewBill() {
 
             try {
                 console.log("Final payload for creating submitted invoice:", finalPayload);
-                const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+                const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2743,7 +2743,7 @@ export default function NewBill() {
 
                 // Print the invoice
                 const company = selectedCompany || patientData.company || '';
-                const printUrl = 'http://103.219.1.138:4430/printview?' +
+                const printUrl = 'https://192.168.7.221:4422/printview?' +
                     'doctype=POS Invoice&' +
                     'name=' + encodeURIComponent(invoiceName) + '&' +
                     'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2777,7 +2777,7 @@ export default function NewBill() {
                 'Authorization': `token ${apiKey}:${apiSecret}`,
             };
 
-            const response = await fetch(`http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+            const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -3207,7 +3207,7 @@ export default function NewBill() {
                     invoice={selectedInvoiceForReturn}
                     onSubmit={async (returnData) => {
                         try {
-                            const response = await fetch('http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+                            const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',

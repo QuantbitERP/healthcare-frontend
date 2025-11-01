@@ -75,7 +75,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
           onClick={async () => {
             setLoading(true);
             try {
-              const res = await fetch(`http://103.219.1.138:4430/api/resource/POS Invoice/${row.original.name}`, {
+              const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${row.original.name}`, {
                 headers: {
                   'Authorization': `token ${apiKey}:${apiSecret}`,
                 }
@@ -108,7 +108,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         limit_page_length: '100'
       });
 
-      const response = await fetch(`http://103.219.1.138:4430/api/resource/POS Invoice?${queryParams.toString()}`, {
+      const response = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice?${queryParams.toString()}`, {
         headers: {
           'Authorization': `token ${apiKey}:${apiSecret}`,
         }

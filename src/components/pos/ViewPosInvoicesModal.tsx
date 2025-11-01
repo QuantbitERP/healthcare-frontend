@@ -47,7 +47,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const { apiKey, apiSecret } = useAuth();
-  const API_BASE_URL = 'http://103.219.1.138:4430/api/resource';
+  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchInvoices = async (searchTerm: string, dates: { from: Date | null, to: Date | null }) => {
@@ -137,7 +137,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     const invoiceName = invoice.name;
     const company = invoice.company;
     console.log('Printing invoice:', invoiceName);
-    const url = 'http://103.219.1.138:4430/printview?' +
+    const url = 'https://192.168.7.221:4422/printview?' +
       'doctype=POS Invoice&' +
       'name=' + encodeURIComponent(invoiceName) + '&' +
       'format=' + encodeURIComponent(invoice.status === 'Return' ? 'IP SALE RETURN INVOICE' : 'Pos Invoice print Format') + '&' +
@@ -162,7 +162,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       };
 
       // Submit the draft invoice
-      const response = await fetch(`http://103.219.1.138:4430/api/resource/POS%20Invoice/${invoice.name}`, {
+      const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${invoice.name}`, {
         method: 'PUT',
         headers,
         credentials: 'include',

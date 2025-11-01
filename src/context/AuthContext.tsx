@@ -102,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const getCurrentUser = async (): Promise<string | null> => {
     try {
       const response = await fetch(
-        "http://103.219.1.138:4430/api/method/frappe.auth.get_logged_user",
+        "https://192.168.7.221:4422/api/method/frappe.auth.get_logged_user",
         {
           method: "GET",
           headers: {
@@ -129,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const checkOpenPOS = async (posProfile: string, user: string): Promise<boolean> => {
     try {
       const response = await fetch(
-        `http://103.219.1.138:4430/api/resource/POS Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"],["user","=","${user}"]]`,
+        `https://192.168.7.221:4422/api/resource/POS Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"],["user","=","${user}"]]`,
         {
           method: "GET",
           headers: {
@@ -153,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const checkAnyOpenPOS = async (posProfile: string): Promise<{ isOpen: boolean; entryName?: string; userName?: string } | null> => {
     try {
       const response = await fetch(
-        `http://103.219.1.138:4430/api/resource/POS Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"]]&fields=["name","user"]`,
+        `https://192.168.7.221:4422/api/resource/POS Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"]]&fields=["name","user"]`,
         {
           method: "GET",
           headers: {
