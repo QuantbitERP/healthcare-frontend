@@ -248,7 +248,7 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     </div>
   );
 };
-
+/* eslint-disable */
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
     updateCell: (rowIndex: number, columnId: string, value: any) => void;

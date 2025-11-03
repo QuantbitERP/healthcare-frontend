@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import React, { useState, useRef, ChangeEvent, DragEvent } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+// import { Skeleton } from "@/components/ui/skeleton";
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import Button from "@/components/buttons/Button"; // Import the Button component
 

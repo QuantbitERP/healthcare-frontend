@@ -12,9 +12,9 @@ interface ItemQuantity {
   [itemCode: string]: number;
 }
 
-interface SelectedBatch {
-  [itemCode: string]: string;
-}
+// interface SelectedBatch {
+//   [itemCode: string]: string;
+// }
 
 interface SelectedBatchQuantities {
   [itemCode: string]: {

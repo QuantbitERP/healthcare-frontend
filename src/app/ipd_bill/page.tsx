@@ -684,7 +684,7 @@ const calculateItemTaxAndTotals = (item: Item): CalculatedItem => {
 export default function NewBill() {
     const [remarks, setRemarks] = useState('');
 
-    const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+    const [_selectedDocument, setSelectedDocument] = useState<File | null>(null);
 
     const router = useRouter();
     const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
@@ -913,10 +913,10 @@ export default function NewBill() {
         approvalNo: string;
     }>>([]);
 
-    const handleClearFile = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevents the modal from opening
-        setSelectedDocument(null);
-    };
+    // const handleClearFile = (e: React.MouseEvent) => {
+    //     e.stopPropagation(); // Prevents the modal from opening
+    //     setSelectedDocument(null);
+    // };
 
     // Recalculate totals whenever items change
     useEffect(() => {
@@ -1510,32 +1510,32 @@ export default function NewBill() {
 
             if (response.ok) {
                 const result = await response.json();
-            
+
                 if (result.message?.status === "error") {
                     // When backend returns error status
                     showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
                     console.error("Draft save error:", result);
-                } 
+                }
                 else if (result.message?.status === "success") {
                     // When draft saved successfully
                     showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
                     console.log("Draft saved:", result);
                     // clearPatient();
                     // router.push("/pos");
-                } 
+                }
                 else {
                     // Unknown or unexpected response structure
                     showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
                     console.warn("Unexpected result:", result);
                 }
-            
+
             } else {
                 // HTTP-level error (non-2xx)
                 const errorData = await response.json().catch(() => ({}));
                 console.error("Failed to save draft:", response.status, errorData);
                 showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
             }
-            
+
         } catch (error) {
             console.error("Error saving draft:", error);
             showAlert("danger", "Error", "Error saving draft. Please try again.");

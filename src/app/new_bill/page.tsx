@@ -131,7 +131,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [selectedBatch, setSelectedBatch] = useState<string | null>(null); // New state for selected batch
+  const [_selectedBatch, setSelectedBatch] = useState<string | null>(null); // New state for selected batch
   const [itemBatches, setItemBatches] = useState<any[]>([]); // To store batches for the highlighted item
   const [quantity, setQuantity] = useState<number>(1); // New state for quantity
   const [currentRate, setCurrentRate] = useState<number | null>(null); // New state for current rate
@@ -607,11 +607,11 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                             />
                             <p className="text-xs text-gray-500 mt-1">
                               * If specific batches are selected above, the quantity will be split among them.
-                                Otherwise, it will be split using FEFO across all available batches.
+                              Otherwise, it will be split using FEFO across all available batches.
                             </p>
                           </div>
                         )}
-                                                {itemBatches.length > 0 && highlightedIndex === index && selectedWarehouse && selectedCompany && (
+                        {itemBatches.length > 0 && highlightedIndex === index && selectedWarehouse && selectedCompany && (
                           <div className="mt-2 p-2 border rounded-md bg-gray-50" onClick={(e) => e.stopPropagation()}> {/* Prevent li onClick when clicking inside batch dropdown */}
                             <h4 className="text-xs font-semibold text-gray-700 mb-2">Select Batches:</h4>
                             <ul className="space-y-1 max-h-40 overflow-y-auto">
@@ -1582,32 +1582,32 @@ export default function NewBill() {
 
       if (response.ok) {
         const result = await response.json();
-    
+
         if (result.message?.status === "error") {
-            // When backend returns error status
-            showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
-            console.error("Draft save error:", result);
-        } 
-        else if (result.message?.status === "success") {
-            // When draft saved successfully
-            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
-            console.log("Draft saved:", result);
-            // clearPatient();
-            // router.push("/pos");
-        } 
-        else {
-            // Unknown or unexpected response structure
-            showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
-            console.warn("Unexpected result:", result);
+          // When backend returns error status
+          showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
+          console.error("Draft save error:", result);
         }
-    
-    } else {
+        else if (result.message?.status === "success") {
+          // When draft saved successfully
+          showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+          console.log("Draft saved:", result);
+          // clearPatient();
+          // router.push("/pos");
+        }
+        else {
+          // Unknown or unexpected response structure
+          showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
+          console.warn("Unexpected result:", result);
+        }
+
+      } else {
         // HTTP-level error (non-2xx)
         const errorData = await response.json().catch(() => ({}));
         console.error("Failed to save draft:", response.status, errorData);
         showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
-    }
-    
+      }
+
     } catch (error) {
       console.error("Error saving draft:", error);
       showAlert("danger", "Error", "Error saving draft. Please try again.");
