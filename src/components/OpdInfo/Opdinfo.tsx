@@ -142,11 +142,11 @@ const OpdCard: React.FC<PatientCardProps> = ({
         { label: "Female", value: "Female" },
     ];
 
-    const visitTypeOptions: SelectOption[] = [
-        { label: "OP", value: "OP" },
-        { label: "IP", value: "IP" },
-        { label: "Emergency", value: "Emergency" },
-    ];
+    // const visitTypeOptions: SelectOption[] = [
+    //     { label: "OP", value: "OP" },
+    //     { label: "IP", value: "IP" },
+    //     { label: "Emergency", value: "Emergency" },
+    // ];
 
     // ... (rest of your existing functions: useEffect, searchPatients, handlers, etc.) ...
     // Update internal state when patientData prop changes
