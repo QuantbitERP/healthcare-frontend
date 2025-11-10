@@ -304,30 +304,30 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             </span>
           </div>
           <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isRoundedOff}
-                  onChange={(e) => setIsRoundedOff(e.target.checked)}
-                  className="w-4 h-4 text-[#0D74CE] border-gray-300 rounded focus:ring-[#0D74CE] focus:ring-2 cursor-pointer"
-                />
-                <span className="text-[#1C2024] text-xs font-normal">Round Off</span>
-              </label>
-              {isRoundedOff && (
-                <span className="text-[#60646C] text-xs font-normal">
-                  {calculateRoundOffValues().rounding_adjustment >= 0 ? '' : ''}
-                </span>
-              )}
-            </div>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isRoundedOff}
+                onChange={(e) => setIsRoundedOff(e.target.checked)}
+                className="w-4 h-4 text-[#0D74CE] border-gray-300 rounded focus:ring-[#0D74CE] focus:ring-2 cursor-pointer"
+              />
+              <span className="text-[#1C2024] text-xs font-normal">Round Off</span>
+            </label>
             {isRoundedOff && (
-              <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
-                
-                <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
-                <span className="text-[#1C2024] text-xs font-bold">
-                  ₹{calculateRoundOffValues().grand_total.toLocaleString()}
-                </span>
-              </div>
+              <span className="text-[#60646C] text-xs font-normal">
+                {calculateRoundOffValues().rounding_adjustment >= 0 ? '' : ''}
+              </span>
             )}
+          </div>
+          {isRoundedOff && (
+            <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
+
+              <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
+              <span className="text-[#1C2024] text-xs font-bold">
+                ₹{calculateRoundOffValues().grand_total.toLocaleString()}
+              </span>
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
@@ -397,7 +397,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
                 ₹{calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Transactions</span>
               <div className="flex items-center space-x-2">

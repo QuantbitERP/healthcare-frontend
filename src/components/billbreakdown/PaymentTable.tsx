@@ -108,6 +108,33 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
     initializePaymentMethods();
   }, [posProfile, apiKey, apiSecret]);
 
+  useEffect(() => {
+    // Update the paidAmount of the last payment entry when totalBillAmount changes
+    if (payments.length > 0) {
+      setPayments(prevPayments => {
+        const lastPaymentIndex = prevPayments.length - 1;
+        const updatedPayments = [...prevPayments];
+        updatedPayments[lastPaymentIndex] = {
+          ...updatedPayments[lastPaymentIndex],
+          paidAmount: totalBillAmount.toFixed(0),
+        };
+        return updatedPayments;
+      });
+    } else if (paymentMethods.length > 0) {
+      // If no payments exist but totalBillAmount changes, create a new one
+      setPayments([{
+        id: Date.now(),
+        paymentMode: paymentMethods[0].mode_of_payment,
+        transactionNo: '',
+        bankName: '',
+        branchName: '',
+        paidAmount: totalBillAmount.toFixed(0),
+        paymentDate: new Date().toISOString().split('T')[0],
+        approvalNo: ''
+      }]);
+    }
+  }, [totalBillAmount, payments.length, paymentMethods]);
+
   const handleAddPayment = () => {
     const defaultPaymentMode = paymentMethods.length > 0 ? paymentMethods[0].mode_of_payment : '';
     setPayments([...payments, {

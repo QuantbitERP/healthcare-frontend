@@ -33,6 +33,7 @@ interface SelectInputProps {
   size?: "sm" | "default";
   onValueChange?: (value: any) => void;
   multiple?: boolean;
+  disabled?: boolean; // <-- 1. PROP ADDED HERE
 }
 
 function getLabelForValue(
@@ -55,6 +56,7 @@ export default function SelectInput({
   onValueChange,
   selValue,
   className,
+  disabled, // <-- 2. PROP RECEIVED HERE
 }: SelectInputProps): JSX.Element {
   const [selValues, setSelValues] = useState<string[]>(
     multiple && Array.isArray(value) ? value : []
@@ -63,7 +65,7 @@ export default function SelectInput({
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
 
-  // Ensure only one dropdown stays open at a time across the app
+  // ... (rest of your existing useEffects) ...
   useEffect(() => {
     const handleCloseAll = () => setOpen(false);
     // Use a global custom event to close other selects
@@ -111,6 +113,7 @@ export default function SelectInput({
     }
   }, [value, multiple]);
 
+
   const selectPlaceholder = multiple
     ? selValues.length > 0
       ? `${selValues.length} Selected`
@@ -138,10 +141,12 @@ export default function SelectInput({
       defaultValue={
         !multiple && typeof selValue === "string" ? selValue : undefined
       }
+      disabled={disabled} // <-- 3. PROP PASSED TO ROOT SELECT
     >
       <SelectTrigger
         size={size}
         className={cn("w-full", borderLess && "border-0 shadow-none", className)}
+        disabled={disabled} // <-- 4. PROP PASSED TO TRIGGER
       >
         {multiple ? (
           <span className="text-sm text-muted-foreground">
@@ -168,6 +173,7 @@ export default function SelectInput({
               className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              disabled={disabled} // <-- 5. PROP PASSED TO SEARCH INPUT
             />
           </div>
           {options
@@ -199,6 +205,7 @@ export default function SelectInput({
               placeholder="Search"
               value={search}
               onValueChange={setSearch}
+              disabled={disabled} // <-- 6. PROP PASSED TO COMMAND INPUT
             />
             <CommandList className="[&>div]:!px-0 [&>div]:!mx-0 [&>div]:!pb-2">
               <CommandEmpty>No results found.</CommandEmpty>
@@ -222,6 +229,7 @@ export default function SelectInput({
                         onValueChange?.(updated);
                       }}
                       id="select-all"
+                      disabled={disabled} // <-- 7. PROP PASSED TO CHECKBOX
                     />
                     <label
                       className="pl-2 pr-4 cursor-pointer"
@@ -249,6 +257,7 @@ export default function SelectInput({
                         onValueChange?.(updated);
                       }}
                       id={opt?.label || ''}
+                      disabled={disabled} // <-- 8. PROP PASSED TO CHECKBOX
                     />
                     <label
                       className="pl-2 pr-4 cursor-pointer"

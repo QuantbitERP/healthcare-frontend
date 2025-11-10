@@ -148,6 +148,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
         { label: "Emergency", value: "Emergency" },
     ];
 
+    // ... (rest of your existing functions: useEffect, searchPatients, handlers, etc.) ...
     // Update internal state when patientData prop changes
     useEffect(() => {
         if (patientData) {
@@ -213,21 +214,6 @@ const OpdCard: React.FC<PatientCardProps> = ({
         }, 500),
         []
     );
-
-    // const handleSelectChange = (value: string) => {
-    //     if (selectOptions.some((option) => option.value === value)) {
-    //         setSelectedValue(value);
-    //         setSearchResults([]);
-
-    //         console.log("Search field changed:", value);
-    //         if (searchValue) {
-    //             searchPatients(searchValue, value);
-    //         }
-    //     } else {
-    //         setSelectedValue("");
-    //         showAlert('warning', 'Warning', 'Invalid search field selected.');
-    //     }
-    // };
 
     const handleSearchChange = (value: string) => {
         setSearchValue(value);
@@ -355,46 +341,6 @@ const OpdCard: React.FC<PatientCardProps> = ({
         loadWarehouses();
     }, [fetchWarehouses]);
 
-    // useEffect(() => {
-    //     const loadCustomers = async () => {
-    //         setLoading(true);
-    //         try {
-    //             const customerData = await fetchCustomer();
-    //             const customerOptions = customerData.map((customer: any) => ({
-    //                 label: customer.name || customer.customer_name || 'Unnamed Customer',
-    //                 value: customer.name,
-    //             }));
-    //             // setCustomers(customerOptions); // This line is no longer needed as customers are from context
-    //         } catch (error) {
-    //             console.error('Error fetching customers:', error);
-    //             // setCustomers([]); // This line is no longer needed
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-    //     loadCustomers();
-    // }, [fetchCustomer]);
-
-    // useEffect(() => {
-    //     const loadCompanies = async () => {
-    //         setLoading(true);
-    //         try {
-    //             const companyData = await fetchCompany();
-    //             const companyOptions = companyData.map((company: any) => ({
-    //                 label: company.name || company.company_name || 'Unnamed Company',
-    //                 value: company.name,
-    //             }));
-    //             // setCompanies(companyOptions); // This line is no longer needed
-    //         } catch (error) {
-    //             console.error('Error fetching companies:', error);
-    //             // setCompanies([]); // This line is no longer needed
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-    //     loadCompanies();
-    // }, [fetchCompany]);
-
     useEffect(() => {
         const loadBranches = async () => {
             setLoading(true);
@@ -414,46 +360,6 @@ const OpdCard: React.FC<PatientCardProps> = ({
         };
         loadBranches();
     }, [fetchBranch]);
-
-    // useEffect(() => {
-    //     const loadDepartments = async () => {
-    //         setLoading(true);
-    //         try {
-    //             const departmentData = await fetchDepatment();
-    //             const departmentOptions = departmentData.map((department: any) => ({
-    //                 label: department.name || department.department_name || 'Unnamed Department',
-    //                 value: department.name,
-    //             }));
-    //             // setDepartments(departmentOptions); // This line is no longer needed
-    //         } catch (error) {
-    //             console.error('Error fetching departments:', error);
-    //             // setDepartments([]); // This line is no longer needed
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-    //     loadDepartments();
-    // }, [fetchDepatment]);
-
-    // useEffect(() => {
-    //     const loadSubDepartments = async () => {
-    //         setLoading(true);
-    //         try {
-    //             const subDepartmentData = await fetchSubDepatment();
-    //             const subDepartmentOptions = subDepartmentData.map((subDepartment: any) => ({
-    //                 label: subDepartment.name || subDepartment.sub_department_name || 'Unnamed Sub Department',
-    //                 value: subDepartment.name,
-    //             }));
-    //             // setSubDepartments(subDepartmentOptions); // This line is no longer needed
-    //         } catch (error) {
-    //             console.error('Error fetching sub departments:', error);
-    //             // setSubDepartments([]); // This line is no longer needed
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-    //     loadSubDepartments();
-    // }, [fetchSubDepatment]);
 
     const handleWarehouseChange = useCallback(
         (value: string) => {
@@ -497,29 +403,6 @@ const OpdCard: React.FC<PatientCardProps> = ({
         [setSelectedDepartment]
     );
 
-    // const handleSubDepartmentChange = async (value: string) => {
-    //     setSelectedSubDepartment?.(value);
-
-
-    //     if (value) {
-    //         try {
-    //             const warehouse = await fetchWarehouseForSubdepartment(value);
-    //             if (warehouse) {
-    //                 setSelectedWarehouse?.(warehouse);
-    //                 console.log("Warehouse set automatically to:", warehouse);
-    //             } else {
-    //                 setSelectedWarehouse?.('');
-    //                 console.warn("No warehouse found for sub-department:", value);
-    //             }
-    //         } catch (error) {
-    //             console.error("Error fetching warehouse for sub-department:", error);
-    //             setSelectedWarehouse?.('');
-    //         }
-    //     } else {
-    //         setSelectedWarehouse?.('');
-    //     }
-    // };
-
     const handleSelectChange = (value: string) => {
         if (value) {
             // Find the actual value from the label if needed
@@ -541,6 +424,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <div className='flex flex-col w-[280px] h-fit gap-4 p-4 rounded-lg border border-[#D9D9E0] bg-[#FFF] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]'>
+                {/* ... (rest of your existing JSX) ... */}
                 <div className='flex flex-col gap-2'>
                     <div className='w-full flex flex-col gap-2'>
                         <span className='w-[208px] text-[#60646C] text-xs font-normal'>Visit Information</span>
@@ -582,15 +466,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         </div>
 
                     </div>
-                    {/* <InfoRow
-                        icon="/assets/icons/Cake.svg"
-                        label="Age / Gender"
-                        value={searchValue}
-                        selectValue={editedPatient.sex}
-                        onChange={(value) => handleFieldChange('age', value)}
-                        onSelectChange={(value) => handleFieldChange('sex', value)}
-                        selectOptions={sexOptions}
-                    /> */}
+
                     <div ref={searchRef} className="relative w-full">
                         <div className="relative">
                             <Input
@@ -801,26 +677,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                             </div>
                         </div>
                     </div>
-                    {/* <div className="flex flex-col gap-2 w-full">
-                        <div className='flex flex-row h-8 items-center justify-between'>
-                            <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
-                                <span className='w-full text-[#1C2024] text-xs font-normal'>Sub Department</span>
-                            </div>
-                            <div className='flex flex-row h-8 items-center justify-between'>
-                                <Dropdown
-                                    reasons={subDepartments.map(subDepartment => ({
-                                        key: subDepartment.value,
-                                        value: subDepartment.label,
-                                    }))}
-                                    value={selectedSubDepartment}
-                                    onChange={handleSubDepartmentChange}
-                                    placeholder="Select sub-department"
-                                    disabled={subDepartments.length === 0}
-                                />
-                            </div>
-                        </div>
-                    </div> */}
+
                     <InfoRow
                         icon="/assets/icons/Building.svg"
                         label="Customer Name"
@@ -830,11 +687,8 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <InfoRow
                         icon="/assets/icons/DoorEnter.svg"
                         label="Visit Type"
-                        value={editedPatient.visitType}
-                        selectValue={editedPatient.visitType}
-                        onSelectChange={(value) => handleFieldChange('visitType', value)}
-                        selectOptions={visitTypeOptions}
-                        disabled={!patientData}
+                        value={editedPatient.visitType || ''}
+                        disabled={true} // <-- 1. THIS IS YOUR ORIGINAL GOAL
                     />
                     <InfoRow
                         icon="/assets/icons/FirstAidKit.svg"
@@ -895,7 +749,8 @@ interface InfoRowProps {
     disabled?: boolean;
 }
 
-const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, selectValue, onChange, onSelectChange, selectOptions }) => (
+// <-- 2. 'disabled' IS NOW RECEIVED HERE
+const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, selectValue, onChange, onSelectChange, selectOptions, disabled }) => (
     <div className='flex flex-row h-8 items-center justify-between border-none border-0 border-input-none'>
         <div className='flex flex-row gap-1'>
             <Image src={icon} width={16} height={16} alt={label} />
@@ -908,12 +763,14 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, selectValue, onCh
                 data={selectOptions}
                 onValueChange={onSelectChange}
                 className="text-[#1C2024] text-xs font-semibold w-[120px] border-none border-0 border-input-none"
+                disabled={disabled} // <-- 3. PROP IS PASSED TO SELECTINPUT
             />
         ) : (
             <Input
                 value={value || ''}
                 onChange={(e) => onChange && onChange(e.target.value)}
                 className='text-[#1C2024] text-xs font-semibold w-[120px]'
+                disabled={disabled} // <-- 4. FIXED: CHANGED FROM 'true' TO 'disabled'
             />
         )}
     </div>

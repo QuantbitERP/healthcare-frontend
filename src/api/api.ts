@@ -549,9 +549,9 @@ export const useFrappeApi = () => {
     }
 
     if (!branch) {
-        console.warn("Branch not selected. Cannot fetch doctors.");
-        setDoctors([]);
-        return [];
+      console.warn("Branch not selected. Cannot fetch doctors.");
+      setDoctors([]);
+      return [];
     }
 
     const url = `${FRAPPE_BASE_URL}/api/method/quantbit_hims_integration.quantbit_hims_integration.doctor_api.get_doctor_list`;

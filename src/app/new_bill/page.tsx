@@ -75,6 +75,7 @@ export interface Item {
   packageName: string;
   binLocation: string;
   marginType?: string; // Add marginType as optional property
+  includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
 }
 
 interface ItemSearchProps {
@@ -715,17 +716,42 @@ interface CalculatedItem extends Item {
   totalAmt: number;
 }
 
-const calculateItemTaxAndTotals = (item: Item): CalculatedItem => {
+const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = false): CalculatedItem => {
   const rate = item.rate !== null ? item.rate : 0;
   const baseAmount = item.orderedQty * rate;
   const discountAmount = baseAmount * (item.discountPercent / 100);
   const itemAmountAfterDiscount = baseAmount - discountAmount;
 
-  const cgstAmount = itemAmountAfterDiscount * (item.cgstPercent / 100);
-  const sgstAmount = itemAmountAfterDiscount * (item.sgstPercent / 100);
-  const igstAmount = itemAmountAfterDiscount * (item.igstPercent / 100);
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+  let igstAmount = 0;
+  let taxableAmount = itemAmountAfterDiscount;
 
-  const totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
+  let finalCgstPercent = item.cgstPercent;
+  let finalSgstPercent = item.sgstPercent;
+  let finalIgstPercent = item.igstPercent;
+
+  if (includedInPrintRate) {
+    const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+    taxableAmount = itemAmountAfterDiscount / (1 + totalTaxRate);
+
+    cgstAmount = taxableAmount * (item.cgstPercent / 100);
+    sgstAmount = taxableAmount * (item.sgstPercent / 100);
+    igstAmount = taxableAmount * (item.igstPercent / 100);
+
+    // Recalculate percentages relative to itemAmountAfterDiscount (total price including tax)
+    if (itemAmountAfterDiscount > 0) {
+      finalCgstPercent = parseFloat(((cgstAmount / itemAmountAfterDiscount) * 100).toFixed(3));
+      finalSgstPercent = parseFloat(((sgstAmount / itemAmountAfterDiscount) * 100).toFixed(3));
+      finalIgstPercent = parseFloat(((igstAmount / itemAmountAfterDiscount) * 100).toFixed(3));
+    }
+  } else {
+    cgstAmount = taxableAmount * (item.cgstPercent / 100);
+    sgstAmount = taxableAmount * (item.sgstPercent / 100);
+    igstAmount = taxableAmount * (item.igstPercent / 100);
+  }
+
+  const totalAmount = itemAmountAfterDiscount + (includedInPrintRate ? 0 : (cgstAmount + sgstAmount + igstAmount));
 
   return {
     ...item,
@@ -735,6 +761,9 @@ const calculateItemTaxAndTotals = (item: Item): CalculatedItem => {
     sgstAmt: sgstAmount,
     igstAmt: igstAmount,
     totalAmt: totalAmount,
+    cgstPercent: finalCgstPercent, // Use the recalculated percentage
+    sgstPercent: finalSgstPercent, // Use the recalculated percentage
+    igstPercent: finalIgstPercent, // Use the recalculated percentage
   };
 };
 
@@ -981,6 +1010,70 @@ export default function NewBill() {
   };
   // --- END: Added function to clear file ---
 
+  const handleReset = () => {
+    setRemarks('');
+    setShowDocumentUpload(false);
+    setSelectedDocument(null);
+    setRequisitionDate(undefined);
+    setRequisitionNo('');
+    setRequisitionFrom('');
+    setToLocation('');
+    setSelectedKit('');
+    setSelectedSaleType('');
+    setIsRoutine(false);
+    setIsStat(false);
+    setIsDischarge(false);
+    setIsAsap(false);
+    setIsExpired(false);
+    setIsGeneric(false);
+    setItems([]);
+    setPatientData(null);
+    setShowDropdown(false);
+    setShowPosProfileSelector(false);
+    setShowPatientRequisitionList(false);
+    setShowPrescriptionList(false);
+    setKitOptions([]);
+    setShowAlternativeItemsPopover(false);
+    setItemSeekingAlternatives(null);
+    setAlternativeItems([]);
+    setSelectedWarehouse('');
+    setSelectedCustomer('');
+    setSelectedCompany('');
+    setSelectedBranch('');
+    setSelectedDepartment('');
+    setSelectedSubDepartment('');
+    setShowViewPosInvoicesModal(false);
+    setShowSelectInvoiceModal(false);
+    setShowCreateReturnModal(false);
+    setSelectedInvoiceForReturn(null);
+    setLoadedInvoiceName(null);
+    setLoadedInvoiceDocstatus(0);
+    setIsLoadingFromPosInvoice(false);
+    setGlobalDiscountPercent(0);
+    setTransactionType('cash');
+    setIsOpdEffect(false);
+    setTaxTemplate('');
+    setCgstAccounts([]);
+    setSgstAccounts([]);
+    setIgstAccounts([]);
+    setGstCategory('');
+    setTotalBillAmount(0);
+    setTotalDiscountAmount(0);
+    setTotalCgstAmount(0);
+    setTotalSgstAmount(0);
+    setTotalIgstAmount(0);
+    setShowClosingEntryModal(false);
+    setCompanyAddress(null);
+    setIsReturn(false);
+    setRecordedPayments([]);
+    setAlert({
+      show: false,
+      variant: "success",
+      heading: "",
+      content: ""
+    });
+  };
+
   // Function to recalculate totals
   const recalculateTotals = (itemsList: Item[]) => {
     // Skip recalculation if loading from POS invoice
@@ -988,7 +1081,7 @@ export default function NewBill() {
       return;
     }
 
-    const calculatedItems = itemsList.map(calculateItemTaxAndTotals);
+    const calculatedItems = itemsList.map(item => calculateItemTaxAndTotals(item, true));
 
     const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
     const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmt, 0);
@@ -1349,6 +1442,7 @@ export default function NewBill() {
           taxTemplate: taxDetails.taxTemplate,
           // Add alternateBatches only if it's an alternative item
           alternateBatches: item.substituteItem ? "1" : "",
+          includedInPrintRate: true, // Always consider included_in_print_rate as true
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         const updatedItems = [...prevItems, newItemWithCalculations];
@@ -1425,6 +1519,7 @@ export default function NewBill() {
       gst_category: gstCategory || "Unregistered",
       customer_address: CompanyAddress,
       remarks: remarks,
+      included_in_print_rate: 1, // Always consider included_in_print_rate as true
 
       posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       items: items.map(item => ({
@@ -1445,6 +1540,7 @@ export default function NewBill() {
         igst_amount: Number(item.igstAmt) || 0,
         amount: Number(item.totalAmt) || 0,
         item_tax_template: item.taxTemplate || "",
+        included_in_print_rate: 1, // Add to item payload
       })),
       payments: recordedPayments.map(p => ({
         mode_of_payment: p.paymentMode || "Cash",
@@ -2374,7 +2470,7 @@ export default function NewBill() {
         rate: discountedRate,
         discountPercent: globalDiscountPercent,
         discountAmt: originalRate * item.orderedQty * (globalDiscountPercent / 100), // Discount on original amount
-      });
+      }, true);
     });
 
     setItems(updatedItems);
@@ -2442,6 +2538,7 @@ export default function NewBill() {
       }
       setSelectedSaleType(fullInvoice.custom_sale_type || '');
       setIsReturn(fullInvoice.is_return === 1);
+      setIsOpdEffect(fullInvoice.included_in_print_rate === 1); // Set isOpdEffect from invoice
 
       // Extract tax rates from invoice taxes array
       const taxRatesFromInvoice: { [key: string]: { cgst: number, sgst: number, igst: number } } = {};
@@ -2553,6 +2650,7 @@ export default function NewBill() {
             kitName: "",
             packageName: "",
             binLocation: "",
+            includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
           };
           loadedItems.push(item);
         }
@@ -2681,10 +2779,12 @@ export default function NewBill() {
         is_pos: 1,
         update_stock: 1,
         company: selectedCompany || patientData.company || "Default Company",
-        docstatus: 1, // Submitted status
+        docstatus: 0, // Initially save as draft
         gst_category: gstCategory || "Unregistered",
         customer_address: CompanyAddress,
         remarks: remarks,
+        included_in_print_rate: 1, // Always consider included_in_print_rate as true
+
         posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         items: items.map(item => ({
           item_code: item.itemCode,
@@ -2704,6 +2804,7 @@ export default function NewBill() {
           igst_amount: Number(item.igstAmt) || 0,
           amount: Number(item.totalAmt) || 0,
           item_tax_template: item.taxTemplate || "",
+          included_in_print_rate: 1, // Add to item payload
         })),
         payments: recordedPayments.map(p => ({
           mode_of_payment: p.paymentMode || "Cash",
@@ -2841,8 +2942,31 @@ export default function NewBill() {
         }
 
         const result = await response.json();
-        const invoiceName = result.message?.name || result.data?.name;
+        const invoiceName = result.message?.data?.name; // Corrected path to invoice name
 
+        if (!invoiceName) {
+          showAlert("danger", "Error", "Failed to retrieve invoice name after saving draft.");
+          console.error("No invoice name returned:", result);
+          return;
+        }
+
+        // Now submit the created draft invoice
+        const submitResponse = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoiceName}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ docstatus: 1 }),
+        });
+
+        if (!submitResponse.ok) {
+          const errorData = await submitResponse.json();
+          showAlert("danger", "Error", `Failed to submit invoice: ${errorData.message || 'Unknown error'}`);
+          // Optionally, you might want to handle the case where submission fails after draft save
+          return;
+        }
 
         showAlert("success", "Success", `Invoice ${invoiceName} created and submitted successfully!`);
         console.log("Invoice created and submitted:", result);
@@ -2850,7 +2974,6 @@ export default function NewBill() {
         // Update state to reflect the loaded invoice
         setLoadedInvoiceName(invoiceName);
         setLoadedInvoiceDocstatus(1);
-
 
         // Print the invoice
         const company = selectedCompany || patientData.company || '';
@@ -3260,7 +3383,7 @@ export default function NewBill() {
           <Button type="secondary-button" size="button-medium">Preview & Print</Button>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
-          <Button type="secondary-button" size="button-medium">Reset</Button>
+          <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
           <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
             Save as Draft
           </Button>

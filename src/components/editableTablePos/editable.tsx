@@ -42,6 +42,8 @@ interface Item {
   totalPckgAmt: number;
   packageName: string;
   binLocation: string;
+  marginType?: string; // Add marginType as optional property
+  includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
 }
 
 const EditableCell = ({
@@ -264,7 +266,7 @@ interface EditableTableProps {
   fetchItemPrice?: (itemCode: string, batchNo: string | null, priceList: string) => Promise<number | null>;
   getBatchQty?: (itemCode: string, batchNo: string, warehouse: string) => Promise<number>;
   selectedWarehouse?: string;
-  calculateItemTaxAndTotals?: (item: Item) => Item;
+  calculateItemTaxAndTotals?: (item: Item, includedInPrintRate: boolean) => Item;
   recalculateTotals?: (itemsList: Item[]) => void;
 }
 
@@ -325,9 +327,23 @@ const EditableTable = ({
             }
           }
 
-          if (['rate', 'orderedQty', 'saleQty', 'discountPercent', 'discountAmt', 'cgstPercent', 'sgstPercent', 'igstPercent'].includes(columnId)) {
+          const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
+          const baseAmount = updatedRow.orderedQty * rate;
+          const discountAmount = baseAmount * (updatedRow.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+
+          if (columnId === 'cgstAmt' && itemAmountAfterDiscount > 0) {
+            updatedRow.cgstPercent = (parsedValue / itemAmountAfterDiscount) * 100;
+          } else if (columnId === 'sgstAmt' && itemAmountAfterDiscount > 0) {
+            updatedRow.sgstPercent = (parsedValue / itemAmountAfterDiscount) * 100;
+          } else if (columnId === 'igstAmt' && itemAmountAfterDiscount > 0) {
+            updatedRow.igstPercent = (parsedValue / itemAmountAfterDiscount) * 100;
+          }
+
+          if (['rate', 'orderedQty', 'saleQty', 'discountPercent', 'discountAmt',
+              'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
-              return calculateItemTaxAndTotals(updatedRow);
+              return calculateItemTaxAndTotals(updatedRow, true);
             }
           }
 
@@ -409,7 +425,7 @@ const EditableTable = ({
                       stockQty: newBatchQty,
                       rate: newRate !== null ? newRate : i.rate
                     };
-                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem) : updatedItem;
+                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem, true) : updatedItem;
                   }
                   return i;
                 });
@@ -502,7 +518,7 @@ const EditableTable = ({
                       rate: newRate !== null ? newRate : i.rate,
                       substituteItem: item.itemCode
                     };
-                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem) : updatedItem;
+                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem, true) : updatedItem;
                   }
                   return i;
                 });
@@ -783,7 +799,9 @@ const EditableTable = ({
       kitName: '',
       totalPckgAmt: 0.00,
       packageName: '',
-      binLocation: ''
+      binLocation: '',
+      marginType: 'Standard', // Add marginType for new item
+      includedInPrintRate: true, // Always consider included_in_print_rate as true for new items
     };
     setItems(prev => [...prev, newItem]);
   };
