@@ -76,6 +76,8 @@ export interface Item {
   binLocation: string;
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
+  genericName?: string; // Add genericName as optional property
+  mrp?: number; // Add MRP field for batch custom_mrp
 }
 
 interface ItemSearchProps {
@@ -147,10 +149,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
   const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean): Promise<Item[]> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // const headers: HeadersInit = {
+      //   'Content-Type': 'application/json',
+      //   'Authorization': `token ${apiKey}:${apiSecret}`,
+      // };
 
       const filters: any[] = [];
       if (isGeneric) {
@@ -162,15 +164,24 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
+      const fields = ["name", "item_name", "item_code", "custom_generic_name"]; // Add any fields you need
 
-      const response = await fetch(`${API_BASE_URL}/Item?filters=${JSON.stringify(filters)}${isGeneric ? '&limit_page_length=1000' : ''}`, {
-        method: 'GET',
-        headers,
-        credentials: 'include',
-      });
+
+      const response = await fetch(
+        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}` +
+        `&fields=${encodeURIComponent(JSON.stringify(fields))}` +
+        `${isGeneric ? '&limit_page_length=1000' : ''}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
+        console.log("generic item data", data);
         const fetchedItems: Item[] = data.data.map((item: any) => ({
           id: item.name || '', // Use item.name (which is itemCode) as the initial ID
           itemCode: item.name || '',
@@ -184,6 +195,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           expiryDate: '', // Initialize expiryDate
           batchStockQty: 0, // Initialize batchStockQty
           rate: item.rate || 0,
+          mrp: 0, // Initialize MRP, will be set when batch is selected
           taxTemplate: '',
           description: '',
           itemAmount: 0,
@@ -200,6 +212,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           kitName: '',
           packageName: '',
           binLocation: '',
+          genericName: item.custom_generic_name, // Map generic name from API
         }));
         return isGeneric ? fetchedItems : fetchedItems.slice(0, 10);
       } else {
@@ -336,6 +349,28 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     }
   };
 
+  // Function to fetch batch MRP
+  const fetchBatchMRP = async (batchName: string): Promise<number> => {
+    try {
+      const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data?.custom_mrp || 0;
+      }
+    } catch (error) {
+      console.error('Error fetching batch MRP:', error);
+    }
+    return 0;
+  };
+
   const handleConfirmedSelectItem = async (item: Item, batchNo: string, expiryDate: string, qtyToTake: number, batchQtyFromList?: number) => {
     if (!selectedWarehouse) {
       showAlert("danger", "Error", "Please select a warehouse first.");
@@ -348,6 +383,8 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     const warehouse = selectedWarehouse; // Use selectedWarehouse prop
     const itemRate = currentRate !== null ? currentRate : item.rate; // Use currentRate if available, otherwise fall back to item.rate
     let batchStockQty = 0; // Initialize batchStockQty
+    let batchMRP = 0; // Initialize batchMRP
+
     if (batchNo) {
       // Use the batch quantity from the list if provided, otherwise fetch from API
       if (batchQtyFromList !== undefined && batchQtyFromList !== null) {
@@ -355,6 +392,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       } else {
         batchStockQty = await getBatchQty(item.itemCode, batchNo, warehouse); // Fetch batch quantity
       }
+
+      // Fetch batch MRP
+      batchMRP = await fetchBatchMRP(batchNo);
     }
 
     const itemWithBatchAndRate: Item = {
@@ -365,6 +405,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       batchStockQty: batchStockQty, // Set batchStockQty from fetched quantity
       stockQty: batchStockQty, // Ensure stockQty also reflects the batch-specific quantity
       rate: itemRate,
+      mrp: batchMRP, // Set MRP from fetched batch MRP
       orderedQty: qtyToTake, // Set orderedQty to the quantity taken from this batch
       saleQty: qtyToTake, // Set saleQty to the quantity taken from this batch
     };
@@ -592,6 +633,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                           ) : (
                             item.rate !== null && <span>Rate: ₹{item.rate.toFixed(2)}</span> // Fallback to item.rate
                           )}
+                          {isGeneric && item.genericName && (
+                            <span className="text-blue-600 font-medium">Generic Name: {item.genericName}</span>
+                          )}
                         </div>
 
                         {highlightedIndex === index && selectedWarehouse && selectedCompany && ( // Show quantity input when item is highlighted, only if warehouse and company are selected
@@ -606,10 +650,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                               // min="1"
                               className="block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            {/* <p className="text-xs text-gray-500 mt-1">
                               * If specific batches are selected above, the quantity will be split among them.
                               Otherwise, it will be split using FEFO across all available batches.
-                            </p>
+                            </p> */}
                           </div>
                         )}
                         {itemBatches.length > 0 && highlightedIndex === index && selectedWarehouse && selectedCompany && (
@@ -718,52 +762,75 @@ interface CalculatedItem extends Item {
 
 const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = false): CalculatedItem => {
   const rate = item.rate !== null ? item.rate : 0;
-  const baseAmount = item.orderedQty * rate;
-  const discountAmount = baseAmount * (item.discountPercent / 100);
-  const itemAmountAfterDiscount = baseAmount - discountAmount;
+  const baseAmount = item.saleQty * rate;
 
   let cgstAmount = 0;
   let sgstAmount = 0;
   let igstAmount = 0;
-  let taxableAmount = itemAmountAfterDiscount;
+  let taxableAmount = 0;
+  let totalAmount = 0;
+  let discountAmount = 0;
+  let itemAmountAfterDiscount = 0;
 
   let finalCgstPercent = item.cgstPercent;
   let finalSgstPercent = item.sgstPercent;
   let finalIgstPercent = item.igstPercent;
 
   if (includedInPrintRate) {
+    // For tax-inclusive rates, the rate already includes tax
+    // First apply discount to the total amount (which includes tax)
+    discountAmount = baseAmount * (item.discountPercent / 100);
+    itemAmountAfterDiscount = baseAmount - discountAmount;
+
     const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
-    taxableAmount = itemAmountAfterDiscount / (1 + totalTaxRate);
 
-    cgstAmount = taxableAmount * (item.cgstPercent / 100);
-    sgstAmount = taxableAmount * (item.sgstPercent / 100);
-    igstAmount = taxableAmount * (item.igstPercent / 100);
+    if (totalTaxRate > 0) {
+      // Extract taxable amount from the discounted total (which includes tax)
+      taxableAmount = itemAmountAfterDiscount / (1 + totalTaxRate);
 
-    // Recalculate percentages relative to itemAmountAfterDiscount (total price including tax)
-    if (itemAmountAfterDiscount > 0) {
-      finalCgstPercent = parseFloat(((cgstAmount / itemAmountAfterDiscount) * 100).toFixed(3));
-      finalSgstPercent = parseFloat(((sgstAmount / itemAmountAfterDiscount) * 100).toFixed(3));
-      finalIgstPercent = parseFloat(((igstAmount / itemAmountAfterDiscount) * 100).toFixed(3));
+      // Calculate individual tax amounts based on taxable amount
+      cgstAmount = taxableAmount * (item.cgstPercent / 100);
+      sgstAmount = taxableAmount * (item.sgstPercent / 100);
+      igstAmount = taxableAmount * (item.igstPercent / 100);
+    } else {
+      // If no tax rates, taxable amount equals total amount
+      taxableAmount = itemAmountAfterDiscount;
+      cgstAmount = sgstAmount = igstAmount = 0;
     }
+
+    // For tax-inclusive, total amount is the discounted amount (already includes tax)
+    totalAmount = itemAmountAfterDiscount;
+
+    // Keep the original percentages as they represent the tax rates
+    finalCgstPercent = item.cgstPercent;
+    finalSgstPercent = item.sgstPercent;
+    finalIgstPercent = item.igstPercent;
   } else {
+    // For tax-exclusive rates, apply discount first, then calculate tax
+    discountAmount = baseAmount * (item.discountPercent / 100);
+    itemAmountAfterDiscount = baseAmount - discountAmount;
+    taxableAmount = itemAmountAfterDiscount;
+
+    // Calculate tax on the discounted taxable amount
     cgstAmount = taxableAmount * (item.cgstPercent / 100);
     sgstAmount = taxableAmount * (item.sgstPercent / 100);
     igstAmount = taxableAmount * (item.igstPercent / 100);
-  }
 
-  const totalAmount = itemAmountAfterDiscount + (includedInPrintRate ? 0 : (cgstAmount + sgstAmount + igstAmount));
+    // Total amount includes the calculated tax
+    totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
+  }
 
   return {
     ...item,
-    itemAmount: baseAmount,
-    discountAmt: discountAmount,
+    itemAmount: baseAmount, // Always the full amount before discount
+    discountAmt: discountAmount, // Discount amount calculated on full amount
     cgstAmt: cgstAmount,
     sgstAmt: sgstAmount,
     igstAmt: igstAmount,
-    totalAmt: totalAmount,
-    cgstPercent: finalCgstPercent, // Use the recalculated percentage
-    sgstPercent: finalSgstPercent, // Use the recalculated percentage
-    igstPercent: finalIgstPercent, // Use the recalculated percentage
+    totalAmt: totalAmount, // Final amount after discount (tax-inclusive)
+    cgstPercent: finalCgstPercent,
+    sgstPercent: finalSgstPercent,
+    igstPercent: finalIgstPercent,
   };
 };
 
@@ -991,6 +1058,7 @@ export default function NewBill() {
   const [showClosingEntryModal, setShowClosingEntryModal] = useState(false); // New state
   const [CompanyAddress, setCompanyAddress] = useState<string | null>(null);
   const [isReturn, setIsReturn] = useState(false);
+  const [roundedGrandTotal, setRoundedGrandTotal] = useState<number>(0);
   // Payments captured from RecordPaymentModal
   const [recordedPayments, setRecordedPayments] = useState<Array<{
     id: number;
@@ -1784,6 +1852,8 @@ export default function NewBill() {
   useEffect(() => {
     if (transactionType === 'credit') {
       setIsOpdEffect(true);
+    } else {
+      setIsOpdEffect(false);
     }
   }, [transactionType]);
 
@@ -2457,25 +2527,19 @@ export default function NewBill() {
       return;
     }
 
-    // Update all items with the global discount percentage applied to rate
+    // Update all items with the global discount percentage
+    // For tax-inclusive rates, apply discount to the total amount (which includes tax)
+    // The calculateItemTaxAndTotals function will handle extracting the taxable amount and taxes
     const updatedItems = items.map(item => {
-      const originalRate = item.rate !== null ? item.rate : 0;
-
-      // Apply discount to the rate itself
-      const discountedRate = originalRate * (1 - globalDiscountPercent / 100);
-
-      // Recalculate with new discounted rate
       return calculateItemTaxAndTotals({
         ...item,
-        rate: discountedRate,
         discountPercent: globalDiscountPercent,
-        discountAmt: originalRate * item.orderedQty * (globalDiscountPercent / 100), // Discount on original amount
       }, true);
     });
 
     setItems(updatedItems);
     recalculateTotals(updatedItems);
-    showAlert("success", "Success", `Applied ${globalDiscountPercent}% discount to all item rates.`);
+    showAlert("success", "Success", `Applied ${globalDiscountPercent}% discount to all items.`);
   };
 
   const handleLoadInvoice = async (invoice: any) => {
@@ -3160,6 +3224,7 @@ export default function NewBill() {
             totalSgstAmount={totalSgstAmount}
             totalIgstAmount={totalIgstAmount}
             posProfile={posProfile || undefined}
+            onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
           // onRecordPayments prop is removed
           />
         </div>
@@ -3314,11 +3379,13 @@ export default function NewBill() {
                     <Checkbox
                       id="Opd-effect"
                       checked={isOpdEffect}
+                      disabled={transactionType === 'cash'}
                       onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
+                      className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
                     />
                     <Label
                       htmlFor="Opd-effect"
-                      className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
+                      className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
                     >
                       OPD Effect
                     </Label>
@@ -3338,6 +3405,7 @@ export default function NewBill() {
                 selectedWarehouse={selectedWarehouse}
                 calculateItemTaxAndTotals={calculateItemTaxAndTotals}
                 recalculateTotals={recalculateTotals}
+                fetchTaxDetails={fetchTaxDetails}
               />
             </CardContent>
           </Card>
@@ -3358,6 +3426,8 @@ export default function NewBill() {
             apiKey={apiKey ?? undefined}
             apiSecret={apiSecret ?? undefined}
             totalBillAmount={totalBillAmount}
+            transactionType={transactionType}
+            roundedGrandTotal={roundedGrandTotal}
           />
         </div>
       </div>

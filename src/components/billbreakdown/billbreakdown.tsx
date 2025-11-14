@@ -292,7 +292,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             </button>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-[#1C2024] text-xs font-normal">Total (Net Total)</span>
+            <span className="text-[#1C2024] text-xs font-normal">Taxable Amount</span>
             <span className="text-[#1C2024] text-xs font-semibold">
               ₹{calculateNetTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
@@ -315,7 +315,9 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             </label>
             {isRoundedOff && (
               <span className="text-[#60646C] text-xs font-normal">
-                {calculateRoundOffValues().rounding_adjustment >= 0 ? '' : ''}
+                {calculateRoundOffValues().rounding_adjustment >= 0
+                  ? `+ ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
+                  : `- ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
             )}
           </div>

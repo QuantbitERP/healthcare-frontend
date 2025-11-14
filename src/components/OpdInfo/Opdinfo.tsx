@@ -8,6 +8,8 @@ import Tags from '@/components/statusTags/Tags';
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import PosInfoCardDetails from '../posInfoCard/posInfoCardDetails';
 import { useFrappeApi } from "@/api/api";
+import { fetchUserDefaultBranch } from "@/api/userDefaultBranch";
+import { useAuth } from "@/context/AuthContext";
 import SelectInput from "@/components/form/Select";
 import Cash from "@/assets/icons/Cash.svg";
 import Dropdown from '../dropdownForPatientCard/Dropdown';
@@ -93,6 +95,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 }) => {
     const [open, setOpen] = useState<boolean>(false);
     const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors, doctors } = useFrappeApi();
+    const { apiKey, apiSecret } = useAuth();
     // fetchWarehouseForSubdepartment
     const { showAlert } = useAlert();
 
@@ -114,6 +117,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
     const [branches, setBranches] = useState<{ label: string; value: string }[]>([]);
+    const [defaultBranch, setDefaultBranch] = useState<string>("");
     // const [selectedWarehouse, setSelectedWarehouse] = useState<string>(''); // Removed
     // const [selectedCustomer, setSelectedCustomer] = useState<string>(''); // Removed
     // const [selectedCompany, setSelectedCompany] = useState<string>(''); // Removed
@@ -342,6 +346,22 @@ const OpdCard: React.FC<PatientCardProps> = ({
     }, [fetchWarehouses]);
 
     useEffect(() => {
+        // Fetch and set default branch (hospital) from session
+        const fetchDefaultBranch = async () => {
+            if (apiKey && apiSecret) {
+                try {
+                    const branch = await fetchUserDefaultBranch(apiKey, apiSecret);
+                    if (branch) {
+                        setDefaultBranch(branch);
+                        setSelectedBranch?.(branch);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch default branch", e);
+                }
+            }
+        };
+        fetchDefaultBranch();
+        // Existing branch loading logic
         const loadBranches = async () => {
             setLoading(true);
             try {
@@ -644,16 +664,28 @@ const OpdCard: React.FC<PatientCardProps> = ({
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Hospital</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
-                                <Dropdown
-                                    reasons={branches.map(branch => ({
-                                        key: branch.value,
-                                        value: branch.label,
-                                    }))}
-                                    value={selectedBranch}
-                                    onChange={handleBranchChange}
-                                    placeholder="Select Hospital"
-                                    disabled={branches.length === 0}
-                                />
+                                {defaultBranch ? (
+    <div className="relative w-full">
+        
+        <input
+            value={defaultBranch}
+            disabled
+            className="text-xs font-semibold placeholder:text-[#B0B3B9] focus:outline-none cursor-not-allowed transition-all  text-right w-full"
+            style={{ textAlign: 'right' }}
+        />
+    </div>
+) : (
+                                    <Dropdown
+                                        reasons={branches.map(branch => ({
+                                            key: branch.value,
+                                            value: branch.label,
+                                        }))}
+                                        value={selectedBranch}
+                                        onChange={handleBranchChange}
+                                        placeholder="Select Hospital"
+                                        disabled={branches.length === 0}
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>

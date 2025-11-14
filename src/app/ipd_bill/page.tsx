@@ -660,7 +660,7 @@ interface CalculatedItem extends Item {
 
 const calculateItemTaxAndTotals = (item: Item): CalculatedItem => {
     const rate = item.rate !== null ? item.rate : 0;
-    const baseAmount = item.orderedQty * rate;
+    const baseAmount = item.saleQty * rate;
     const discountAmount = baseAmount * (item.discountPercent / 100);
     const itemAmountAfterDiscount = baseAmount - discountAmount;
 
@@ -2300,7 +2300,7 @@ export default function NewBill() {
                 ...item,
                 rate: discountedRate,
                 discountPercent: globalDiscountPercent,
-                discountAmt: originalRate * item.orderedQty * (globalDiscountPercent / 100), // Discount on original amount
+                discountAmt: originalRate * item.saleQty * (globalDiscountPercent / 100), // Discount on original amount
             });
         });
 

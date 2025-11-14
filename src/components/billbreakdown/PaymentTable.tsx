@@ -24,11 +24,35 @@ interface PaymentTableProps {
   apiKey?: string;
   apiSecret?: string;
   totalBillAmount: number;
+  transactionType?: 'cash' | 'credit';
+  roundedGrandTotal?: number;
 }
 
-const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posProfile, apiKey, apiSecret, totalBillAmount }) => {
+const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posProfile, apiKey, apiSecret, totalBillAmount, transactionType, roundedGrandTotal }) => {
   const [expandedCells, setExpandedCells] = useState<{ [key: string]: boolean }>({});
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+
+  // Auto-set paid amount based on transaction type
+  useEffect(() => {
+    if (transactionType === 'credit') {
+      // For credit transactions, set paid amount to 0
+      setPayments(prev =>
+        prev.map(payment => ({
+          ...payment,
+          paidAmount: '0'
+        }))
+      );
+    } else if (transactionType === 'cash') {
+      // For cash transactions, set paid amount to rounded grand total
+      const paidAmount = (roundedGrandTotal ?? totalBillAmount).toString();
+      setPayments(prev =>
+        prev.map(payment => ({
+          ...payment,
+          paidAmount: paidAmount
+        }))
+      );
+    }
+  }, [transactionType, roundedGrandTotal, totalBillAmount, setPayments]);
 
   useEffect(() => {
     const initializePaymentMethods = async () => {

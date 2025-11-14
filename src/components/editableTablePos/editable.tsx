@@ -9,7 +9,12 @@ import {
   RowData,
 } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button as UIButton } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import BulkAction from "../bulkAction/BulkAction";
+import AlternativeItemsPopover from "../itemAlternative/ItemAlternative";
 
 interface Item {
   id: string;
@@ -44,6 +49,7 @@ interface Item {
   binLocation: string;
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
+  mrp?: number; // Add MRP field for batch custom_mrp
 }
 
 const EditableCell = ({
@@ -101,7 +107,7 @@ const EditableCell = ({
       className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[32px] flex items-center"
     >
       {type === 'number' && typeof value === 'number'
-        ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt')
+        ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
           ? `₹${value.toFixed(2)}`
           : value.toString()
         : value || '-'
@@ -157,6 +163,7 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     orderedQty: "Ordered Qty",
     saleQty: "Sale Qty",
     rate: "Unit Sale Rate",
+    mrp: "MRP",
     uom: "UOM",
     itemAmount: "Item Amount",
     discountPercent: "Discount (%)",
@@ -268,6 +275,9 @@ interface EditableTableProps {
   selectedWarehouse?: string;
   calculateItemTaxAndTotals?: (item: Item, includedInPrintRate: boolean) => Item;
   recalculateTotals?: (itemsList: Item[]) => void;
+  fetchTaxDetails?: (itemCode: string, rate: number, qty: number, uom: string) => Promise<any>;
+  apiKey?: string;
+  apiSecret?: string;
 }
 
 const EditableTable = ({
@@ -279,14 +289,23 @@ const EditableTable = ({
   getBatchQty,
   selectedWarehouse,
   calculateItemTaxAndTotals,
-  recalculateTotals
+  recalculateTotals,
+  fetchTaxDetails,
+  apiKey,
+  apiSecret
 }: EditableTableProps) => {
+  const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
+  const effectiveApiKey = apiKey || authApiKey;
+  const effectiveApiSecret = apiSecret || authApiSecret;
 
   const [rowSelection, setRowSelection] = useState({});
   const [showRowActions, setShowRowActions] = useState(false);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
+  });
+  const [columnVisibility, setColumnVisibility] = useState({
+    mrp: false, // Hide MRP column by default
   });
 
   const handleRemoveItemFromDetails = (itemId: string) => {
@@ -305,7 +324,7 @@ const EditableTable = ({
         if (index === rowIndex) {
           let parsedValue = value;
 
-          if (['stockQty', 'orderedQty', 'saleQty', 'rate', 'itemAmount', 'discountPercent', 'discountAmt',
+          if (['stockQty', 'orderedQty', 'saleQty', 'rate', 'mrp', 'itemAmount', 'discountPercent', 'discountAmt',
             'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt'].includes(columnId)) {
             parsedValue = parseFloat(value) || 0;
           }
@@ -317,7 +336,7 @@ const EditableTable = ({
 
           if (columnId === 'discountAmt') {
             const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
-            const baseAmount = updatedRow.orderedQty * rate;
+            const baseAmount = updatedRow.saleQty * rate;
             if (baseAmount > 0) {
               const discountPercent = (parsedValue / baseAmount) * 100;
               updatedRow = {
@@ -328,20 +347,29 @@ const EditableTable = ({
           }
 
           const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
-          const baseAmount = updatedRow.orderedQty * rate;
+          const baseAmount = updatedRow.saleQty * rate;
           const discountAmount = baseAmount * (updatedRow.discountPercent / 100);
           const itemAmountAfterDiscount = baseAmount - discountAmount;
 
-          if (columnId === 'cgstAmt' && itemAmountAfterDiscount > 0) {
-            updatedRow.cgstPercent = (parsedValue / itemAmountAfterDiscount) * 100;
-          } else if (columnId === 'sgstAmt' && itemAmountAfterDiscount > 0) {
-            updatedRow.sgstPercent = (parsedValue / itemAmountAfterDiscount) * 100;
-          } else if (columnId === 'igstAmt' && itemAmountAfterDiscount > 0) {
-            updatedRow.igstPercent = (parsedValue / itemAmountAfterDiscount) * 100;
+          // For tax-inclusive rates, calculate percentage based on taxable amount, not total amount
+          if (columnId === 'cgstAmt' || columnId === 'sgstAmt' || columnId === 'igstAmt') {
+            // Since we're using tax-inclusive rates, we need to calculate the taxable amount first
+            const totalTaxRate = (updatedRow.cgstPercent + updatedRow.sgstPercent + updatedRow.igstPercent) / 100;
+            const taxableAmount = totalTaxRate > 0 ? itemAmountAfterDiscount / (1 + totalTaxRate) : itemAmountAfterDiscount;
+
+            if (taxableAmount > 0) {
+              if (columnId === 'cgstAmt') {
+                updatedRow.cgstPercent = (parsedValue / taxableAmount) * 100;
+              } else if (columnId === 'sgstAmt') {
+                updatedRow.sgstPercent = (parsedValue / taxableAmount) * 100;
+              } else if (columnId === 'igstAmt') {
+                updatedRow.igstPercent = (parsedValue / taxableAmount) * 100;
+              }
+            }
           }
 
           if (['rate', 'orderedQty', 'saleQty', 'discountPercent', 'discountAmt',
-              'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt'].includes(columnId)) {
+            'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow, true);
             }
@@ -388,6 +416,32 @@ const EditableTable = ({
           const item = row.original as Item;
           const [batches, setBatches] = useState<any[]>([]);
           const [loading, setLoading] = useState(false);
+          const [isOpen, setIsOpen] = useState(false);
+          const [selectedBatches, setSelectedBatches] = useState<{ [key: string]: boolean }>({});
+          const [batchQuantities, setBatchQuantities] = useState<{ [key: string]: number }>({});
+          const [itemTaxDetails, setItemTaxDetails] = useState<any>(null);
+          const [batchMRPs, setBatchMRPs] = useState<{ [key: string]: number }>({});
+
+          const fetchBatchMRP = async (batchName: string) => {
+            try {
+              const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `token ${effectiveApiKey}:${effectiveApiSecret}`,
+                },
+                credentials: 'include',
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                return data.data?.custom_mrp || 0;
+              }
+            } catch (error) {
+              console.error('Error fetching batch MRP:', error);
+            }
+            return 0;
+          };
 
           const loadBatches = async () => {
             if (!fetchItemBatches || !item.itemCode) return;
@@ -395,6 +449,26 @@ const EditableTable = ({
             try {
               const fetchedBatches = await fetchItemBatches(item.itemCode);
               setBatches(fetchedBatches);
+
+              // Fetch tax details for the item
+              if (fetchTaxDetails) {
+                const taxDetails = await fetchTaxDetails(item.itemCode, item.rate || 0, 1, item.uom);
+                setItemTaxDetails(taxDetails);
+              }
+
+              // Fetch MRP for each batch
+              const mrpPromises = fetchedBatches.map(async (batch: any) => {
+                const mrp = await fetchBatchMRP(batch.name);
+                return { batchName: batch.name, mrp };
+              });
+
+              const mrpResults = await Promise.all(mrpPromises);
+              const mrpMap: { [key: string]: number } = {};
+              mrpResults.forEach(result => {
+                mrpMap[result.batchName] = result.mrp;
+              });
+              setBatchMRPs(mrpMap);
+
             } catch (error) {
               console.error('Error fetching batches:', error);
             } finally {
@@ -402,59 +476,168 @@ const EditableTable = ({
             }
           };
 
-          const handleBatchChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-            const selectedBatchNo = e.target.value;
-            if (!selectedBatchNo || !fetchItemPrice) return;
+          const handleBatchSelection = (batchName: string, isSelected: boolean) => {
+            setSelectedBatches(prev => ({
+              ...prev,
+              [batchName]: isSelected
+            }));
+          };
 
-            const selectedBatch = batches.find(b => b.name === selectedBatchNo);
-            if (!selectedBatch) return;
+          const handleQuantityChange = (batchName: string, quantity: number) => {
+            setBatchQuantities(prev => ({
+              ...prev,
+              [batchName]: quantity
+            }));
+          };
+
+          const handleApplyBatches = async () => {
+            const selectedBatchNames = Object.keys(selectedBatches).filter(name => selectedBatches[name]);
+            if (selectedBatchNames.length === 0) return;
 
             try {
-              const newRate = await fetchItemPrice(item.itemCode, selectedBatchNo, 'Standard Selling');
-              const newBatchQty = selectedBatch.batch_qty || 0;
+              // Create new items for each selected batch
+              const newBatchItems: Item[] = [];
 
-              setItems(prev => {
-                const updatedItems = prev.map(i => {
-                  if (i.id === item.id) {
-                    const updatedItem = {
-                      ...i,
-                      batchNo: selectedBatchNo,
-                      batch: selectedBatchNo,
-                      expiryDate: selectedBatch.expiry_date,
-                      batchStockQty: newBatchQty,
-                      stockQty: newBatchQty,
-                      rate: newRate !== null ? newRate : i.rate
-                    };
-                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem, true) : updatedItem;
-                  }
-                  return i;
+              for (const batchName of selectedBatchNames) {
+                const selectedBatch = batches.find(b => b.name === batchName);
+                if (!selectedBatch) continue;
+
+                const quantity = batchQuantities[batchName] || 0;
+                if (quantity <= 0) continue; // Skip if no quantity entered
+
+                const newRate = await fetchItemPrice?.(item.itemCode, batchName, 'Standard Selling');
+                const newBatchQty = selectedBatch.batch_qty || 0;
+                const safeRate = newRate !== null && newRate !== undefined ? newRate : (item.rate ?? 0);
+
+                const newItem: Item = {
+                  ...item,
+                  id: `${item.id}-${batchName}-${Date.now()}`, // Create unique ID for each batch row
+                  batchNo: batchName,
+                  batch: batchName,
+                  expiryDate: selectedBatch.expiry_date,
+                  batchStockQty: newBatchQty,
+                  stockQty: newBatchQty,
+                  rate: safeRate,
+                  mrp: batchMRPs[batchName] || 0, // Set MRP from fetched batch MRP
+                  saleQty: quantity
+                };
+
+                const itemWithTax = calculateItemTaxAndTotals ? calculateItemTaxAndTotals(newItem, true) : newItem;
+                newBatchItems.push(itemWithTax);
+              }
+
+              // Replace the original item row with new batch item rows
+              if (newBatchItems.length > 0) {
+                setItems(prev => {
+                  // Filter out the original item and add the new batch items
+                  const updatedItems = prev.filter(i => i.id !== item.id);
+                  updatedItems.splice(prev.findIndex(i => i.id === item.id), 0, ...newBatchItems);
+                  if (recalculateTotals) recalculateTotals(updatedItems);
+                  return updatedItems;
                 });
-                if (recalculateTotals) recalculateTotals(updatedItems);
-                return updatedItems;
-              });
+              }
 
+              setIsOpen(false);
             } catch (error) {
-              console.error('Error updating batch:', error);
+              console.error('Error applying batches:', error);
             }
           };
 
           return (
-            <div className="min-w-[180px]">
-              <select
-                value={item.batchNo || ''}
-                onChange={handleBatchChange}
-                onFocus={loadBatches}
-                disabled={!fetchItemBatches || !item.itemCode}
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Current: {item.batchNo || 'No Batch'}</option>
-                {loading && <option disabled>Loading...</option>}
-                {batches.map((batch: any) => (
-                  <option key={batch.name} value={batch.name}>
-                    {batch.name} (Exp: {batch.expiry_date}, Qty: {batch.batch_qty})
-                  </option>
-                ))}
-              </select>
+            <div className="min-w-[120px]">
+              <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogTrigger asChild>
+                  <UIButton
+                    onClick={loadBatches}
+                    disabled={!fetchItemBatches || !item.itemCode}
+                    className="w-full text-xs font-semibold border-2 border-white bg-white text-black px-3 py-2 rounded-md hover:bg-blue-100 hover:border-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Select Batch
+                  </UIButton>
+                </DialogTrigger>
+                <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Alternative Batches - {item.itemName}</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="mt-4">
+                    {loading ? (
+                      <div className="text-center py-4">Loading batches...</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Select</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Batch No</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Expiry Date</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Custom MRP</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Batch Qty</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">CGST Rate</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">SGST Rate</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">IGST Rate</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Input Quantity</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {batches.map((batch: any, index: number) => (
+                              <tr key={batch.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="border border-gray-300 px-2 py-2">
+                                  <Checkbox
+                                    checked={selectedBatches[batch.name] || false}
+                                    onCheckedChange={(checked) => handleBatchSelection(batch.name, checked === true)}
+                                  />
+                                </td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">{batch.name}</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">{batch.expiry_date || '-'}</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">₹{batchMRPs[batch.name] || item.rate || 0}</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">{batch.batch_qty || 0}</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.cgstRate || '0.00'}%</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.sgstRate || '0.00'}%</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.igstRate || '0.00'}%</td>
+                                <td className="border border-gray-300 px-2 py-2">
+                                  <Input
+                                    type="number"
+                                    value={batchQuantities[batch.name] || ''}
+                                    onChange={(e) => handleQuantityChange(batch.name, parseInt(e.target.value) || 0)}
+                                    className="w-20 h-8 text-xs"
+                                    placeholder="Qty"
+                                    min="0"
+                                    max={batch.batch_qty}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        {batches.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            No alternative batches available for this item.
+                          </div>
+                        )}
+
+                        <div className="flex justify-end gap-2 mt-4">
+                          <UIButton
+                            onClick={() => setIsOpen(false)}
+                            className="border border-red-300 text-red-600 bg-red-50 px-4 py-2 rounded-md hover:bg-red-100 hover:border-red-400 transition-colors duration-200"
+                          >
+                            Close
+                          </UIButton>
+
+                          <UIButton
+                            onClick={handleApplyBatches}
+                            disabled={Object.keys(selectedBatches).filter(name => selectedBatches[name]).length === 0}
+                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300"
+                          >
+                            Apply Selected Batches
+                          </UIButton>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           );
         },
@@ -464,43 +647,64 @@ const EditableTable = ({
         header: "Substitute Item",
         cell: ({ row }) => {
           const item = row.original as Item;
-          const [substitutes, setSubstitutes] = useState<any[]>([]);
+          const [isAlternativeOpen, setIsAlternativeOpen] = useState(false);
+          const [alternativeItems, setAlternativeItems] = useState<any[]>([]);
           const [loading, setLoading] = useState(false);
 
-          const loadSubstitutes = async () => {
+          const loadAlternativeItems = async () => {
             if (!fetchSubstituteItems || !item.itemCode) return;
             setLoading(true);
             try {
               const fetchedSubstitutes = await fetchSubstituteItems(item.itemCode);
-              setSubstitutes(fetchedSubstitutes);
+              // Transform substitutes to match ItemAlternative format
+              const transformedItems = await Promise.all(
+                fetchedSubstitutes.map(async (sub: any) => {
+                  const batches = await fetchItemBatches?.(sub.alternative_item_code) || [];
+                  return {
+                    item_code: sub.alternative_item_code,
+                    item_name: sub.alternative_item_name || sub.alternative_item_code,
+                    batches: batches.map((b: any) => ({
+                      batch_no: b.name,
+                      expiry_date: b.expiry_date,
+                      qty: b.batch_qty || 0
+                    }))
+                  };
+                })
+              );
+              setAlternativeItems(transformedItems);
+              setIsAlternativeOpen(true);
             } catch (error) {
-              console.error('Error fetching substitutes:', error);
+              console.error('Error fetching alternative items:', error);
             } finally {
               setLoading(false);
             }
           };
 
-          const handleSubstituteChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-            const selectedItemCode = e.target.value;
-            if (!selectedItemCode || !fetchItemBatches || !fetchItemPrice) return;
-
-            const selectedSubstitute = substitutes.find(s => s.alternative_item_code === selectedItemCode);
-            if (!selectedSubstitute) return;
+          const handleSelectAlternative = async (itemCode: string, batchNo: string, expiryDate: string, qty: number) => {
+            if (!fetchItemPrice) return;
 
             try {
-              const batches = await fetchItemBatches(selectedItemCode);
-              const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
+              const newRate = await fetchItemPrice(itemCode, batchNo, 'Standard Selling');
+              const selectedAlternative = alternativeItems.find(a => a.item_code === itemCode);
 
-              let firstBatch = sortedBatches.length > 0 ? sortedBatches[0] : null;
-              let newRate: number | null = null;
-              let newBatchQty = 0;
+              // Fetch MRP for the selected batch
+              let batchMRP = 0;
+              try {
+                const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `token ${effectiveApiKey}:${effectiveApiSecret}`,
+                  },
+                  credentials: 'include',
+                });
 
-              if (firstBatch) {
-                newRate = await fetchItemPrice(selectedItemCode, firstBatch.name, 'Standard Selling');
-                newBatchQty = firstBatch.batch_qty || 0;
-              } else {
-                newRate = await fetchItemPrice(selectedItemCode, null, 'Standard Selling');
-                console.warn(`Substitute item ${selectedItemCode} has no available batches.`);
+                if (response.ok) {
+                  const data = await response.json();
+                  batchMRP = data.data?.custom_mrp || 0;
+                }
+              } catch (error) {
+                console.error('Error fetching batch MRP:', error);
               }
 
               setItems(prev => {
@@ -508,14 +712,16 @@ const EditableTable = ({
                   if (i.id === item.id) {
                     const updatedItem = {
                       ...i,
-                      itemCode: selectedItemCode,
-                      itemName: selectedSubstitute.alternative_item_name || selectedItemCode,
-                      batchNo: firstBatch ? firstBatch.name : '',
-                      batch: firstBatch ? firstBatch.name : '',
-                      expiryDate: firstBatch ? firstBatch.expiry_date : '',
-                      batchStockQty: newBatchQty,
-                      stockQty: newBatchQty,
+                      itemCode: itemCode,
+                      itemName: selectedAlternative?.item_name || itemCode,
+                      batchNo: batchNo,
+                      batch: batchNo,
+                      expiryDate: expiryDate,
+                      batchStockQty: qty,
+                      stockQty: qty,
                       rate: newRate !== null ? newRate : i.rate,
+                      mrp: batchMRP, // Set MRP from fetched batch MRP
+                      saleQty: qty,
                       substituteItem: item.itemCode
                     };
                     return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem, true) : updatedItem;
@@ -526,28 +732,29 @@ const EditableTable = ({
                 return updatedItems;
               });
 
+              setIsAlternativeOpen(false);
             } catch (error) {
-              console.error('Error updating substitute item:', error);
+              console.error('Error selecting alternative item:', error);
             }
           };
 
           return (
-            <div className="min-w-[200px]">
-              <select
-                value={''}
-                onChange={handleSubstituteChange}
-                onFocus={loadSubstitutes}
-                disabled={!fetchSubstituteItems || !item.itemCode}
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div className="min-w-[150px]">
+              <UIButton
+                onClick={loadAlternativeItems}
+                disabled={!fetchSubstituteItems || !item.itemCode || loading}
+                className="w-full text-xs font-semibold border-2 border-white bg-white text-black px-3 py-2 rounded-md hover:bg-green-100 hover:border-green-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">Current: {item.itemName}</option>
-                {loading && <option disabled>Loading...</option>}
-                {substitutes.map((sub) => (
-                  <option key={sub.alternative_item_code} value={sub.alternative_item_code}>
-                    {sub.alternative_item_name || sub.alternative_item_code}
-                  </option>
-                ))}
-              </select>
+                {loading ? 'Loading...' : 'Substitute'}
+              </UIButton>
+
+              <AlternativeItemsPopover
+                isOpen={isAlternativeOpen}
+                onClose={() => setIsAlternativeOpen(false)}
+                onSelectAlternative={handleSelectAlternative}
+                alternativeItems={alternativeItems}
+                originalItem={item}
+              />
             </div>
           );
         },
@@ -606,6 +813,13 @@ const EditableTable = ({
       {
         accessorKey: "rate",
         header: "Unit Sale Rate",
+        cell: ({ getValue, row, column, table }) => (
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
+        ),
+      },
+      {
+        accessorKey: "mrp",
+        header: "MRP",
         cell: ({ getValue, row, column, table }) => (
           <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
@@ -733,6 +947,9 @@ const EditableTable = ({
     state: {
       rowSelection,
       pagination,
+      columnVisibility: {
+        mrp: false, // Hide MRP column by default
+      },
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
