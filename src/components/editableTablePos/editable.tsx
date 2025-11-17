@@ -469,6 +469,21 @@ const EditableTable = ({
               });
               setBatchMRPs(mrpMap);
 
+              // Check which batches are already in the grid and pre-select them
+              const preSelectedBatches: { [key: string]: boolean } = {};
+              const preSelectedQuantities: { [key: string]: number } = {};
+              
+              items.forEach(gridItem => {
+                // Check if this item is the same as the current item (by itemCode)
+                if (gridItem.itemCode === item.itemCode && gridItem.batchNo) {
+                  preSelectedBatches[gridItem.batchNo] = true;
+                  preSelectedQuantities[gridItem.batchNo] = gridItem.saleQty || 0;
+                }
+              });
+
+              setSelectedBatches(preSelectedBatches);
+              setBatchQuantities(preSelectedQuantities);
+
             } catch (error) {
               console.error('Error fetching batches:', error);
             } finally {
@@ -552,7 +567,7 @@ const EditableTable = ({
                     disabled={!fetchItemBatches || !item.itemCode}
                     className="w-full text-xs font-semibold border-2 border-white bg-white text-black px-3 py-2 rounded-md hover:bg-blue-100 hover:border-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Select Batch
+                    Alternate Batch
                   </UIButton>
                 </DialogTrigger>
                 <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
@@ -580,7 +595,9 @@ const EditableTable = ({
                             </tr>
                           </thead>
                           <tbody>
-                            {batches.map((batch: any, index: number) => (
+                            {batches.map((batch: any, index: number) => {
+                              const isInGrid = items.some(gridItem => gridItem.itemCode === item.itemCode && gridItem.batchNo === batch.name);
+                              return (
                               <tr key={batch.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                 <td className="border border-gray-300 px-2 py-2">
                                   <Checkbox
@@ -588,7 +605,14 @@ const EditableTable = ({
                                     onCheckedChange={(checked) => handleBatchSelection(batch.name, checked === true)}
                                   />
                                 </td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">{batch.name}</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span>{batch.name}</span>
+                                    {isInGrid && (
+                                      <span className="text-green-600 font-bold text-sm" title="Already in grid">✓</span>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">{batch.expiry_date || '-'}</td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">₹{batchMRPs[batch.name] || item.rate || 0}</td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">{batch.batch_qty || 0}</td>
@@ -607,7 +631,8 @@ const EditableTable = ({
                                   />
                                 </td>
                               </tr>
-                            ))}
+                            );
+                            })}
                           </tbody>
                         </table>
 
@@ -893,6 +918,33 @@ const EditableTable = ({
         cell: ({ getValue, row, column, table }) => (
           <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
+      },
+      {
+        id: "taxableAmount",
+        header: "Taxable Amt.",
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          const baseAmount = item.saleQty * rate;
+          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+          
+          let taxableAmount = 0;
+          if (totalTaxRate > 0) {
+            taxableAmount = baseAmount / (1 + totalTaxRate);
+          } else {
+            taxableAmount = baseAmount;
+          }
+          
+          // Apply discount to taxable amount
+          const discountAmount = taxableAmount * (item.discountPercent / 100);
+          const discountedTaxableAmount = taxableAmount - discountAmount;
+          
+          return (
+            <div className="px-2 py-1 text-sm">
+              ₹{discountedTaxableAmount.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "totalAmt",

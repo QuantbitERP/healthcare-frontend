@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { MoreHorizontal, Edit2, Check, X } from 'lucide-react';
-// import Dropdown from '../dropdownForPatientCard/Dropdown';
 import RecordPaymentModal from './RecordPaymentModal';
 import TotalBreakdownModal from './TotalBreakdownModal';
 import { useAuth } from '@/context/AuthContext';
 
-interface IpdIpdBillbreakDown {
+interface IpdBillBreakdownProps {
   totalBillAmount: number;
   totalDiscountAmount: number;
   totalCgstAmount: number;
@@ -33,7 +32,7 @@ interface RecordedPayment {
   approvalNo: string;
 }
 
-const IpdBillbreakDown: React.FC<IpdIpdBillbreakDown> = ({
+const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
   totalBillAmount,
   totalDiscountAmount,
   totalCgstAmount,
@@ -47,11 +46,8 @@ const IpdBillbreakDown: React.FC<IpdIpdBillbreakDown> = ({
   const { apiKey, apiSecret } = useAuth();
   const [showRecordPayment, setShowRecordPayment] = useState(false);
   const [showTotalBreakdown, setShowTotalBreakdown] = useState(false);
-  // const [selectedConcession, setSelectedConcession] = useState<string>('');
-  // const [selectedConcessionauth, setSelectedConcessionauth] = useState<string>('');
-  const [_concessionOptions, setConcessionOptions] = useState<Array<{ value: string, label: string }>>([]);
-  const [_concessionauthOptions, setConcessionauthOptions] = useState<Array<{ value: string, label: string }>>([]);
-  const concessionAmount: number = 0;
+
+  const concessionAmount = 0;
   const [isRoundedOff, setIsRoundedOff] = useState<boolean>(true);
   const [recordedPayments, setRecordedPayments] = useState<RecordedPayment[]>([]);
 
@@ -68,82 +64,8 @@ const IpdBillbreakDown: React.FC<IpdIpdBillbreakDown> = ({
     balanceUtilized: '0',
     transactions: '0',
   });
-
-  const FRAPPE_BASE_URL = 'https://192.168.7.221:4422';
-
   // Fetch concession types and users (unchanged)
-  useEffect(() => {
-    const fetchConcessionTypes = async () => {
-      try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
-        const response = await fetch(`${FRAPPE_BASE_URL}/api/resource/Concession Type?fields=["name"]&limit_page_length=1000`, {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const options = data.data.map((item: any) => ({
-            value: item.name,
-            label: item.name,
-          }));
-          setConcessionOptions(options);
-        }
-      } catch (error) {
-        console.error('Error fetching concession types:', error);
-      }
-    };
 
-    if (apiKey && apiSecret) {
-      fetchConcessionTypes();
-    }
-  }, [apiKey, apiSecret]);
-
-  useEffect(() => {
-    const fetchConcessionUsers = async () => {
-      try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
-        const roleResponse = await fetch(`${FRAPPE_BASE_URL}/api/resource/User?fields=["name","full_name"]&filters=[["Has Role","role","=","concession"]]&limit_page_length=1000`, {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        });
-        if (roleResponse.ok) {
-          const roleData = await roleResponse.json();
-          const userNames = [...new Set(roleData.data.map((item: any) => item.name))] as string[];
-          if (userNames.length > 0) {
-            const userPromises = userNames.map((userName: string) =>
-              fetch(`${FRAPPE_BASE_URL}/api/resource/User/${encodeURIComponent(userName)}?fields=["name","full_name"]`, {
-                method: 'GET',
-                headers,
-                credentials: 'include',
-              }).then(res => res.json())
-            );
-            const userResults = await Promise.all(userPromises);
-            const options = userResults
-              .filter(result => result.data)
-              .map(result => ({
-                value: result.data.name,
-                label: result.data.full_name || result.data.name,
-              }));
-            setConcessionauthOptions(options);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching concession users:', error);
-      }
-    };
-
-    if (apiKey && apiSecret) {
-      fetchConcessionUsers();
-    }
-  }, [apiKey, apiSecret]);
 
   const handleEditToggle = (field: keyof typeof editableFields) => {
     if (editableFields[field].isEditing) {
@@ -292,7 +214,7 @@ const IpdBillbreakDown: React.FC<IpdIpdBillbreakDown> = ({
             </button>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-[#1C2024] text-xs font-normal">Total (Net Total)</span>
+            <span className="text-[#1C2024] text-xs font-normal">Taxable Amount</span>
             <span className="text-[#1C2024] text-xs font-semibold">
               ₹{calculateNetTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
@@ -315,12 +237,27 @@ const IpdBillbreakDown: React.FC<IpdIpdBillbreakDown> = ({
             </label>
             {isRoundedOff && (
               <span className="text-[#60646C] text-xs font-normal">
-                {calculateRoundOffValues().rounding_adjustment >= 0 ? '' : ''}
+                {calculateRoundOffValues().rounding_adjustment >= 0
+                  ? `+ ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
+                  : `- ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
             )}
           </div>
-          <div className="flex flex-col gap-2">
+          {isRoundedOff && (
+            <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
 
+              <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
+              <span className="text-[#1C2024] text-xs font-bold">
+                ₹{calculateRoundOffValues().grand_total.toLocaleString()}
+              </span>
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
+
+
+
+            </div>
             {/* Display Total Employee Balance Utilized */}
             {renderEditableField(
               'Total Employee Balance Utilized',
@@ -345,14 +282,6 @@ const IpdBillbreakDown: React.FC<IpdIpdBillbreakDown> = ({
               </span>
             </div>
 
-            {isRoundedOff && (
-              <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
-                <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
-                <span className="text-[#1C2024] text-xs font-bold">
-                  ₹{calculateRoundOffValues().grand_total.toLocaleString()}
-                </span>
-              </div>
-            )}
             <div className="flex items-center justify-between">
               <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Transactions</span>
               <div className="flex items-center space-x-2">

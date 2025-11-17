@@ -70,6 +70,11 @@ export default function POS() {
   const handlePOSProfileSelect = (profile: string) => {
     setPosProfile(profile); // Handled in POSProfileSelector, kept for consistency
     setShowPosProfileSelector(false);
+    // Reset invoices and pagination when profile changes
+    setSalesInvoices([]);
+    setFilteredInvoices([]);
+    setPage(0);
+    setHasFetchedInitialInvoices(false);
   };
 
   const handleSearch = () => {
@@ -99,6 +104,7 @@ export default function POS() {
         <PageHeader
           title="POS"
           icon="../assets/icons/BriefcaseIcon.svg"
+          posProfile={posProfile || undefined}
           rightButtons={
             <div className="flex flex-row space-x-2">
               <Button
@@ -112,6 +118,14 @@ export default function POS() {
                 size="button-medium"
                 onClick={() => handleClick("/ipd_bill")}
               > + New IPD Bill
+              </Button>
+
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={() => setShowPosProfileSelector(true)}
+              >
+                Change POS Profile
               </Button>
 
               <Button

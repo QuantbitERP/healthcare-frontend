@@ -778,28 +778,29 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   if (includedInPrintRate) {
     // For tax-inclusive rates, the rate already includes tax
-    // First apply discount to the total amount (which includes tax)
-    discountAmount = baseAmount * (item.discountPercent / 100);
-    itemAmountAfterDiscount = baseAmount - discountAmount;
-
+    // First extract the taxable amount from the base amount (which includes tax)
     const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
 
     if (totalTaxRate > 0) {
-      // Extract taxable amount from the discounted total (which includes tax)
-      taxableAmount = itemAmountAfterDiscount / (1 + totalTaxRate);
-
-      // Calculate individual tax amounts based on taxable amount
-      cgstAmount = taxableAmount * (item.cgstPercent / 100);
-      sgstAmount = taxableAmount * (item.sgstPercent / 100);
-      igstAmount = taxableAmount * (item.igstPercent / 100);
+      // Extract taxable amount from the total (which includes tax)
+      taxableAmount = baseAmount / (1 + totalTaxRate);
     } else {
       // If no tax rates, taxable amount equals total amount
-      taxableAmount = itemAmountAfterDiscount;
-      cgstAmount = sgstAmount = igstAmount = 0;
+      taxableAmount = baseAmount;
     }
 
-    // For tax-inclusive, total amount is the discounted amount (already includes tax)
-    totalAmount = itemAmountAfterDiscount;
+    // Apply discount to the taxable amount (not the total)
+    discountAmount = taxableAmount * (item.discountPercent / 100);
+    const discountedTaxableAmount = taxableAmount - discountAmount;
+
+    // Calculate individual tax amounts based on discounted taxable amount
+    cgstAmount = discountedTaxableAmount * (item.cgstPercent / 100);
+    sgstAmount = discountedTaxableAmount * (item.sgstPercent / 100);
+    igstAmount = discountedTaxableAmount * (item.igstPercent / 100);
+
+    // Total amount is discounted taxable amount + calculated taxes
+    itemAmountAfterDiscount = discountedTaxableAmount;
+    totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
 
     // Keep the original percentages as they represent the tax rates
     finalCgstPercent = item.cgstPercent;
@@ -823,11 +824,11 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   return {
     ...item,
     itemAmount: baseAmount, // Always the full amount before discount
-    discountAmt: discountAmount, // Discount amount calculated on full amount
+    discountAmt: discountAmount, // Discount amount calculated on taxable amount
     cgstAmt: cgstAmount,
     sgstAmt: sgstAmount,
     igstAmt: igstAmount,
-    totalAmt: totalAmount, // Final amount after discount (tax-inclusive)
+    totalAmt: totalAmount, // Final amount after discount and tax
     cgstPercent: finalCgstPercent,
     sgstPercent: finalSgstPercent,
     igstPercent: finalIgstPercent,
@@ -1830,6 +1831,8 @@ export default function NewBill() {
     setPosProfile(profile);
     localStorage.setItem('posProfile', profile);
     setShowPosProfileSelector(false);
+    // Reset form when POS Profile changes
+    handleReset();
   };
 
   // Hide patient search dropdown when clicking outside
@@ -3123,10 +3126,15 @@ export default function NewBill() {
           parentLink="/pos"
           title="New OPD Bill"
           icon="../assets/icons/BriefcaseIcon.svg"
+          posProfile={posProfile || undefined}
+          warehouse={selectedWarehouse || undefined}
           rightButtons={
             <div className="flex flex-row space-x-2">
               <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
                 View POS Invoices
+              </Button>
+              <Button type="secondary-button" size="button-medium" onClick={() => setShowPosProfileSelector(true)}>
+                Change POS Profile
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={logout}>
                 Logout
