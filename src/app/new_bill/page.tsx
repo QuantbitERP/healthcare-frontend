@@ -74,6 +74,7 @@ export interface Item {
   totalPckgAmt: number;
   packageName: string;
   binLocation: string;
+  warehouse?: string; // Add warehouse field for stock tracking
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   genericName?: string; // Add genericName as optional property
@@ -845,7 +846,7 @@ export default function NewBill() {
 
   const router = useRouter();
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
-  const { classifications, fetchUserDefaultCompany } = useFrappeApi();
+  const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
@@ -890,6 +891,55 @@ export default function NewBill() {
       if (data.message) {
         return data.message;
       }
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching batches:', error);
+      return [];
+    }
+  };
+
+  // Function to fetch item batches with explicit warehouse and company parameters
+  const fetchItemBatchesWithParams = async (itemCode: string, warehouse: string, company: string) => {
+    try {
+      if (!warehouse) {
+        console.warn('No warehouse provided, cannot fetch batches');
+        return [];
+      }
+
+      if (!company) {
+        console.warn('No company provided, cannot fetch batches');
+        return [];
+      }
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Call the new API method that filters by warehouse and company
+      const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          item_code: itemCode,
+          warehouse: warehouse,
+          company: company
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch batches:', response.status, response.statusText);
+        return [];
+      }
+
+      const data = await response.json();
+      console.log('fetchItemBatchesWithParams response for', itemCode, ':', data);
+      if (data.message) {
+        console.log('Returning batches:', data.message, 'Type:', typeof data.message, 'Is Array:', Array.isArray(data.message));
+        return data.message;
+      }
+      console.log('No message in response, returning empty array');
       return [];
     } catch (error: any) {
       console.error('Error fetching batches:', error);
@@ -1029,7 +1079,9 @@ export default function NewBill() {
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedSubDepartment, setSelectedSubDepartment] = useState<string>('');
+  const selectedHospital = '';
   const [showViewPosInvoicesModal, setShowViewPosInvoicesModal] = useState(false); // New state for View POS Invoices modal
+  const [_isItemsLoadedFromRequisitionOrPrescription, setIsItemsLoadedFromRequisitionOrPrescription] = useState(false); // Track if items are loaded from requisition or prescription
 
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
   const [showCreateReturnModal, setShowCreateReturnModal] = useState(false);
@@ -1070,7 +1122,21 @@ export default function NewBill() {
     paidAmount: string;
     paymentDate: string;
     approvalNo: string;
+    custom_bank_name?: string;
+    custom_branch_name?: string;
+    custom_transaction_no?: string;
   }>>([]);
+
+  // Auto-select default self-paid customer once data is available
+  useEffect(() => {
+    if (selectedCustomer) return;
+    if (!customers || customers.length === 0) return;
+
+    const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+    if (defaultSelfPaidCustomer) {
+      setSelectedCustomer(defaultSelfPaidCustomer.value);
+    }
+  }, [customers, selectedCustomer]);
 
   // --- START: Added function to clear file ---
   const handleClearFile = (e: React.MouseEvent) => {
@@ -1105,9 +1171,7 @@ export default function NewBill() {
     setShowAlternativeItemsPopover(false);
     setItemSeekingAlternatives(null);
     setAlternativeItems([]);
-    setSelectedWarehouse('');
     setSelectedCustomer('');
-    setSelectedCompany('');
     setSelectedBranch('');
     setSelectedDepartment('');
     setSelectedSubDepartment('');
@@ -1171,6 +1235,7 @@ export default function NewBill() {
     // setSearchResults([]);
     setShowDropdown(false);
     setItems([]);
+    setIsItemsLoadedFromRequisitionOrPrescription(false);
     <Alerts
       heading="Sucess"
 
@@ -1597,6 +1662,7 @@ export default function NewBill() {
         uom: item.uom,
         rate: Number(item.rate) || 0,
         batch_no: item.batch || "",
+        warehouse: selectedWarehouse || item.warehouse || "",
         margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
         discount_percentage: Number(item.discountPercent) || 0,
         base_amount: Number(item.itemAmount) || 0,
@@ -1614,10 +1680,10 @@ export default function NewBill() {
       payments: recordedPayments.map(p => ({
         mode_of_payment: p.paymentMode || "Cash",
         amount: parseFloat(p.paidAmount || "0") || 0,
-        reference_no: p.transactionNo || "",
-        // bank: p.bankName || "",
-        // branch: p.branchName || "",
-        // posting_date: p.paymentDate || "",
+        reference_no: p.custom_transaction_no || p.transactionNo || "",
+        custom_bank_name: p.custom_bank_name || p.bankName || "",
+        custom_branch_name: p.custom_branch_name || p.branchName || "",
+        custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
       })),
       patient_data: {
         mrn: patientData.mrn || "",
@@ -1648,11 +1714,15 @@ export default function NewBill() {
       // Custom patient and requisition details
       custom_patient_name: patientData?.name || "",
       custom_uhid: patientData?.mrn || "",
+      custom_abha_id: patientData?.ABHAID || "",
+      custom_age: patientData?.age || "",
       custom_req_no: requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
       custom_bed_no: patientData?.bed || "",
+      custom_department: selectedDepartment || patientData?.dept || "",
+      custom_hospital: selectedHospital || "",
     };
 
     // Construct the taxes array dynamically
@@ -1932,6 +2002,13 @@ export default function NewBill() {
       return;
     }
 
+    const company = selectedCompany; // Ensure selectedCompany is set before this point
+    if (!company) {
+      showAlert("danger", "Error", "Please select a company first to load requisition items.");
+      setShowPatientRequisitionList(false);
+      return;
+    }
+
     if (!fullRequisitionData.patient_requisition_item_details || !Array.isArray(fullRequisitionData.patient_requisition_item_details)) {
       showAlert("danger", "Error", "Requisition item details are missing or not in a valid format.");
       setShowPatientRequisitionList(false);
@@ -1943,7 +2020,7 @@ export default function NewBill() {
       const requestedQty = reqItem.req_qty;
 
       try {
-        const batches = await fetchItemBatches(itemCode);
+        const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
 
         let remainingQtyToAllocate = requestedQty;
@@ -2153,6 +2230,13 @@ export default function NewBill() {
       return;
     }
 
+    const company = selectedCompany; // Ensure selectedCompany is set before this point
+    if (!company) {
+      showAlert("danger", "Error", "Please select a company first to load prescription items.");
+      setShowPrescriptionList(false);
+      return;
+    }
+
     if (!fullPrescriptionData.patient_requisition_item_details || !Array.isArray(fullPrescriptionData.patient_requisition_item_details)) {
       showAlert("danger", "Error", "Prescription item details are missing or not in a valid format.");
       setShowPrescriptionList(false);
@@ -2160,12 +2244,16 @@ export default function NewBill() {
     }
 
     for (const reqItem of fullPrescriptionData.patient_requisition_item_details) {
+      console.log('Prescription item details:', reqItem);
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
+      console.log('Processing item - itemCode:', itemCode, 'requestedQty:', requestedQty);
 
       try {
-        const batches = await fetchItemBatches(itemCode);
+        const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
+        console.log('handleSelectPrescription - fetched batches for', itemCode, ':', batches, 'Type:', typeof batches, 'Is Array:', Array.isArray(batches));
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
+        console.log('handleSelectPrescription - sortedBatches for', itemCode, ':', sortedBatches, 'Length:', sortedBatches.length);
 
         let remainingQtyToAllocate = requestedQty;
 
@@ -2585,7 +2673,7 @@ export default function NewBill() {
         ABHAID: fullInvoice.custom_abha_id || "N/A",
         category: fullInvoice.custom_category || "N/A",
         doctor: fullInvoice.custom_doctor_name || "N/A",
-        mrn: fullInvoice.custom_uhid || fullInvoice.customer || "N/A",
+        mrn: fullInvoice.custom_uhid || "N/A",
         displayNo: fullInvoice.custom_uhid || "N/A",
         dept: fullInvoice.custom_department || "N/A",
         visitType: fullInvoice.custom_visit_type || "N/A",
@@ -2760,6 +2848,9 @@ export default function NewBill() {
           paidAmount: Math.abs(payment.amount || 0).toString(),
           paymentDate: payment.posting_date || "",
           approvalNo: payment.approval_no || "",
+          custom_bank_name: payment.custom_bank_name || "",
+          custom_branch_name: payment.custom_branch_name || "",
+          custom_transaction_no: payment.custom_transaction_no || "",
         }));
         setRecordedPayments(loadedPayments);
       }
@@ -2859,6 +2950,7 @@ export default function NewBill() {
           uom: item.uom,
           rate: Number(item.rate) || 0,
           batch_no: item.batch || "",
+          warehouse: selectedWarehouse || item.warehouse || "",
           margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
           discount_percentage: Number(item.discountPercent) || 0,
           base_amount: Number(item.itemAmount) || 0,
@@ -2876,7 +2968,10 @@ export default function NewBill() {
         payments: recordedPayments.map(p => ({
           mode_of_payment: p.paymentMode || "Cash",
           amount: parseFloat(p.paidAmount || "0") || 0,
-          reference_no: p.transactionNo || "",
+          reference_no: p.custom_transaction_no || p.transactionNo || "",
+          custom_bank_name: p.custom_bank_name || p.bankName || "",
+          custom_branch_name: p.custom_branch_name || p.branchName || "",
+          custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
         })),
         patient_data: {
           mrn: patientData.mrn || "",
@@ -2905,11 +3000,15 @@ export default function NewBill() {
         requisition_to: requisitionTo || "",
         custom_patient_name: patientData?.name || "",
         custom_uhid: patientData?.mrn || "",
+        custom_abha_id: patientData?.ABHAID || "",
+        custom_age: patientData?.age || "",
         custom_req_no: requisitionNo || "",
         custom_visit_code: patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
         custom_bed_no: patientData?.bed || "",
+        custom_department: selectedDepartment || patientData?.dept || "",
+        custom_hospital: selectedHospital || "",
       };
 
       // Construct the taxes array dynamically

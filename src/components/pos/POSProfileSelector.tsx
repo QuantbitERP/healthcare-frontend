@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 
 interface POSProfile {
   name: string;
+  warehouse?: string;
 }
 
 interface POSProfileSelectorProps {
@@ -210,7 +211,10 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
                 {posProfiles.map((profile) => (
                   <div key={profile.name} className="flex items-center space-x-2">
                     <RadioGroupItem value={profile.name} id={profile.name} />
-                    <Label htmlFor={profile.name}>{profile.name}</Label>
+                    <Label htmlFor={profile.name}>
+                      {profile.name}
+                      {profile.warehouse ? ` (${profile.warehouse})` : ""}
+                    </Label>
                   </div>
                 ))}
               </RadioGroup>

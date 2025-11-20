@@ -73,6 +73,7 @@ export interface Item {
   totalPckgAmt: number;
   packageName: string;
   binLocation: string;
+  warehouse?: string; // Add warehouse field for stock tracking
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   genericName?: string; // Add genericName as optional property
@@ -1028,8 +1029,8 @@ export default function NewBill() {
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedSubDepartment, setSelectedSubDepartment] = useState<string>('');
+  const selectedHospital = '';
   const [showViewPosInvoicesModal, setShowViewPosInvoicesModal] = useState(false); // New state for View POS Invoices modal
-
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
   const [showCreateReturnModal, setShowCreateReturnModal] = useState(false);
   const [selectedInvoiceForReturn, setSelectedInvoiceForReturn] = useState<any>(null);
@@ -1069,6 +1070,9 @@ export default function NewBill() {
     paidAmount: string;
     paymentDate: string;
     approvalNo: string;
+    custom_bank_name?: string;
+    custom_branch_name?: string;
+    custom_transaction_no?: string;
   }>>([]);
 
   // --- START: Added function to clear file ---
@@ -1596,6 +1600,7 @@ export default function NewBill() {
         uom: item.uom,
         rate: Number(item.rate) || 0,
         batch_no: item.batch || "",
+        warehouse: selectedWarehouse || item.warehouse || "",
         margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
         discount_percentage: Number(item.discountPercent) || 0,
         base_amount: Number(item.itemAmount) || 0,
@@ -1613,10 +1618,10 @@ export default function NewBill() {
       payments: recordedPayments.map(p => ({
         mode_of_payment: p.paymentMode || "Cash",
         amount: parseFloat(p.paidAmount || "0") || 0,
-        reference_no: p.transactionNo || "",
-        // bank: p.bankName || "",
-        // branch: p.branchName || "",
-        // posting_date: p.paymentDate || "",
+        reference_no: p.custom_transaction_no || p.transactionNo || "",
+        custom_bank_name: p.custom_bank_name || p.bankName || "",
+        custom_branch_name: p.custom_branch_name || p.branchName || "",
+        custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
       })),
       patient_data: {
         mrn: patientData.mrn || "",
@@ -1652,6 +1657,8 @@ export default function NewBill() {
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
       custom_bed_no: patientData?.bed || "",
+      custom_department: selectedDepartment || patientData?.dept || "",
+      custom_hospital: selectedHospital || "",
     };
 
     // Construct the taxes array dynamically
@@ -2757,6 +2764,9 @@ export default function NewBill() {
           paidAmount: Math.abs(payment.amount || 0).toString(),
           paymentDate: payment.posting_date || "",
           approvalNo: payment.approval_no || "",
+          custom_bank_name: payment.custom_bank_name || "",
+          custom_branch_name: payment.custom_branch_name || "",
+          custom_transaction_no: payment.custom_transaction_no || "",
         }));
         setRecordedPayments(loadedPayments);
       }
@@ -2856,6 +2866,7 @@ export default function NewBill() {
           uom: item.uom,
           rate: Number(item.rate) || 0,
           batch_no: item.batch || "",
+          warehouse: selectedWarehouse || item.warehouse || "",
           margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
           discount_percentage: Number(item.discountPercent) || 0,
           base_amount: Number(item.itemAmount) || 0,
@@ -2873,7 +2884,10 @@ export default function NewBill() {
         payments: recordedPayments.map(p => ({
           mode_of_payment: p.paymentMode || "Cash",
           amount: parseFloat(p.paidAmount || "0") || 0,
-          reference_no: p.transactionNo || "",
+          reference_no: p.custom_transaction_no || p.transactionNo || "",
+          custom_bank_name: p.custom_bank_name || p.bankName || "",
+          custom_branch_name: p.custom_branch_name || p.branchName || "",
+          custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
         })),
         patient_data: {
           mrn: patientData.mrn || "",
@@ -2907,6 +2921,8 @@ export default function NewBill() {
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
         custom_bed_no: patientData?.bed || "",
+        custom_department: selectedDepartment || patientData?.dept || "",
+        custom_hospital: selectedHospital || "",
       };
 
       // Construct the taxes array dynamically

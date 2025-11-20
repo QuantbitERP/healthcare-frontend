@@ -174,6 +174,7 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     sgstAmt: "SGST Amt.",
     igstPercent: "IGST (%)",
     igstAmt: "IGST Amt.",
+    taxableAmount: "Item Amt",
     totalAmt: "Total Amt.",
     kitName: "Kit Name",
     totalPckgAmt: "Total Pckg Amt.",
@@ -306,6 +307,7 @@ const EditableTable = ({
   });
   const [columnVisibility, setColumnVisibility] = useState({
     mrp: false, // Hide MRP column by default
+    itemAmount: false, // Hide Item Amount column by default
   });
 
   const handleRemoveItemFromDetails = (itemId: string) => {
@@ -472,7 +474,7 @@ const EditableTable = ({
               // Check which batches are already in the grid and pre-select them
               const preSelectedBatches: { [key: string]: boolean } = {};
               const preSelectedQuantities: { [key: string]: number } = {};
-              
+
               items.forEach(gridItem => {
                 // Check if this item is the same as the current item (by itemCode)
                 if (gridItem.itemCode === item.itemCode && gridItem.batchNo) {
@@ -586,7 +588,7 @@ const EditableTable = ({
                               <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Select</th>
                               <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Batch No</th>
                               <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Expiry Date</th>
-                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Custom MRP</th>
+                              <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">MRP</th>
                               <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">Batch Qty</th>
                               <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">CGST Rate</th>
                               <th className="border border-gray-300 px-2 py-2 text-left text-xs font-medium">SGST Rate</th>
@@ -598,40 +600,40 @@ const EditableTable = ({
                             {batches.map((batch: any, index: number) => {
                               const isInGrid = items.some(gridItem => gridItem.itemCode === item.itemCode && gridItem.batchNo === batch.name);
                               return (
-                              <tr key={batch.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                <td className="border border-gray-300 px-2 py-2">
-                                  <Checkbox
-                                    checked={selectedBatches[batch.name] || false}
-                                    onCheckedChange={(checked) => handleBatchSelection(batch.name, checked === true)}
-                                  />
-                                </td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <span>{batch.name}</span>
-                                    {isInGrid && (
-                                      <span className="text-green-600 font-bold text-sm" title="Already in grid">✓</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">{batch.expiry_date || '-'}</td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">₹{batchMRPs[batch.name] || item.rate || 0}</td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">{batch.batch_qty || 0}</td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.cgstRate || '0.00'}%</td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.sgstRate || '0.00'}%</td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.igstRate || '0.00'}%</td>
-                                <td className="border border-gray-300 px-2 py-2">
-                                  <Input
-                                    type="number"
-                                    value={batchQuantities[batch.name] || ''}
-                                    onChange={(e) => handleQuantityChange(batch.name, parseInt(e.target.value) || 0)}
-                                    className="w-20 h-8 text-xs"
-                                    placeholder="Qty"
-                                    min="0"
-                                    max={batch.batch_qty}
-                                  />
-                                </td>
-                              </tr>
-                            );
+                                <tr key={batch.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  <td className="border border-gray-300 px-2 py-2">
+                                    <Checkbox
+                                      checked={selectedBatches[batch.name] || false}
+                                      onCheckedChange={(checked) => handleBatchSelection(batch.name, checked === true)}
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <span>{batch.name}</span>
+                                      {isInGrid && (
+                                        <span className="text-green-600 font-bold text-sm" title="Already in grid">✓</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">{batch.expiry_date || '-'}</td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">₹{batchMRPs[batch.name] || item.rate || 0}</td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">{batch.batch_qty || 0}</td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.cgstRate || '0.00'}%</td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.sgstRate || '0.00'}%</td>
+                                  <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.igstRate || '0.00'}%</td>
+                                  <td className="border border-gray-300 px-2 py-2">
+                                    <Input
+                                      type="number"
+                                      value={batchQuantities[batch.name] || ''}
+                                      onChange={(e) => handleQuantityChange(batch.name, parseInt(e.target.value) || 0)}
+                                      className="w-20 h-8 text-xs"
+                                      placeholder="Qty"
+                                      min="0"
+                                      max={batch.batch_qty}
+                                    />
+                                  </td>
+                                </tr>
+                              );
                             })}
                           </tbody>
                         </table>
@@ -857,11 +859,24 @@ const EditableTable = ({
         ),
       },
       {
-        accessorKey: "itemAmount",
-        header: "Item Amount",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        id: "taxableAmount",
+        header: "Item Amt",
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          const baseAmount = item.saleQty * rate;
+          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+
+          let taxableAmount = totalTaxRate > 0 ? baseAmount / (1 + totalTaxRate) : baseAmount;
+          const discountAmount = taxableAmount * (item.discountPercent / 100);
+          const discountedTaxableAmount = taxableAmount - discountAmount;
+
+          return (
+            <div className="px-2 py-1 text-sm">
+              ₹{discountedTaxableAmount.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "discountPercent",
@@ -920,31 +935,11 @@ const EditableTable = ({
         ),
       },
       {
-        id: "taxableAmount",
-        header: "Taxable Amt.",
-        cell: ({ row }) => {
-          const item = row.original as Item;
-          const rate = item.rate !== null ? item.rate : 0;
-          const baseAmount = item.saleQty * rate;
-          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
-          
-          let taxableAmount = 0;
-          if (totalTaxRate > 0) {
-            taxableAmount = baseAmount / (1 + totalTaxRate);
-          } else {
-            taxableAmount = baseAmount;
-          }
-          
-          // Apply discount to taxable amount
-          const discountAmount = taxableAmount * (item.discountPercent / 100);
-          const discountedTaxableAmount = taxableAmount - discountAmount;
-          
-          return (
-            <div className="px-2 py-1 text-sm">
-              ₹{discountedTaxableAmount.toFixed(2)}
-            </div>
-          );
-        },
+        accessorKey: "itemAmount",
+        header: "Item Amount",
+        cell: ({ getValue, row, column, table }) => (
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
+        ),
       },
       {
         accessorKey: "totalAmt",
@@ -1001,6 +996,7 @@ const EditableTable = ({
       pagination,
       columnVisibility: {
         mrp: false, // Hide MRP column by default
+        itemAmount: false, // Hide Item Amount column by default
       },
     },
     enableRowSelection: true,

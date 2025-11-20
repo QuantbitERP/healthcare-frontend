@@ -15,6 +15,9 @@ interface Payment {
   paidAmount: string;
   paymentDate: string;
   approvalNo: string;
+  custom_bank_name?: string;
+  custom_branch_name?: string;
+  custom_transaction_no?: string;
 }
 
 interface PaymentTableProps {
@@ -124,7 +127,10 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
           branchName: '',
           paidAmount: totalBillAmount.toFixed(2),
           paymentDate: new Date().toISOString().split('T')[0],
-          approvalNo: ''
+          approvalNo: '',
+          custom_bank_name: '',
+          custom_branch_name: '',
+          custom_transaction_no: ''
         }]);
       }
     };
@@ -154,7 +160,10 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
         branchName: '',
         paidAmount: totalBillAmount.toFixed(0),
         paymentDate: new Date().toISOString().split('T')[0],
-        approvalNo: ''
+        approvalNo: '',
+        custom_bank_name: '',
+        custom_branch_name: '',
+        custom_transaction_no: ''
       }]);
     }
   }, [totalBillAmount, payments.length, paymentMethods]);
@@ -169,7 +178,10 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
       branchName: '',
       paidAmount: totalBillAmount.toFixed(2),
       paymentDate: new Date().toISOString().split('T')[0],
-      approvalNo: ''
+      approvalNo: '',
+      custom_bank_name: '',
+      custom_branch_name: '',
+      custom_transaction_no: ''
     }]);
   };
 
@@ -253,8 +265,8 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
                       width: expandedCells[`${payment.id}-transactionNo`] ? '320px' : '100%'
                     }}
                     placeholder="Transaction No"
-                    value={payment.transactionNo}
-                    onChange={(e) => handlePaymentChange(payment.id, 'transactionNo', e.target.value)}
+                    value={payment.custom_transaction_no || payment.transactionNo}
+                    onChange={(e) => handlePaymentChange(payment.id, 'custom_transaction_no', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'transactionNo')}
                     onBlur={() => handleCellClick(payment.id, 'transactionNo')}
                   />
@@ -268,8 +280,8 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
                       width: expandedCells[`${payment.id}-bankName`] ? '320px' : '100%'
                     }}
                     placeholder="Bank Name"
-                    value={payment.bankName}
-                    onChange={(e) => handlePaymentChange(payment.id, 'bankName', e.target.value)}
+                    value={payment.custom_bank_name || payment.bankName}
+                    onChange={(e) => handlePaymentChange(payment.id, 'custom_bank_name', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'bankName')}
                     onBlur={() => handleCellClick(payment.id, 'bankName')}
                   />
@@ -283,8 +295,8 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
                       width: expandedCells[`${payment.id}-branchName`] ? '320px' : '100%'
                     }}
                     placeholder="Branch Name"
-                    value={payment.branchName}
-                    onChange={(e) => handlePaymentChange(payment.id, 'branchName', e.target.value)}
+                    value={payment.custom_branch_name || payment.branchName}
+                    onChange={(e) => handlePaymentChange(payment.id, 'custom_branch_name', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'branchName')}
                     onBlur={() => handleCellClick(payment.id, 'branchName')}
                   />

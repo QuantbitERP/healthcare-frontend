@@ -263,7 +263,7 @@ export const useFrappeApi = () => {
       return customers;
     }
 
-    const CUSTOMER_API_URL = buildFrappeApiUrl("Customer", ["name"]);
+    const CUSTOMER_API_URL = buildFrappeApiUrl("Customer", ["name", "custom_is_self_paid"]);
 
     try {
       const data = await makeFrappeApiCall(CUSTOMER_API_URL, "Customer", apiKey!, apiSecret!);
@@ -271,6 +271,7 @@ export const useFrappeApi = () => {
         name: customer.name,
         label: customer.name,
         value: customer.name,
+        isSelfPaid: Boolean(customer.custom_is_self_paid),
       }));
       console.log("Customers loaded successfully:", customerData);
       setCustomers(customerData);

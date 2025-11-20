@@ -12,6 +12,9 @@ interface Payment {
   paidAmount: string;
   paymentDate: string;
   approvalNo: string;
+  custom_bank_name?: string;
+  custom_branch_name?: string;
+  custom_transaction_no?: string;
 }
 
 interface RecordPaymentModalProps {
