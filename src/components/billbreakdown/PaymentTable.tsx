@@ -63,7 +63,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
 
       if (posProfile && apiKey && apiSecret) {
         try {
-          const response = await fetch(`http://192.168.1.30:4414/api/resource/POS%20Profile/${posProfile}`, {
+          const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Profile/${posProfile}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',

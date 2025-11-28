@@ -453,7 +453,7 @@ const EditableTable = ({
 
           const fetchBatchMRP = async (batchName: string) => {
             try {
-              const response = await fetch(`http://192.168.1.30:4414/api/resource/Batch/${batchName}`, {
+              const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
                 method: 'GET',
                 headers: {
                   'Content-Type': 'application/json',
@@ -758,7 +758,7 @@ const EditableTable = ({
               // Fetch MRP for the selected batch
               let batchMRP = 0;
               try {
-                const response = await fetch(`http://192.168.1.30:4414/api/resource/Batch/${batchNo}`, {
+                const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
                   method: 'GET',
                   headers: {
                     'Content-Type': 'application/json',

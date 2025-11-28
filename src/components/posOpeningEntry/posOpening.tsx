@@ -73,7 +73,7 @@ const POSOpeningEntry: React.FC = () => {
       try {
         // Fetch Companies
         const companyRes = await fetch(
-          "http://192.168.1.30:4414/api/resource/Company?fields=[\"name\"]",
+          "https://192.168.7.221:4422/api/resource/Company?fields=[\"name\"]",
           {
             method: "GET",
             headers: {
@@ -92,7 +92,7 @@ const POSOpeningEntry: React.FC = () => {
 
         // Fetch POS Profiles
         const posRes = await fetch(
-          "http://192.168.1.30:4414/api/resource/POS Profile?fields=[\"name\"]",
+          "https://192.168.7.221:4422/api/resource/POS Profile?fields=[\"name\"]",
           {
             method: "GET",
             headers: {
@@ -111,7 +111,7 @@ const POSOpeningEntry: React.FC = () => {
 
         // Fetch Modes of Payment
         const mopRes = await fetch(
-          "http://192.168.1.30:4414/api/resource/Mode of Payment?fields=[\"name\"]",
+          "https://192.168.7.221:4422/api/resource/Mode of Payment?fields=[\"name\"]",
           {
             method: "GET",
             headers: {
@@ -198,7 +198,7 @@ const POSOpeningEntry: React.FC = () => {
     setError(null);
     try {
       const response = await fetch(
-        "http://192.168.1.30:4414/api/resource/POS Opening Entry",
+        "https://192.168.7.221:4422/api/resource/POS Opening Entry",
         {
           method: "POST",
           headers: {

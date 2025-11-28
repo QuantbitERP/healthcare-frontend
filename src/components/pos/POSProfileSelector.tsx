@@ -42,7 +42,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       const fetchPOSProfiles = async () => {
         try {
           console.log("Fetching POS Profiles for user:", currentUser);
-          const url = `http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
+          const url = `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
           const response = await fetch(url, {
             method: "POST",
             headers: {
@@ -96,7 +96,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       try {
         console.log("Checking for POS conflicts before proceeding...");
         const response = await fetch(
-          `http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
+          `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
           {
             method: "POST",
             headers: {

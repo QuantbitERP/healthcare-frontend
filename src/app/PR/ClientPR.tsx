@@ -102,7 +102,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const suggestionsRef = useRef<HTMLUListElement>(null);
   const { apiKey, apiSecret } = useAuth();
 
-  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
+  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
 
   const searchItems = async (query: string = '', classification: string = '', generic: boolean = false): Promise<Item[]> => {
     try {
@@ -403,7 +403,7 @@ const useStockQty = () => {
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
 
         const response = await fetch(
-          `http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
+          `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
           {
             method: "POST",
             headers,
@@ -530,7 +530,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `http://192.168.1.30:4414/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
+        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
         {
           method: 'GET',
           headers,
@@ -572,7 +572,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `http://192.168.1.30:4414/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
+        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
         {
           method: 'GET',
           headers,
@@ -766,7 +766,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   });
 
   const API_BASE_URL = "http://192.168.7.196:8085/masterdata/search-patient";
-  const FRAPPE_API_BASE_URL = "http://192.168.1.30:4414/api/resource";
+  const FRAPPE_API_BASE_URL = "https://192.168.7.221:4422/api/resource";
 
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
@@ -1017,7 +1017,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const handleFinalize = async () => {
     const docName = await savePatientRequisition(true);
     if (docName) {
-      const printUrl = `http://192.168.1.30:4414/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+      const printUrl = `https://192.168.7.221:4422/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
       window.location.href = printUrl;
     }
   };
@@ -1545,7 +1545,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       };
 
       const response = await fetch(
-        `http://192.168.1.30:4414/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -1635,7 +1635,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       // First, check if an amendment already exists
       const checkAmendResponse = await fetch(
-        `http://192.168.1.30:4414/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://192.168.7.221:4422/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -1660,7 +1660,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         } else {
           // Fetch the cancelled document
           const fetchResponse = await fetch(
-            `http://192.168.1.30:4414/api/resource/Patient%20Requisition/${requisitionNo}`,
+            `https://192.168.7.221:4422/api/resource/Patient%20Requisition/${requisitionNo}`,
             {
               method: 'GET',
               headers,
@@ -1715,7 +1715,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
           // Create the new amended document
           const createResponse = await fetch(
-            `http://192.168.1.30:4414/api/resource/Patient%20Requisition`,
+            `https://192.168.7.221:4422/api/resource/Patient%20Requisition`,
             {
               method: 'POST',
               headers,
@@ -1761,7 +1761,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     }
 
     try {
-      const printUrl = 'http://192.168.1.30:4414/printview?' +
+      const printUrl = 'https://192.168.7.221:4422/printview?' +
         'doctype=Patient%20Requisition&' +
         'name=' + encodeURIComponent(requisitionNo) + '&' +
         'trigger_print=1&' +

@@ -91,8 +91,8 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const { apiKey, apiSecret } = useAuth();
 
-  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
-  const API_METHOD_URL = 'http://192.168.1.30:4414/api/method';
+  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_METHOD_URL = 'https://192.168.7.221:4422/api/method';
 
   useEffect(() => {
     if (isOpen && posProfile) {

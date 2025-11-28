@@ -57,7 +57,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const [isASAP, setIsASAP] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const { apiKey, apiSecret } = useAuth();
-  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
+  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {
