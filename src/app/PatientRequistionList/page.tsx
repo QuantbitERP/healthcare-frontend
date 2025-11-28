@@ -15,10 +15,11 @@ interface Requisition {
   requestedFromDept: string;
   requestedToDept: string;
   userName: string;
+  docstatus: number;
 }
 
 export default function PatientRequisitionList() {
-  const API_BASE_URL = "https://192.168.7.221:4422/api/resource";
+  const API_BASE_URL = "http://192.168.1.30:4414/api/resource";
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +42,8 @@ export default function PatientRequisitionList() {
           "requisition_date_time",
           "requisition_from",
           "requisition_to",
-          "owner"
+          "owner",
+          "docstatus"
         ]),
         limit_page_length: "40",
         order_by: "creation desc"
@@ -82,6 +84,7 @@ export default function PatientRequisitionList() {
         requestedFromDept: doc.requisition_from || "",
         requestedToDept: doc.requisition_to || "",
         userName: doc.owner || "",
+        docstatus: doc.docstatus || 0,
       }));
 
       setRequisitions(transformedData);
@@ -176,6 +179,24 @@ export default function PatientRequisitionList() {
             { accessorKey: "requestedFromDept", header: "Requested From Dept./Ward" },
             { accessorKey: "requestedToDept", header: "Requested to Dept./Ward" },
             {
+              accessorKey: "docstatus",
+              header: "Status",
+              cell: ({ getValue }: any) => {
+                const status = getValue();
+                return (
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      status === 0
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {status === 0 ? "Draft" : "Submitted"}
+                  </span>
+                );
+              },
+            },
+            {
               accessorKey: "userName",
               header: "Created By",
               cell: ({ getValue }: any) => (
@@ -188,6 +209,7 @@ export default function PatientRequisitionList() {
             requisitionDate: "Requisition Date",
             requestedFromDept: "Requested From Dept./Ward",
             requestedToDept: "Requested to Dept./Ward",
+            docstatus: "Status",
             userName: "Created By",
           }}
           filterCount={filterCount}

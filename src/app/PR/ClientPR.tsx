@@ -102,7 +102,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const suggestionsRef = useRef<HTMLUListElement>(null);
   const { apiKey, apiSecret } = useAuth();
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
 
   const searchItems = async (query: string = '', classification: string = '', generic: boolean = false): Promise<Item[]> => {
     try {
@@ -403,7 +403,7 @@ const useStockQty = () => {
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
 
         const response = await fetch(
-          `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
+          `http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
           {
             method: "POST",
             headers,
@@ -433,7 +433,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const router = useRouter();
   const params = use(searchParams);
   const { fetchDepartment, fetchBranches, fetchKits, fetchClassifications } = useFrappeApi();
-  const { isAuthenticated, apiKey, apiSecret } = useAuth();
+  const { isAuthenticated, apiKey, apiSecret, currentUser } = useAuth();
 
   // State for form fields
   const [selectedValue, setSelectedValue] = useState<string>("");
@@ -455,6 +455,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const [barcodeValue, setBarcodeValue] = useState("");
   const [isGeneric, setIsGeneric] = useState(false);
   const [patientRemark, setPatientRemark] = useState("");
+  const [docstatus, setDocstatus] = useState<number>(0); // 0=Draft, 1=Submitted, 2=Cancelled
+  const [_isAmendMode, setIsAmendMode] = useState(false); // Track if in amend mode
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   // Alert state
@@ -488,6 +490,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
   // Search type options
   const selectOptions: SelectOption[] = [
+    { label: "", value: "CLEAR" }, // Use special value instead of empty string
     { label: "UHID", value: "uhid" },
     { label: "Aadhaar No", value: "aadharCardNo" },
     { label: "Mobile No", value: "mobile" },
@@ -496,6 +499,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
   // Sale type options
   const saleTypeOptions: SelectOption[] = [
+    { label: "", value: "CLEAR" }, // Use special value instead of empty string
     { label: "Cash", value: "cash" },
     { label: "Company", value: "company" },
   ];
@@ -526,7 +530,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
+        `http://192.168.1.30:4414/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
         {
           method: 'GET',
           headers,
@@ -568,7 +572,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
+        `http://192.168.1.30:4414/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
         {
           method: 'GET',
           headers,
@@ -658,31 +662,25 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       updated[existingIdx].reqQty = String(newReq);
 
       // 2. Refresh stock (in case the warehouse changed)
-      if (requisitionFrom) {
-        const stock = await fetchStockQty(baseItem.itemCode, requisitionFrom);
-        updated[existingIdx].stockQty = stock;
-      }
+      const newStock = await fetchStockQty(updated[existingIdx].itemCode, requisitionFrom);
+      updated[existingIdx].stockQty = newStock;
+
       setItems(updated);
-      showAlert(
-        "success",
-        "Success",
-        `${baseItem.itemName} quantity increased to ${newReq}`
-      );
+      showAlert("success", "Success", `${baseItem.itemName} quantity updated (stock: ${newStock})`);
       return;
     }
 
-    // 3. New item – fetch stock first, then push
-    let stock = "0";
-    if (requisitionFrom) {
-      stock = await fetchStockQty(baseItem.itemCode, requisitionFrom);
-    }
+    // 3. New item - get stock
+    const stock = await fetchStockQty(baseItem.itemCode, requisitionFrom);
 
+    // 4. Only set kit name if the item is actually from a kit (baseItem.kit is not empty)
+    // Don't automatically assign selectedKit to manually added items
     const newItem: Item = {
       ...baseItem,
       id: baseItem.itemCode ? String(baseItem.itemCode.hashCode()) : String(Date.now()),
       reqQty: String(qtyIncrement),
       stockQty: stock,
-      kit: selectedKit || baseItem.kit || "",
+      kit: baseItem.kit || "", // Only use kit name from baseItem, not selectedKit
       remark: baseItem.remark || "",
     };
 
@@ -768,7 +766,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   });
 
   const API_BASE_URL = "http://192.168.7.196:8085/masterdata/search-patient";
-  const FRAPPE_API_BASE_URL = "https://192.168.7.221:4422/api/resource";
+  const FRAPPE_API_BASE_URL = "http://192.168.1.30:4414/api/resource";
 
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
@@ -807,7 +805,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setSelectedSaleType(requisition.sale_type || "");
       setSelectedClassification(requisition.classification || "");
       setIsGeneric(requisition.generic === "1");
-      setPatientRemark(requisition.remarks || "");
+      setPatientRemark(requisition.remarks || requisition.remark || "");
+      console.log("Loading remark:", requisition.remarks, requisition.remark);
+      setDocstatus(requisition.docstatus || 0); // Capture docstatus
+      setIsAmendMode(false); // Reset amend mode
       setPriorities({
         routine: requisition.routine === 1,
         stat: requisition.stat === 1,
@@ -1016,7 +1017,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const handleFinalize = async () => {
     const docName = await savePatientRequisition(true);
     if (docName) {
-      const printUrl = `https://192.168.7.221:4422/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+      const printUrl = `http://192.168.1.30:4414/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
       window.location.href = printUrl;
     }
   };
@@ -1138,6 +1139,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   );
 
   const handleSelectChange = (value: string) => {
+    if (value === "CLEAR") {
+      setSelectedValue(""); // Clear selection
+      setSearchResults([]);
+      setShowDropdown(false);
+      console.log("Search field cleared");
+      return;
+    }
+    
     if (selectOptions.some((option) => option.value === value)) {
       setSelectedValue(value);
       setSearchResults([]);
@@ -1150,6 +1159,55 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setSelectedValue("");
       showAlert("warning", "Warning", "Invalid search field selected.");
     }
+  };
+
+  // Handler functions for dropdowns with clear functionality
+  const handleKitChange = (value: string) => {
+    if (value === "CLEAR") {
+      setSelectedKit(""); // Clear selection
+      return;
+    }
+    setSelectedKit(value);
+  };
+
+  const handleSaleTypeChange = (value: string) => {
+    if (value === "CLEAR") {
+      setSelectedSaleType(""); // Clear selection
+      return;
+    }
+    setSelectedSaleType(value);
+  };
+
+  const handleClassificationChange = (value: string) => {
+    if (value === "CLEAR") {
+      setSelectedClassification(""); // Clear selection
+      return;
+    }
+    setSelectedClassification(value);
+  };
+
+  const handleRequisitionFromChange = (value: string) => {
+    if (value === "CLEAR") {
+      setRequisitionFrom(""); // Clear selection
+      return;
+    }
+    setRequisitionFrom(value);
+  };
+
+  const handleRequisitionToChange = (value: string) => {
+    if (value === "CLEAR") {
+      setRequisitionTo(""); // Clear selection
+      return;
+    }
+    setRequisitionTo(value);
+  };
+
+  const handleToLocationChange = (value: string) => {
+    if (value === "CLEAR") {
+      setToLocation(""); // Clear selection
+      return;
+    }
+    setToLocation(value);
   };
 
   const handleSearchChange = (value: string) => {
@@ -1475,8 +1533,309 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     patientRemark.trim().length <= 255 &&
     items.length > 0;
 
+  // Debug: Log current user
+  console.log('Current user:', currentUser);
+
+  // Function to check if sale exists for requisition
+  const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      const response = await fetch(
+        `http://192.168.1.30:4414/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data && data.data.length > 0;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking sale for requisition:", error);
+      return false;
+    }
+  };
+
+  // Function to cancel a submitted requisition
+  const handleCancelRequisition = async () => {
+    if (!requisitionNo) {
+      showAlert("danger", "Error", "No requisition to cancel");
+      return;
+    }
+
+    // Check if sale exists for this requisition
+    const saleExists = await checkSaleExistsForRequisition(requisitionNo);
+    if (saleExists) {
+      showAlert("danger", "Error", "Cannot cancel requisition: Sale has been generated against this requisition");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+      const storedCsrfToken = localStorage.getItem('csrfToken');
+      if (storedCsrfToken) {
+        headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
+      }
+
+      const response = await fetch(
+        `${FRAPPE_API_BASE_URL}/Patient Requisition/${requisitionNo}`,
+        {
+          method: 'PUT',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            docstatus: 2, // 2 = Cancelled
+          }),
+        }
+      );
+
+      if (response.ok) {
+        setDocstatus(2);
+        showAlert("success", "Success", "Requisition cancelled successfully");
+      } else {
+        showAlert("danger", "Error", "Failed to cancel requisition");
+      }
+    } catch (error) {
+      console.error("Error cancelling requisition:", error);
+      showAlert("danger", "Error", "Error cancelling requisition. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Function to amend a cancelled requisition
+  const handleAmendRequisition = async () => {
+    if (!requisitionNo || docstatus !== 2) {
+      showAlert("danger", "Error", "Can only amend cancelled requisitions");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+      const storedCsrfToken = localStorage.getItem('csrfToken');
+      if (storedCsrfToken) {
+        headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
+      }
+
+      // First, check if an amendment already exists
+      const checkAmendResponse = await fetch(
+        `http://192.168.1.30:4414/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (checkAmendResponse.ok) {
+        const existingAmendments = await checkAmendResponse.json();
+        
+        // If an amendment already exists, load it
+        if (existingAmendments.data && existingAmendments.data.length > 0) {
+          const amendedDocName = existingAmendments.data[0].name;
+          setIsAmendMode(true);
+          setDocstatus(0);
+          setRequisitionNo(amendedDocName);
+          showAlert("success", "Success", `Loading existing amendment: ${amendedDocName}`);
+          
+          setTimeout(() => {
+            fetchRequisitionData(amendedDocName);
+          }, 500);
+        } else {
+          // Fetch the cancelled document
+          const fetchResponse = await fetch(
+            `http://192.168.1.30:4414/api/resource/Patient%20Requisition/${requisitionNo}`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+
+          if (!fetchResponse.ok) {
+            showAlert("danger", "Error", "Failed to fetch requisition for amendment");
+            return;
+          }
+
+          const cancelledDoc = await fetchResponse.json();
+          const docData = cancelledDoc.data;
+
+          // Create a new document with amended_from set
+          const newDocData = {
+            doctype: 'Patient Requisition',
+            amended_from: requisitionNo,
+            requisition_date_time: docData.requisition_date_time,
+            requisition_from: docData.requisition_from,
+            requisition_to: docData.requisition_to,
+            to_location: docData.to_location,
+            kit: docData.kit,
+            sale_type: docData.sale_type,
+            classification: docData.classification,
+            generic: docData.generic,
+            remarks: docData.remarks,
+            routine: docData.routine,
+            stat: docData.stat,
+            discharge: docData.discharge,
+            asap: docData.asap,
+            expired: docData.expired,
+            full_name: docData.full_name,
+            age: docData.age,
+            gender: docData.gender,
+            mobile_number: docData.mobile_number,
+            aadhar_no: docData.aadhar_no,
+            doctor: docData.doctor || docData.consulting_doctor, // Use doctor field
+            patient_id: docData.patient_id,
+            visit_type: docData.visit_type,
+            patient_company: docData.patient_company,
+            department: docData.department,
+            ward: docData.ward,
+            bed_name: docData.bed_name,
+            patient_category: docData.patient_category,
+            visit_id: docData.visit_id,
+            visit_datetime: docData.visit_datetime,
+            registration_date: docData.registration_date,
+            patient_requisition_item_details: docData.patient_requisition_item_details || [],
+          };
+
+          // Create the new amended document
+          const createResponse = await fetch(
+            `http://192.168.1.30:4414/api/resource/Patient%20Requisition`,
+            {
+              method: 'POST',
+              headers,
+              credentials: 'include',
+              body: JSON.stringify(newDocData),
+            }
+          );
+
+          if (createResponse.ok) {
+            const amendedData = await createResponse.json();
+            const amendedDocName = amendedData.data?.name;
+            
+            setIsAmendMode(true);
+            setDocstatus(0);
+            setRequisitionNo(amendedDocName);
+            showAlert("success", "Success", `Requisition amended successfully. New document: ${amendedDocName}`);
+            
+            setTimeout(() => {
+              fetchRequisitionData(amendedDocName);
+            }, 500);
+          } else {
+            const errorData = await createResponse.json();
+            console.error('Create amendment error:', errorData);
+            showAlert("danger", "Error", errorData.exc || "Failed to create amended requisition");
+          }
+        }
+      } else {
+        showAlert("danger", "Error", "Failed to check for existing amendments");
+      }
+    } catch (error) {
+      console.error("Error amending requisition:", error);
+      showAlert("danger", "Error", "Error amending requisition. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Function to print requisition
+  const handlePrintRequisition = async () => {
+    if (!requisitionNo) {
+      showAlert("danger", "Error", "No requisition to print");
+      return;
+    }
+
+    try {
+      const printUrl = 'http://192.168.1.30:4414/printview?' +
+        'doctype=Patient%20Requisition&' +
+        'name=' + encodeURIComponent(requisitionNo) + '&' +
+        'trigger_print=1&' +
+        'format=Patient%20Requisition&' +
+        'no_letterhead=0&' +
+        'settings=%7B%7D&' +
+        '_lang=en';
+      
+      window.open(printUrl, '_blank');
+    } catch (error) {
+      console.error("Error printing requisition:", error);
+      showAlert("danger", "Error", "Failed to print requisition. Please try again.");
+    }
+  };
+
+  // Function to delete a draft requisition
+  const handleDeleteRequisition = async () => {
+    if (!requisitionNo || docstatus !== 0) {
+      showAlert("danger", "Error", "Can only delete draft requisitions");
+      return;
+    }
+
+    const confirmDelete = window.confirm("Are you sure you want to delete this requisition? This action cannot be undone.");
+    if (!confirmDelete) return;
+
+    try {
+      setIsSaving(true);
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+      const storedCsrfToken = localStorage.getItem('csrfToken');
+      if (storedCsrfToken) {
+        headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
+      }
+
+      const response = await fetch(
+        `${FRAPPE_API_BASE_URL}/Patient Requisition/${requisitionNo}`,
+        {
+          method: 'DELETE',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (response.ok) {
+        showAlert("success", "Success", "Requisition deleted successfully");
+        // Redirect to requisition list after deletion
+        setTimeout(() => {
+          router.push("/PatientRequistionList");
+        }, 1500);
+      } else {
+        showAlert("danger", "Error", "Failed to delete requisition");
+      }
+    } catch (error) {
+      console.error("Error deleting requisition:", error);
+      showAlert("danger", "Error", "Error deleting requisition. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="bg-gray-50 min-h-screen px-3">
+    <div className="bg-gray-50 min-h-screen px-3 relative">
+      {/* Debug: Show current user info */}
+   
+
+      {/* Profile Circle - Top Right Corner - Always visible for testing */}
+      <div className="fixed top-4 right-4 z-[9999] group">
+        <div className="relative">
+          
+        </div>
+      </div>
+
       {alert.show && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] max-w-md">
           <Alerts
@@ -1625,8 +1984,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                       label="Requisition From"
                       inputType="select"
                       value={requisitionFrom}
-                      onChange={setRequisitionFrom}
-                      data={warehouses}
+                      onChange={handleRequisitionFromChange}
+                      data={[{ label: "", value: "CLEAR" }, ...warehouses]} // Use special value instead of empty string
                       placeholder="Select Department"
                       required={true}
                     />
@@ -1637,8 +1996,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                       label="Requisition To"
                       inputType="select"
                       value={requisitionTo}
-                      onChange={setRequisitionTo}
-                      data={warehouses}
+                      onChange={handleRequisitionToChange}
+                      data={[{ label: "", value: "CLEAR" }, ...warehouses]} // Use special value instead of empty string
                       placeholder="Select Department"
                       required={true}
                     />
@@ -1649,8 +2008,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                       label="To Location"
                       inputType="select"
                       value={toLocation}
-                      onChange={setToLocation}
-                      data={branches}
+                      onChange={handleToLocationChange}
+                      data={[{ label: "", value: "CLEAR" }, ...branches]} // Use special value instead of empty string
                       placeholder="Select Branch"
                       required={true}
                     />
@@ -1661,8 +2020,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                       label="Kit"
                       inputType="select"
                       value={selectedKit}
-                      onChange={setSelectedKit}
-                      data={kits}
+                      onChange={handleKitChange}
+                      data={[{ label: "", value: "CLEAR" }, ...kits]} // Use special value instead of empty string
                       placeholder="Select Kit"
                     />
                   </div>
@@ -1672,7 +2031,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                       label="Sale Type"
                       inputType="select"
                       value={selectedSaleType}
-                      onChange={setSelectedSaleType}
+                      onChange={handleSaleTypeChange}
                       data={saleTypeOptions}
                       placeholder="Select Sale Type"
                       required={true}
@@ -1736,8 +2095,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                   <RenderFormElement
                     inputType="select"
                     value={selectedClassification}
-                    onChange={setSelectedClassification}
-                    data={classifications}
+                    onChange={handleClassificationChange}
+                    data={[{ label: "", value: "CLEAR" }, ...classifications]} // Use special value instead of empty string
                     placeholder="Select Classification"
                   />
                   <div className="flex items-center space-x-2 col-span-2">
@@ -1804,30 +2163,85 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       <div className="fixed bottom-0 left-0 w-full h-16 px-6 flex justify-between items-center border-y border-[#D9D9E0] bg-white z-100">
         <div className="w-fit h-fit flex items-center gap-4">
+          {/* Status Badge */}
+          {requisitionNo && (
+            <div className="text-xs font-medium">
+              {docstatus === 0 && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Draft</span>}
+              {docstatus === 1 && <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Submitted</span>}
+              {docstatus === 2 && <span className="px-2 py-1 bg-red-100 text-red-800 rounded">Cancelled</span>}
+            </div>
+          )}
         </div>
         <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
-          <Button type="secondary-button" size="button-medium" onClick={handleReset}>
-            Reset
-          </Button>
-          <Button
-            type="primary-outlined-button"
-            size="button-medium"
-            onClick={handleSave}
-            disabled={isSaving || !isFormValid}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            type="primary-button"
-            size="button-medium"
-            onClick={handleFinalize}
-            disabled={isSaving || !isFormValid}
-          >
-            {isSaving ? "Finalizing..." : "Finalize and Print"}
-          </Button>
-          <Button type="primary-button" size="button-medium" onClick={handleClick}>
-            Show Requisition
-          </Button>
+          {/* Draft State Buttons */}
+          {docstatus === 0 && (
+            <>
+              <Button type="secondary-button" size="button-medium" onClick={handleReset}>
+                Reset
+              </Button>
+              <Button
+                type="primary-outlined-button"
+                size="button-medium"
+                onClick={handleSave}
+                disabled={isSaving || !isFormValid}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={handleFinalize}
+                disabled={isSaving || !isFormValid}
+              >
+                {isSaving ? "Finalizing..." : "Finalize and Print"}
+              </Button>
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleDeleteRequisition}
+                disabled={isSaving}
+              >
+                {isSaving ? "Deleting..." : "Delete"}
+              </Button>
+            </>
+          )}
+
+          {/* Submitted State Buttons */}
+          {docstatus === 1 && (
+            <>
+              <Button type="primary-button" size="button-medium" onClick={handleClick}>
+                Show Requisition
+              </Button>
+              <Button type="primary-outlined-button" size="button-medium" onClick={handlePrintRequisition}>
+                Print
+              </Button>
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleCancelRequisition}
+                disabled={isSaving}
+              >
+                {isSaving ? "Cancelling..." : "Cancel"}
+              </Button>
+            </>
+          )}
+
+          {/* Cancelled State Buttons */}
+          {docstatus === 2 && (
+            <>
+              <Button type="primary-button" size="button-medium" onClick={handleClick}>
+                Show Requisition
+              </Button>
+              <Button
+                type="primary-outlined-button"
+                size="button-medium"
+                onClick={handleAmendRequisition}
+                disabled={isSaving}
+              >
+                {isSaving ? "Amending..." : "Amend"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

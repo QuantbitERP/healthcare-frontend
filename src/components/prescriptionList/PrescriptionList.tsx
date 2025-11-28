@@ -6,6 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import Button from "@/components/buttons/Button";
 import DataTableComponent, { TableCellComponents } from "@/components/DataTable";
 import { Button as UIButton } from "@/components/ui/button";
@@ -25,6 +27,9 @@ interface Prescription {
   visit_id: string;
   start_date: string;
   end_date: string;
+  prescription_status?: "Pending" | "Completed";
+  total_qty?: number;
+  invoiced_qty?: number;
 }
 
 interface PrescriptionListProps {
@@ -43,8 +48,9 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPrescriptions = useCallback(async (search?: string, dateRange?: DateRange) => {
@@ -99,7 +105,15 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         withCredentials: true,
       });
 
-      const data: any[] = response.data.data || [];
+      let data: any[] = response.data.data || [];
+      
+      // Filter out completed prescriptions if showCompleted is false
+      if (!showCompleted) {
+        data = data.filter(
+          (prescription: Prescription) => prescription.prescription_status !== "Completed"
+        );
+      }
+      
       const transformedData = data.map((item: any, index: number) => ({
         id: index + 1,
         prescription_number: item.name || "",
@@ -120,7 +134,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [apiKey, apiSecret]);
+  }, [apiKey, apiSecret, showCompleted]);
 
   // Debounced search implementation
   const debouncedFetch = useCallback((search: string, dateRange?: DateRange) => {
@@ -145,6 +159,13 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const handleDateRangeChange = useCallback((newDateRange: DateRange | undefined) => {
     debouncedFetch(searchTerm, newDateRange);
   }, [debouncedFetch, searchTerm]);
+
+  // Handle showCompleted change
+  useEffect(() => {
+    if (isOpen) {
+      fetchPrescriptions(searchTerm, dateRange);
+    }
+  }, [showCompleted, isOpen, fetchPrescriptions, searchTerm, dateRange]);
 
   // Initial load when component opens
   useEffect(() => {
@@ -210,6 +231,24 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       ),
     },
     {
+      accessorKey: "prescription_status",
+      header: "Status",
+      cell: ({ getValue }: any) => {
+        const status = getValue();
+        return (
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              status === "Completed" 
+                ? "bg-green-100 text-green-800" 
+                : "bg-yellow-100 text-yellow-800"
+            }`}>
+              {status || "Pending"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       id: "select",
       header: "Select",
       cell: ({ row }: any) => (
@@ -232,6 +271,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     patient_name: "Patient Name",
     patient_id: "Patient ID",
     doctor_id: "Doctor Name",
+    prescription_status: "Status",
   };
 
   if (!isOpen) return null;
@@ -247,6 +287,15 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         </CardHeader>
 
         <CardContent className="flex-1 p-4 overflow-hidden flex flex-col">
+          {/* Show Completed Filter */}
+          <div className="flex items-center space-x-2 mb-4 p-2 bg-gray-50 rounded">
+            <Checkbox
+              id="showCompletedPrescription"
+              checked={showCompleted}
+              onCheckedChange={(checked) => setShowCompleted(checked === true)}
+            />
+            <Label htmlFor="showCompletedPrescription" className="text-xs">Show Completed</Label>
+          </div>
 
           {/* DataTableComponent with built-in search and date filters */}
           <div className="flex-1 overflow-hidden">

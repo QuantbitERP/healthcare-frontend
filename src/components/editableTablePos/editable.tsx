@@ -9,6 +9,7 @@ import {
   RowData,
 } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Button as UIButton } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ interface Item {
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   mrp?: number; // Add MRP field for batch custom_mrp
+  custom_allow_sale_days?: number; // Add custom_allow_sale_days field
 }
 
 const EditableCell = ({
@@ -273,12 +275,18 @@ interface EditableTableProps {
   fetchSubstituteItems?: (itemCode: string) => Promise<any[]>;
   fetchItemPrice?: (itemCode: string, batchNo: string | null, priceList: string) => Promise<number | null>;
   getBatchQty?: (itemCode: string, batchNo: string, warehouse: string) => Promise<number>;
+  fetchBinLocationFromItem?: (itemCode: string) => Promise<string>;
   selectedWarehouse?: string;
   calculateItemTaxAndTotals?: (item: Item, includedInPrintRate: boolean) => Item;
   recalculateTotals?: (itemsList: Item[]) => void;
   fetchTaxDetails?: (itemCode: string, rate: number, qty: number, uom: string) => Promise<any>;
   apiKey?: string;
   apiSecret?: string;
+  showAlert?: (variant: "success" | "warning" | "danger" | "primary" | "secondary", heading: string, content: string) => void;
+  barcode?: string;
+  setBarcode?: (value: string) => void;
+  isComplete?: boolean;
+  setIsComplete?: (value: boolean) => void;
 }
 
 const EditableTable = ({
@@ -288,12 +296,18 @@ const EditableTable = ({
   fetchSubstituteItems,
   fetchItemPrice,
   getBatchQty,
+  fetchBinLocationFromItem,
   selectedWarehouse,
   calculateItemTaxAndTotals,
   recalculateTotals,
   fetchTaxDetails,
   apiKey,
-  apiSecret
+  apiSecret,
+  showAlert, // Added showAlert callback
+  barcode,
+  setBarcode,
+  isComplete,
+  setIsComplete,
 }: EditableTableProps) => {
   const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
   const effectiveApiKey = apiKey || authApiKey;
@@ -305,7 +319,7 @@ const EditableTable = ({
     pageIndex: 0,
     pageSize: 10,
   });
-  const [columnVisibility, setColumnVisibility] = useState({
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     mrp: false, // Hide MRP column by default
     itemAmount: false, // Hide Item Amount column by default
   });
@@ -329,6 +343,19 @@ const EditableTable = ({
           if (['stockQty', 'orderedQty', 'saleQty', 'rate', 'mrp', 'itemAmount', 'discountPercent', 'discountAmt',
             'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt'].includes(columnId)) {
             parsedValue = parseFloat(value) || 0;
+          }
+
+          // Stock validation for saleQty
+          if (columnId === 'saleQty') {
+            const availableStock = row.batchStockQty !== undefined && row.batchStockQty !== null ? row.batchStockQty : row.stockQty;
+            if (parsedValue > availableStock) {
+              if (showAlert) {
+                showAlert("warning", "Stock Warning", "You Dont have enough stock for this batch, Please Select alternate batch");
+              } else {
+                alert('You Dont have enough stock for this batch, Please Select alternate batch');
+              }
+              return row; // Return original row without changes
+            }
           }
 
           let updatedRow = {
@@ -426,7 +453,7 @@ const EditableTable = ({
 
           const fetchBatchMRP = async (batchName: string) => {
             try {
-              const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
+              const response = await fetch(`http://192.168.1.30:4414/api/resource/Batch/${batchName}`, {
                 method: 'GET',
                 headers: {
                   'Content-Type': 'application/json',
@@ -512,19 +539,32 @@ const EditableTable = ({
             if (selectedBatchNames.length === 0) return;
 
             try {
-              // Create new items for each selected batch
               const newBatchItems: Item[] = [];
 
               for (const batchName of selectedBatchNames) {
+                const quantity = batchQuantities[batchName];
                 const selectedBatch = batches.find(b => b.name === batchName);
                 if (!selectedBatch) continue;
 
-                const quantity = batchQuantities[batchName] || 0;
-                if (quantity <= 0) continue; // Skip if no quantity entered
-
-                const newRate = await fetchItemPrice?.(item.itemCode, batchName, 'Standard Selling');
                 const newBatchQty = selectedBatch.batch_qty || 0;
-                const safeRate = newRate !== null && newRate !== undefined ? newRate : (item.rate ?? 0);
+                const batchMRP = batchMRPs[batchName] || 0; // Get MRP from fetched batch MRP
+                const safeRate = batchMRP > 0 ? batchMRP : (item.rate !== null ? item.rate : 0); // Use batch MRP if available, otherwise use item rate
+
+                // Check batch expiry
+                const expiryDate = selectedBatch.expiry_date;
+                if (expiryDate) {
+                  const daysUntilExpiry = Math.round((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
+                  const allowSaleDays = item.custom_allow_sale_days || 0;
+                  if (allowSaleDays > 0 && daysUntilExpiry > 0 && daysUntilExpiry <= allowSaleDays) {
+                    console.warn(`Batch ${batchName} expires within ${allowSaleDays} days. Please verify.`);
+                  }
+                }
+
+                // Fetch bin_location for this item
+                let binLocation = "";
+                if (fetchBinLocationFromItem) {
+                  binLocation = await fetchBinLocationFromItem(item.itemCode);
+                }
 
                 const newItem: Item = {
                   ...item,
@@ -534,9 +574,10 @@ const EditableTable = ({
                   expiryDate: selectedBatch.expiry_date,
                   batchStockQty: newBatchQty,
                   stockQty: newBatchQty,
-                  rate: safeRate,
-                  mrp: batchMRPs[batchName] || 0, // Set MRP from fetched batch MRP
-                  saleQty: quantity
+                  rate: safeRate, // Use batch MRP as rate
+                  mrp: batchMRP, // Set MRP from fetched batch MRP
+                  saleQty: quantity,
+                  binLocation: binLocation // Set bin_location from Item doctype
                 };
 
                 const itemWithTax = calculateItemTaxAndTotals ? calculateItemTaxAndTotals(newItem, true) : newItem;
@@ -717,7 +758,7 @@ const EditableTable = ({
               // Fetch MRP for the selected batch
               let batchMRP = 0;
               try {
-                const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
+                const response = await fetch(`http://192.168.1.30:4414/api/resource/Batch/${batchNo}`, {
                   method: 'GET',
                   headers: {
                     'Content-Type': 'application/json',
@@ -826,9 +867,14 @@ const EditableTable = ({
       {
         accessorKey: "orderedQty",
         header: "Ordered Qty",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.orderedQty}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "saleQty",
@@ -840,9 +886,15 @@ const EditableTable = ({
       {
         accessorKey: "rate",
         header: "Unit Sale Rate",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{rate.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "mrp",
@@ -854,9 +906,14 @@ const EditableTable = ({
       {
         accessorKey: "uom",
         header: "UOM",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.uom}
+            </div>
+          );
+        },
       },
       {
         id: "taxableAmount",
@@ -895,86 +952,146 @@ const EditableTable = ({
       {
         accessorKey: "cgstPercent",
         header: "CGST (%)",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.cgstPercent}%
+            </div>
+          );
+        },
       },
       {
         accessorKey: "cgstAmt",
         header: "CGST Amt.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{item.cgstAmt.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "sgstPercent",
         header: "SGST (%)",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.sgstPercent}%
+            </div>
+          );
+        },
       },
       {
         accessorKey: "sgstAmt",
         header: "SGST Amt.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{item.sgstAmt.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "igstPercent",
         header: "IGST (%)",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.igstPercent}%
+            </div>
+          );
+        },
       },
       {
         accessorKey: "igstAmt",
         header: "IGST Amt.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{item.igstAmt.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "itemAmount",
         header: "Item Amount",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{item.itemAmount.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "totalAmt",
         header: "Total Amt.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{item.totalAmt.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "kitName",
         header: "KIT Name",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue() || ''} row={row} column={column} table={table} />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.kitName || ''}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "totalPckgAmt",
         header: "Total Pckg Amt.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{item.totalPckgAmt.toFixed(2)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "packageName",
         header: "Package Name",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue() || ''} row={row} column={column} table={table} />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.packageName || ''}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "binLocation",
         header: "Bin Location",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue() || ''} row={row} column={column} table={table} />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              {item.binLocation || ''}
+            </div>
+          );
+        },
       },
       {
         id: 'actions',
@@ -994,14 +1111,12 @@ const EditableTable = ({
     state: {
       rowSelection,
       pagination,
-      columnVisibility: {
-        mrp: false, // Hide MRP column by default
-        itemAmount: false, // Hide Item Amount column by default
-      },
+      columnVisibility,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     meta: {
@@ -1073,6 +1188,26 @@ const EditableTable = ({
 
   return (
     <div className="p-2 max-w-7xl mx-auto">
+      {/* Barcode and Complete Section */}
+      <div className="flex gap-4 mb-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="isComplete"
+            checked={isComplete || false}
+            onCheckedChange={(checked) => setIsComplete?.(checked === true)}
+          />
+          <Label htmlFor="isComplete" className="text-sm">Complete</Label>
+        </div>
+        <div className="w-1/2 max-w-xs">
+          <Input
+            placeholder="Barcode"
+            value={barcode || ""}
+            onChange={(e) => setBarcode?.(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800"></h2>
         <ColumnVisibilityDropdown table={table} />

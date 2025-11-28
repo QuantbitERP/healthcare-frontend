@@ -584,7 +584,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                                     value={selectedWarehouse}
                                     onChange={handleWarehouseChange}
                                     placeholder="Select warehouse"
-                                    disabled={warehouses.length === 0}
+                                    disabled={true} // Make readonly
                                 />
                             </div>
                         </div>

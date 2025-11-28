@@ -48,7 +48,7 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
   const [showTotalBreakdown, setShowTotalBreakdown] = useState(false);
 
   const concessionAmount = 0;
-  const [isRoundedOff, setIsRoundedOff] = useState<boolean>(true);
+  const [isRoundedOff] = useState<boolean>(true);
   const [recordedPayments, setRecordedPayments] = useState<RecordedPayment[]>([]);
 
   // Editable fields state
@@ -226,7 +226,7 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <label className="flex items-center space-x-2 cursor-pointer">
+            {/* <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isRoundedOff}
@@ -234,16 +234,16 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
                 className="w-4 h-4 text-[#0D74CE] border-gray-300 rounded focus:ring-[#0D74CE] focus:ring-2 cursor-pointer"
               />
               <span className="text-[#1C2024] text-xs font-normal">Round Off</span>
-            </label>
-            {isRoundedOff && (
+            </label> */}
+            {/* {isRoundedOff && (
               <span className="text-[#60646C] text-xs font-normal">
                 {calculateRoundOffValues().rounding_adjustment >= 0
                   ? `+ ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
                   : `- ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
-            )}
+            )} */}
           </div>
-          {isRoundedOff && (
+          {/* {isRoundedOff && (
             <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
 
               <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
@@ -251,7 +251,7 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
                 ₹{calculateRoundOffValues().grand_total.toLocaleString()}
               </span>
             </div>
-          )}
+          )} */}
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
 

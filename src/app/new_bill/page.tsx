@@ -79,6 +79,8 @@ export interface Item {
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   genericName?: string; // Add genericName as optional property
   mrp?: number; // Add MRP field for batch custom_mrp
+  use_serial_batch_fields?: number;
+  custom_allow_sale_days?: number; // Add custom_allow_sale_days field
 }
 
 interface ItemSearchProps {
@@ -146,7 +148,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
 
   const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean): Promise<Item[]> => {
     try {
@@ -165,7 +167,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
-      const fields = ["name", "item_name", "item_code", "custom_generic_name"]; // Add any fields you need
+      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days"]; // Add any fields you need
 
 
       const response = await fetch(
@@ -214,6 +216,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           packageName: '',
           binLocation: '',
           genericName: item.custom_generic_name, // Map generic name from API
+          custom_allow_sale_days: item.custom_allow_sale_days || 0, // Map custom_allow_sale_days from API
         }));
         return isGeneric ? fetchedItems : fetchedItems.slice(0, 10);
       } else {
@@ -353,7 +356,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   // Function to fetch batch MRP
   const fetchBatchMRP = async (batchName: string): Promise<number> => {
     try {
-      const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
+      const response = await fetch(`http://192.168.1.30:4414/api/resource/Batch/${batchName}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -409,6 +412,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       mrp: batchMRP, // Set MRP from fetched batch MRP
       orderedQty: qtyToTake, // Set orderedQty to the quantity taken from this batch
       saleQty: qtyToTake, // Set saleQty to the quantity taken from this batch
+      use_serial_batch_fields: 1,
     };
     console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
     onSelectItem(itemWithBatchAndRate);
@@ -848,9 +852,9 @@ export default function NewBill() {
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-  const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+  const ITEM_DETAILS_API_URL = 'http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
   // Function to fetch item batches filtered by warehouse and company
   const fetchItemBatches = async (itemCode: string) => {
@@ -871,7 +875,7 @@ export default function NewBill() {
       };
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -917,7 +921,7 @@ export default function NewBill() {
       };
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -955,7 +959,7 @@ export default function NewBill() {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
-      const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+      const resp = await fetch('http://192.168.1.30:4414/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1045,6 +1049,67 @@ export default function NewBill() {
     return rate; // Return null if no rate is found
   };
 
+  // Function to fetch bin_location from Item doctype's custom_item_consumption_details
+  const fetchBinLocationFromItem = async (itemCode: string) => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+      
+      console.log(`[BinLocation] Fetching item: ${itemCode}`);
+      
+      // Fetch the entire Item document
+      const response = await fetch(`${API_BASE_URL}/Item/${itemCode}`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        console.log(`[BinLocation] Failed to fetch item ${itemCode}, status: ${response.status}`);
+        return "";
+      }
+      
+      const data = await response.json();
+      console.log(`[BinLocation] Item data received:`, data.data);
+      
+      // Log all keys in the data object
+      if (data.data) {
+        console.log(`[BinLocation] Available fields:`, Object.keys(data.data));
+      }
+      
+      // Try different possible field names for the child table
+      const childTableNames = ['custom_item_consumption_details', 'item_consumption_details', 'consumption_details'];
+      
+      for (const fieldName of childTableNames) {
+        console.log(`[BinLocation] Checking field: ${fieldName}`);
+        if (data.data?.[fieldName]) {
+          console.log(`[BinLocation] Found field ${fieldName}:`, data.data[fieldName]);
+          if (Array.isArray(data.data[fieldName]) && data.data[fieldName].length > 0) {
+            const binLocation = data.data[fieldName][0].bin_location;
+            console.log(`[BinLocation] Found bin_location from ${fieldName}:`, binLocation);
+            if (binLocation) {
+              return binLocation;
+            }
+          }
+        }
+      }
+      
+      // If no child table found, try direct bin_location field
+      if (data.data?.bin_location) {
+        console.log('[BinLocation] Found direct bin_location field:', data.data.bin_location);
+        return data.data.bin_location;
+      }
+      
+      console.log(`[BinLocation] No bin_location found for item ${itemCode}`);
+      return "";
+    } catch (error) {
+      console.error('[BinLocation] Error fetching bin location:', error);
+      return "";
+    }
+  };
+
   const classificationTypeOptions = classifications;
 
   // const [searchValue, setSearchValue] = useState<string>("");
@@ -1052,7 +1117,9 @@ export default function NewBill() {
   const [requisitionNo, setRequisitionNo] = useState('');
   const [requisitionFrom, setRequisitionFrom] = useState('');
   const [requisitionTo] = useState('');
-  const [toLocation, setToLocation] = useState('');
+  const [_toLocation, setToLocation] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
@@ -1082,6 +1149,8 @@ export default function NewBill() {
   const selectedHospital = '';
   const [showViewPosInvoicesModal, setShowViewPosInvoicesModal] = useState(false); // New state for View POS Invoices modal
   const [_isItemsLoadedFromRequisitionOrPrescription, setIsItemsLoadedFromRequisitionOrPrescription] = useState(false); // Track if items are loaded from requisition or prescription
+  const [sourceDocumentName, setSourceDocumentName] = useState<string>(''); // Track the source document name (requisition or prescription)
+  const [sourceDocumentType, setSourceDocumentType] = useState<'requisition' | 'prescription' | ''>(''); // Track the source document type
 
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
   const [showCreateReturnModal, setShowCreateReturnModal] = useState(false);
@@ -1138,6 +1207,34 @@ export default function NewBill() {
     }
   }, [customers, selectedCustomer]);
 
+  // Function to check if sale exists for requisition
+  const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data && data.data.length > 0;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking sale for requisition:", error);
+      return false;
+    }
+  };
+
   // --- START: Added function to clear file ---
   const handleClearFile = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the modal from opening
@@ -1161,6 +1258,9 @@ export default function NewBill() {
     setIsAsap(false);
     setIsExpired(false);
     setIsGeneric(false);
+    setIsItemsLoadedFromRequisitionOrPrescription(false);
+    setSourceDocumentName('');
+    setSourceDocumentType('');
     setItems([]);
     setPatientData(null);
     setShowDropdown(false);
@@ -1236,6 +1336,8 @@ export default function NewBill() {
     setShowDropdown(false);
     setItems([]);
     setIsItemsLoadedFromRequisitionOrPrescription(false);
+    setSourceDocumentName('');
+    setSourceDocumentType('');
     <Alerts
       heading="Sucess"
 
@@ -1269,7 +1371,8 @@ export default function NewBill() {
             label: kit.name,
             value: kit.name,
           }));
-          setKitOptions(fetchedKitOptions);
+          // Add empty option at the beginning
+          setKitOptions([{ label: "", value: "CLEAR" }, ...fetchedKitOptions]);
         }
       } catch (error: any) {
         console.error('Error fetching kit options:', error);
@@ -1308,7 +1411,7 @@ export default function NewBill() {
           'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
-        const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+        const taxTemplateResponse = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
           headers: taxTemplateHeaders,
           credentials: 'include',
@@ -1330,7 +1433,7 @@ export default function NewBill() {
           'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
-        const taxAccountsResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+        const taxAccountsResponse = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
           method: 'POST',
           headers: taxAccountsHeaders,
           credentials: 'include',
@@ -1368,7 +1471,7 @@ export default function NewBill() {
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
 
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+        const response = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -1410,7 +1513,7 @@ export default function NewBill() {
         };
 
         const response = await fetch(
-          'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+          'http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
           {
             method: 'POST',
             headers,
@@ -1446,8 +1549,19 @@ export default function NewBill() {
     fetchCompanyAddress();
   }, [selectedCustomer, apiKey, apiSecret]);
 
+  const handleClassificationChange = (value: string) => {
+    if (value === "CLEAR") {
+      setSelectedSaleType("");
+      return;
+    }
+    setSelectedSaleType(value);
+  };
 
   const handleSelectKit = async (kitName: string) => {
+    if (kitName === "CLEAR") {
+      setSelectedKit("");
+      return;
+    }
     setSelectedKit(kitName);
     if (!kitName) {
       showAlert("primary", "Information", "No kit selected.");
@@ -1461,7 +1575,7 @@ export default function NewBill() {
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
 
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+      const response = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1561,6 +1675,31 @@ export default function NewBill() {
       const finalRate = item.rate !== null ? item.rate : 0; // Use item's rate, ensure it's not null
       const finalBatchStockQty = item.batchStockQty; // Use item's batchStockQty
 
+      // Fetch bin_location from Item doctype
+      console.log(`[BinLocation] Fetching bin_location for item: ${item.itemCode}`);
+      const binLocation = await fetchBinLocationFromItem(item.itemCode);
+      console.log(`[BinLocation] Fetched bin_location: ${binLocation}`);
+
+      // Batch expiry warning check
+      console.log("Batch Expiry Warning Check - finalExpiryDate:", finalExpiryDate);
+      console.log("Batch Expiry Warning Check - Date.now():", Date.now());
+      const daysUntilExpiry = Math.round((new Date(finalExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
+      console.log("Batch Expiry Warning Check - daysUntilExpiry:", daysUntilExpiry);
+      const customAllowSaleDays = item.custom_allow_sale_days || 0; // Default to 0 if undefined
+      console.log("Batch Expiry Warning Check - customAllowSaleDays:", customAllowSaleDays);
+      if (customAllowSaleDays > 0) {
+        if (daysUntilExpiry > 0 && daysUntilExpiry <= customAllowSaleDays) {
+          console.log(`Batch ${finalBatchNo} of item ${item.itemName} expires in ${daysUntilExpiry} days. Please verify before proceeding.`);
+          console.log("Showing batch expiry warning alert...");
+          showAlert("warning", "Batch Expiry Warning", `Batch ${finalBatchNo} of ${item.itemName} will expire in ${daysUntilExpiry} days (Expiry Date: ${finalExpiryDate}). This is within the allowed sale period of ${customAllowSaleDays} days.`);
+        } else if (daysUntilExpiry <= 0) {
+          console.log(`Batch ${finalBatchNo} of item ${item.itemName} has already expired. Please verify before proceeding.`);
+          console.log("Showing batch expiry error alert...");
+          showAlert("danger", "Batch Expired", `Batch ${finalBatchNo} of ${item.itemName} has already expired (Expiry Date: ${finalExpiryDate}). Cannot add to bill.`);
+          return; // Don't add expired batch
+        }
+      }
+
       setItems(prevItems => {
         // Always add as a new item, as each batch-specific item has a unique ID now
         const newItemWithCalculations = calculateItemTaxAndTotals({
@@ -1570,6 +1709,7 @@ export default function NewBill() {
           rate: finalRate, // Use the final rate from the item
           batchNo: finalBatchNo, // Use the final batch number
           expiryDate: finalExpiryDate, // Use the final expiry date
+          binLocation: binLocation, // Set the fetched bin_location
           cgstPercent: taxDetails.cgstRate,
           sgstPercent: taxDetails.sgstRate,
           igstPercent: taxDetails.igstRate,
@@ -1579,11 +1719,16 @@ export default function NewBill() {
           includedInPrintRate: true, // Always consider included_in_print_rate as true
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
-        const updatedItems = [...prevItems, newItemWithCalculations];
-        recalculateTotals(updatedItems);
-        return updatedItems;
+        if (newItemWithCalculations) {
+          const updatedItems = [...prevItems, newItemWithCalculations];
+          recalculateTotals(updatedItems);
+          return updatedItems;
+        } else {
+          console.error("Error adding item to details: newItemWithCalculations is null or undefined");
+          return prevItems;
+        }
       });
-      showAlert("success", "Success", "Item added successfully");
+      // showAlert("success", "Success", "Item added successfully");
     } catch (error) {
       console.error("Error adding item with tax details:", error);
       showAlert("danger", "Error", "Failed to add item. Please try again.");
@@ -1629,6 +1774,15 @@ export default function NewBill() {
       return;
     }
 
+    // Check if sale exists for this requisition
+    if (sourceDocumentName && sourceDocumentType === 'requisition') {
+      const saleExists = await checkSaleExistsForRequisition(sourceDocumentName);
+      if (saleExists) {
+        showAlert("danger", "Error", "Cannot create sale for this requisition: Sale has already been generated against this requisition");
+        return;
+      }
+    }
+
     // // Check if POS session is open
     // try {
     //    const isPosOpen = await checkOpenPOS(posProfile);
@@ -1661,7 +1815,9 @@ export default function NewBill() {
         qty: isReturn ? (Number(item.saleQty) || 0) : (Number(item.saleQty) || 0),
         uom: item.uom,
         rate: Number(item.rate) || 0,
-        batch_no: item.batch || "",
+        batch_no: item.batchNo || item.batch || "",
+        custom_expiry_date: item.expiryDate || "", // Add expiry date field
+        custom_bin_location: item.binLocation || "", // Add bin_location from item
         warehouse: selectedWarehouse || item.warehouse || "",
         margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
         discount_percentage: Number(item.discountPercent) || 0,
@@ -1676,6 +1832,7 @@ export default function NewBill() {
         amount: Number(item.totalAmt) || 0,
         item_tax_template: item.taxTemplate || "",
         included_in_print_rate: 1, // Add to item payload
+        use_serial_batch_fields: 1,
       })),
       payments: recordedPayments.map(p => ({
         mode_of_payment: p.paymentMode || "Cash",
@@ -1716,7 +1873,7 @@ export default function NewBill() {
       custom_uhid: patientData?.mrn || "",
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
-      custom_req_no: requisitionNo || "",
+      custom_req_no: sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
@@ -1804,7 +1961,9 @@ export default function NewBill() {
 
     try {
       console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+      console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
+      console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
+      const response = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1932,6 +2091,11 @@ export default function NewBill() {
 
   const handleSelectRequisition = async (requisition: any) => {
     console.log("Selected requisition:", requisition);
+    // Set source document information
+    setSourceDocumentName(requisition.name);
+    setSourceDocumentType('requisition');
+    setIsItemsLoadedFromRequisitionOrPrescription(true);
+    
     // Fetch the full requisition document to ensure child tables are available
     let fullRequisitionData = requisition;
     try {
@@ -2083,8 +2247,8 @@ export default function NewBill() {
               itemName: reqItem.item_name,
               uom: reqItem.unit,
               stockQty: batchStockQty,
-              orderedQty: qtyToTake,
-              saleQty: qtyToTake,
+              orderedQty: requestedQty, // Use full requisition quantity instead of batch quantity
+              saleQty: qtyToTake, // Keep saleQty as the actual batch quantity being allocated
               batch: batch.name,
               batchNo: batch.name,
               expiryDate: batch.expiry_date,
@@ -2160,6 +2324,11 @@ export default function NewBill() {
 
   const handleSelectPrescription = async (prescription: any) => {
     console.log("Selected prescription:", prescription);
+    // Set source document information
+    setSourceDocumentName(prescription.prescription_number);
+    setSourceDocumentType('prescription');
+    setIsItemsLoadedFromRequisitionOrPrescription(true);
+    
     // Fetch the full prescription document to ensure child tables are available
     let fullPrescriptionData = prescription;
     try {
@@ -2314,8 +2483,8 @@ export default function NewBill() {
               itemName: reqItem.item_name,
               uom: reqItem.unit,
               stockQty: batchStockQty,
-              orderedQty: qtyToTake,
-              saleQty: qtyToTake,
+              orderedQty: requestedQty, // Use full prescription quantity instead of batch quantity
+              saleQty: qtyToTake, // Keep saleQty as the actual batch quantity being allocated
               batch: batch.name,
               batchNo: batch.name,
               expiryDate: batch.expiry_date,
@@ -2592,28 +2761,35 @@ export default function NewBill() {
     content: ""
   });
 
+  useEffect(() => {
+    console.log('Alert state changed:', alert);
+  }, [alert]);
+
   // Show alert function
   const showAlert = (variant: AlertState['variant'], heading: string, content: string) => {
+    console.log('Setting alert state:', variant, heading, content);
     setAlert({
       show: true,
       variant,
       heading,
       content
     });
-    // Auto hide after 3 seconds
+    // Auto hide after 5 seconds
     setTimeout(() => {
       setAlert(prev => ({ ...prev, show: false }));
-    }, 3000);
+    }, 5000);
   };
 
   // Apply global discount to all items
   const handleApplyGlobalDiscount = () => {
     if (items.length === 0) {
+      console.log('Setting alert state:', "warning", "Warning", "No items in the table to apply discount.");
       showAlert("warning", "Warning", "No items in the table to apply discount.");
       return;
     }
 
     if (globalDiscountPercent < 0 || globalDiscountPercent > 100) {
+      console.log('Setting alert state:', "danger", "Error", "Discount percentage must be between 0 and 100.");
       showAlert("danger", "Error", "Discount percentage must be between 0 and 100.");
       return;
     }
@@ -2774,6 +2950,33 @@ export default function NewBill() {
           const igstAmount = Math.abs(invItem.igst_amount || 0);
           const totalAmount = Math.abs(invItem.amount || 0);
 
+          // Fetch current stock quantity for the batch in the warehouse
+          let currentStockQty = 0;
+          console.log('Loading item:', {
+            item_code: invItem.item_code,
+            batch_no: invItem.batch_no,
+            warehouse: fullInvoice.warehouse,
+            set_warehouse: fullInvoice.set_warehouse
+          });
+          
+          if (invItem.batch_no && invItem.item_code && (fullInvoice.warehouse || fullInvoice.set_warehouse)) {
+            const warehouse = fullInvoice.warehouse || fullInvoice.set_warehouse;
+            try {
+              console.log(`Fetching stock for ${invItem.item_code}, batch ${invItem.batch_no}, warehouse ${warehouse}`);
+              currentStockQty = await getBatchQty(invItem.item_code, invItem.batch_no, warehouse);
+              console.log(`Stock qty fetched: ${currentStockQty}`);
+            } catch (error) {
+              console.error(`Error fetching stock qty for ${invItem.item_code} batch ${invItem.batch_no}:`, error);
+              currentStockQty = 0;
+            }
+          } else {
+            console.log('Missing required data for stock fetch:', {
+              hasBatchNo: !!invItem.batch_no,
+              hasItemCode: !!invItem.item_code,
+              hasWarehouse: !!(fullInvoice.warehouse || fullInvoice.set_warehouse)
+            });
+          }
+
           const item: Item = {
             id: `${invItem.item_code}-${invItem.batch_no || 'no-batch'}-${Date.now()}-${Math.random()}`,
             alternateBatches: "",
@@ -2781,13 +2984,13 @@ export default function NewBill() {
             itemCode: invItem.item_code || "",
             itemName: invItem.item_name || "",
             uom: invItem.uom || "",
-            stockQty: invItem.actual_qty || 0,
+            stockQty: currentStockQty, // Use fetched current stock quantity
             orderedQty: Math.abs(invItem.qty || 0),
             saleQty: Math.abs(invItem.qty || 0),
             batch: invItem.batch_no || "",
             batchNo: invItem.batch_no || "",
-            expiryDate: invItem.expiry_date || "",
-            batchStockQty: invItem.actual_batch_qty || 0,
+            expiryDate: invItem.custom_expiry_date || "",
+            batchStockQty: currentStockQty, // Use fetched current stock quantity for batch stock
             rate: invItem.rate || 0,
             taxTemplate: taxDetails.taxTemplate,
             description: invItem.description || "",
@@ -2800,11 +3003,11 @@ export default function NewBill() {
             sgstAmt: sgstAmount, // Use exact amount from invoice
             igstPercent: taxDetails.igstRate,
             igstAmt: igstAmount, // Use exact amount from invoice
-            totalAmt: totalAmount, // Use exact total from invoice
+            totalAmt: totalAmount,
             totalPckgAmt: 0,
             kitName: "",
             packageName: "",
-            binLocation: "",
+            binLocation: invItem.custom_bin_location || "", // Load bin_location from invoice
             includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
           };
           loadedItems.push(item);
@@ -2897,7 +3100,7 @@ export default function NewBill() {
 
         // Print the invoice
         const company = selectedCompany || result.data?.company || '';
-        const printUrl = 'https://192.168.7.221:4422/printview?' +
+        const printUrl = 'http://192.168.1.30:4414/printview?' +
           'doctype=POS Invoice&' +
           'name=' + encodeURIComponent(loadedInvoiceName) + '&' +
           'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -2930,6 +3133,15 @@ export default function NewBill() {
         return;
       }
 
+      // Check if sale exists for this requisition
+      if (sourceDocumentName && sourceDocumentType === 'requisition') {
+        const saleExists = await checkSaleExistsForRequisition(sourceDocumentName);
+        if (saleExists) {
+          showAlert("danger", "Error", "Cannot create sale for this requisition: Sale has already been generated against this requisition");
+          return;
+        }
+      }
+
       const payload = {
         doctype: "POS Invoice",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
@@ -2949,7 +3161,9 @@ export default function NewBill() {
           qty: isReturn ? (Number(item.saleQty) || 0) : (Number(item.saleQty) || 0),
           uom: item.uom,
           rate: Number(item.rate) || 0,
-          batch_no: item.batch || "",
+          batch_no: item.batchNo || item.batch || "",
+          custom_expiry_date: item.expiryDate || "", // Add expiry date field
+          custom_bin_location: item.binLocation || "", // Add bin_location from item
           warehouse: selectedWarehouse || item.warehouse || "",
           margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
           discount_percentage: Number(item.discountPercent) || 0,
@@ -2964,6 +3178,7 @@ export default function NewBill() {
           amount: Number(item.totalAmt) || 0,
           item_tax_template: item.taxTemplate || "",
           included_in_print_rate: 1, // Add to item payload
+          use_serial_batch_fields: 1,
         })),
         payments: recordedPayments.map(p => ({
           mode_of_payment: p.paymentMode || "Cash",
@@ -3002,7 +3217,7 @@ export default function NewBill() {
         custom_uhid: patientData?.mrn || "",
         custom_abha_id: patientData?.ABHAID || "",
         custom_age: patientData?.age || "",
-        custom_req_no: requisitionNo || "",
+        custom_req_no: sourceDocumentName || requisitionNo || "",
         custom_visit_code: patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
@@ -3090,7 +3305,9 @@ export default function NewBill() {
 
       try {
         console.log("Final payload for creating submitted invoice:", finalPayload);
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+        console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
+        console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
+        const response = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3143,7 +3360,7 @@ export default function NewBill() {
 
         // Print the invoice
         const company = selectedCompany || patientData.company || '';
-        const printUrl = 'https://192.168.7.221:4422/printview?' +
+        const printUrl = 'http://192.168.1.30:4414/printview?' +
           'doctype=POS Invoice&' +
           'name=' + encodeURIComponent(invoiceName) + '&' +
           'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
@@ -3177,7 +3394,7 @@ export default function NewBill() {
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
 
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+      const response = await fetch(`http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -3206,7 +3423,7 @@ export default function NewBill() {
     <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
       {/* Alert Component */}
       {alert.show && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] max-w-md">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
           <Alerts
             heading={alert.heading}
             content={alert.content}
@@ -3349,8 +3566,8 @@ export default function NewBill() {
                 <RenderFormElement
                   inputType="select"
                   value={selectedSaleType}
-                  onChange={setSelectedSaleType}
-                  data={classificationTypeOptions}
+                  onChange={handleClassificationChange}
+                  data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
                   placeholder="Select Classification"
                 />
 
@@ -3413,7 +3630,7 @@ export default function NewBill() {
 
 
                   {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                  <div className="w-full sm:w-auto flex-1 min-w-[150px]">
+                  {/* <div className="w-full sm:w-auto flex-1 min-w-[150px]">
                     <RenderFormElement
                       inputType="input"
                       InputValueType="text"
@@ -3421,7 +3638,7 @@ export default function NewBill() {
                       onChange={setToLocation}
                       placeholder="Barcode"
                     />
-                  </div>
+                  </div> */}
 
 
                 </div>
@@ -3455,6 +3672,7 @@ export default function NewBill() {
                   >
                     Apply Discount
                   </Button>
+                  
 
                   {/* Transaction Type Toggle*/}
                   <div className="flex items-center gap-2 ml-2">
@@ -3480,6 +3698,7 @@ export default function NewBill() {
                       </button>
                     </div>
                   </div>
+                  
 
                   {/* OPD Effect Checkbox */}
                   <div className="flex items-center gap-2 pl-2">
@@ -3501,6 +3720,7 @@ export default function NewBill() {
                 </div>
 
               </div>
+              
 
               <HorizontallyScrollableTable
                 items={items}
@@ -3509,10 +3729,16 @@ export default function NewBill() {
                 fetchSubstituteItems={fetchSubstituteItems}
                 fetchItemPrice={fetchItemPrice}
                 getBatchQty={getBatchQty}
+                fetchBinLocationFromItem={fetchBinLocationFromItem}
                 selectedWarehouse={selectedWarehouse}
                 calculateItemTaxAndTotals={calculateItemTaxAndTotals}
                 recalculateTotals={recalculateTotals}
                 fetchTaxDetails={fetchTaxDetails}
+                showAlert={showAlert}
+                barcode={barcode}
+                setBarcode={setBarcode}
+                isComplete={isComplete}
+                setIsComplete={setIsComplete}
               />
             </CardContent>
           </Card>
@@ -3652,7 +3878,7 @@ export default function NewBill() {
           invoice={selectedInvoiceForReturn}
           onSubmit={async (returnData) => {
             try {
-              const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+              const response = await fetch('http://192.168.1.30:4414/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

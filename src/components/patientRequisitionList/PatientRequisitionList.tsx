@@ -29,6 +29,9 @@ interface PatientRequisition {
   department: string;
   company: string;
   remark: string;
+  requisition_status?: "Pending" | "Completed";
+  total_qty?: number;
+  invoiced_qty?: number;
 }
 
 interface PatientRequisitionListProps {
@@ -52,8 +55,9 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const [isDischarge, setIsDischarge] = useState(false);
   const [isRoutine, setIsRoutine] = useState(false);
   const [isASAP, setIsASAP] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
   const { apiKey, apiSecret } = useAuth();
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'http://192.168.1.30:4414/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {
@@ -99,16 +103,11 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       }
 
       // Status filters
-      const statusFilters = [];
-      // if (isExpired) statusFilters.push("Expired");
-      // if (isStat) statusFilters.push("Stat");
-      // if (isDischarge) statusFilters.push("Discharge");
-      // if (isRoutine) statusFilters.push("Routine");
-      // if (isASAP) statusFilters.push("ASAP");
-
-      if (statusFilters.length > 0) {
-        filters.push(["status", "in", statusFilters]);
-      }
+      if (isExpired) filters.push(["expired", "=", "1"]);
+      if (isStat) filters.push(["stat", "=", "1"]);
+      if (isDischarge) filters.push(["discharge", "=", "1"]);
+      if (isRoutine) filters.push(["routine", "=", "1"]);
+      if (isASAP) filters.push(["asap", "=", "1"]);
 
       if (filters.length > 0) {
         params.filters = JSON.stringify(filters);
@@ -122,34 +121,41 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       const response = await axios.get(`${API_BASE_URL}/Patient Requisition`, {
         params,
         headers,
-        // withCredentials: true,
+        withCredentials: true,
       });
-      console.log(response);
 
-      const data: any[] = response.data.data || [];
-      const transformedData = data.map((item: any, index: number) => ({
-        id: index + 1,
-        name: item.name,
-        patient_id: item.patient_id || "",
-        patient_name: item.full_name || "",
-        doctor: item.doctor || "",
-        transaction_date: item.requisition_date_time || "",
-        sale_type: item.sale_type || "",
-        status: item.status || "",
-        visit_id: item.visit_id || "",
-        department: item.requisition_from || "",
-        company: item.patient_company || "",
-        remark: item.remark || "",
-      }));
+      if (response.data.data) {
+        // Filter out completed requisitions if showCompleted is false
+        let filteredRequisitions = response.data.data;
+        if (!showCompleted) {
+          filteredRequisitions = filteredRequisitions.filter(
+            (req: PatientRequisition) => req.requisition_status !== "Completed"
+          );
+        }
+        const transformedData = filteredRequisitions.map((item: any, index: number) => ({
+          id: index + 1,
+          name: item.name,
+          patient_id: item.patient_id || "",
+          patient_name: item.full_name || "",
+          doctor: item.doctor || "",
+          transaction_date: item.requisition_date_time || "",
+          sale_type: item.sale_type || "",
+          status: item.status || "",
+          visit_id: item.visit_id || "",
+          department: item.requisition_from || "",
+          company: item.patient_company || "",
+          remark: item.remark || "",
+        }));
 
-      setRequisitions(transformedData);
+        setRequisitions(transformedData);
+      }
     } catch (error) {
       console.error("Failed to fetch patient requisitions:", error);
       setRequisitions([]);
     } finally {
       setLoading(false);
     }
-  }, [ipNo, isExpired, isStat, isDischarge, isRoutine, isASAP]);
+  }, [ipNo, isExpired, isStat, isDischarge, isRoutine, isASAP, showCompleted]);
 
   // Debounced search implementation
   const debouncedFetch = useCallback((search: string, dateRange?: DateRange) => {
@@ -181,6 +187,13 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       fetchRequisitions();
     }
   }, [isOpen, fetchRequisitions]);
+
+  // Trigger fetch when status filters change
+  useEffect(() => {
+    if (isOpen) {
+      fetchRequisitions(searchTerm, dateRange);
+    }
+  }, [isExpired, isStat, isDischarge, isRoutine, isASAP, isOpen, fetchRequisitions]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -242,6 +255,24 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       header: "Remark",
     },
     {
+      accessorKey: "requisition_status",
+      header: "Status",
+      cell: ({ getValue }: any) => {
+        const status = getValue();
+        return (
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              status === "Completed" 
+                ? "bg-green-100 text-green-800" 
+                : "bg-yellow-100 text-yellow-800"
+            }`}>
+              {status || "Pending"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       id: "select",
       header: "Select",
       cell: ({ row }: any) => (
@@ -265,6 +296,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
     visit_id: "Visit Code",
     company: "Company",
     remark: "Remark",
+    requisition_status: "Status",
   };
 
   if (!isOpen) return null;
@@ -279,68 +311,79 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
           </UIButton>
         </CardHeader>
 
-        <CardContent className="flex-1 p-4 overflow-hidden flex flex-col">
-          {/* Additional Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-            <div>
-              <Label htmlFor="ipNo" className="text-xs font-medium">IP No:</Label>
-              <Input
-                id="ipNo"
-                placeholder="Enter IP No"
-                value={ipNo}
-                onChange={(e) => setIpNo(e.target.value)}
-                className="mt-1"
-              />
-            </div>
+        <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
+          {/* Sticky Filters Section */}
+          <div className="flex-shrink-0 bg-white border-b">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 bg-gray-50">
+              <div>
+                <Label htmlFor="ipNo" className="text-xs font-medium">IP No:</Label>
+                <Input
+                  id="ipNo"
+                  placeholder="Enter IP No"
+                  value={ipNo}
+                  onChange={(e) => setIpNo(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
 
-            <div className="flex items-center space-x-2 pt-4">
-              <Checkbox
-                id="expired"
-                checked={isExpired}
-                onCheckedChange={(checked) => setIsExpired(checked === true)}
-              />
-              <Label htmlFor="expired" className="text-xs">Expired</Label>
-            </div>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="expired"
+                  checked={isExpired}
+                  onCheckedChange={(checked) => setIsExpired(checked === true)}
+                />
+                <Label htmlFor="expired" className="text-xs">Expired</Label>
+              </div>
 
-            <div className="flex items-center space-x-2 pt-4">
-              <Checkbox
-                id="stat"
-                checked={isStat}
-                onCheckedChange={(checked) => setIsStat(checked === true)}
-              />
-              <Label htmlFor="stat" className="text-xs">Stat</Label>
-            </div>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="stat"
+                  checked={isStat}
+                  onCheckedChange={(checked) => setIsStat(checked === true)}
+                />
+                <Label htmlFor="stat" className="text-xs">Stat</Label>
+              </div>
 
-            <div className="flex items-center space-x-2 pt-4">
-              <Checkbox
-                id="discharge"
-                checked={isDischarge}
-                onCheckedChange={(checked) => setIsDischarge(checked === true)}
-              />
-              <Label htmlFor="discharge" className="text-xs">Discharge</Label>
-            </div>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="discharge"
+                  checked={isDischarge}
+                  onCheckedChange={(checked) => setIsDischarge(checked === true)}
+                />
+                <Label htmlFor="discharge" className="text-xs">Discharge</Label>
+              </div>
 
-            <div className="flex items-center space-x-2 pt-4">
-              <Checkbox
-                id="routine"
-                checked={isRoutine}
-                onCheckedChange={(checked) => setIsRoutine(checked === true)}
-              />
-              <Label htmlFor="routine" className="text-xs">Routine</Label>
-            </div>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="routine"
+                  checked={isRoutine}
+                  onCheckedChange={(checked) => setIsRoutine(checked === true)}
+                />
+                <Label htmlFor="routine" className="text-xs">Routine</Label>
+              </div>
 
-            <div className="flex items-center space-x-2 pt-4">
-              <Checkbox
-                id="asap"
-                checked={isASAP}
-                onCheckedChange={(checked) => setIsASAP(checked === true)}
-              />
-              <Label htmlFor="asap" className="text-xs">ASAP</Label>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="asap"
+                  checked={isASAP}
+                  onCheckedChange={(checked) => setIsASAP(checked === true)}
+                />
+                <Label htmlFor="asap" className="text-xs">ASAP</Label>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="showCompleted"
+                  checked={showCompleted}
+                  onCheckedChange={(checked) => setShowCompleted(checked === true)}
+                />
+                <Label htmlFor="showCompleted" className="text-xs">Show Completed</Label>
+              </div>
             </div>
           </div>
 
-          {/* DataTableComponent with built-in search and date filters */}
-          <div className="flex-1 overflow-hidden">
+          {/* Scrollable DataTable Section */}
+          <div className="flex-1 overflow-auto" style={{ height: 'calc(95vh - 200px)' }}>
             <DataTableComponent
               pageName="Patient Requisition"
               isRowSelectable={false}
@@ -359,7 +402,6 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               hideMeFilter={true}
               hideShowColumns={true}
               autoSize={true}
-              className="h-full"
             />
           </div>
         </CardContent>

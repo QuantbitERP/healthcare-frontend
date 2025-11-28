@@ -22,7 +22,7 @@ function POSInfo({ posProfile, warehouse, className = "" }: POSInfoProps) {
 
       try {
         const response = await fetch(
-          `https://192.168.7.221:4422/api/resource/Warehouse/${warehouse}`,
+          `http://192.168.1.30:4414/api/resource/Warehouse/${warehouse}`,
           {
             method: "GET",
             headers: {
