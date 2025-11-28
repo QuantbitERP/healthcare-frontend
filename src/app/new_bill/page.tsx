@@ -3786,19 +3786,29 @@ export default function NewBill() {
           <Button type="secondary-button" size="button-medium">Preview & Print</Button>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
-          <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-          <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
-            Save as Draft
-          </Button>
-          <Button type="primary-outlined-button" size="button-medium" onClick={() => setShowSelectInvoiceModal(true)}>
-            Return Bill
-          </Button>
-          <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
-            Closing Entry
-          </Button>
-          <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
-            {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print'}
-          </Button>
+          {loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
+            // Show only Print button for submitted invoices
+            <Button type="primary-button" size="button-medium" onClick={() => window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank')}>
+              Print Invoice
+            </Button>
+          ) : (
+            // Show all buttons for new invoices or drafts
+            <>
+              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
+              <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
+                Save as Draft
+              </Button>
+              <Button type="primary-outlined-button" size="button-medium" onClick={() => setShowSelectInvoiceModal(true)}>
+                Return Bill
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
+                Closing Entry
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+                {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

@@ -3261,7 +3261,7 @@ export default function IPDBill() {
         <PageHeader
           parentTitle="POS"
           parentLink="/pos"
-          title="New OPD Bill"
+          title="New IPD Bill"
           icon="../assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           warehouse={selectedWarehouse || undefined}
