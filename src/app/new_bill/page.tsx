@@ -1208,32 +1208,32 @@ export default function NewBill() {
   }, [customers, selectedCustomer]);
 
   // Function to check if sale exists for requisition
-  const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
-    try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+  // const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
+  //   try {
+  //     const headers: HeadersInit = {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `token ${apiKey}:${apiSecret}`,
+  //     };
 
-      const response = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
-        {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        }
-      );
+  //     const response = await fetch(
+  //       `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+  //       {
+  //         method: 'GET',
+  //         headers,
+  //         credentials: 'include',
+  //       }
+  //     );
 
-      if (response.ok) {
-        const data = await response.json();
-        return data.data && data.data.length > 0;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error checking sale for requisition:", error);
-      return false;
-    }
-  };
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       return data.data && data.data.length > 0;
+  //     }
+  //     return false;
+  //   } catch (error) {
+  //     console.error("Error checking sale for requisition:", error);
+  //     return false;
+  //   }
+  // };
 
   // Function to get total and invoiced quantities for a requisition
   const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
