@@ -1235,6 +1235,181 @@ export default function NewBill() {
     }
   };
 
+  // Function to get total and invoiced quantities for a requisition
+  const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Get total quantity from requisition items
+      const reqResponse = await fetch(
+        `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","patient_requisition_item_details"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!reqResponse.ok) {
+        console.error("Failed to fetch requisition details");
+        return { total_qty: 0, invoiced_qty: 0 };
+      }
+
+      const reqData = await reqResponse.json();
+      const requisitionItems = reqData.data?.patient_requisition_item_details || [];
+      console.log("Requisition items for", reqNo, ":", requisitionItems);
+      
+      // Try different field names for quantity
+      const totalQty = requisitionItems.reduce((sum: number, item: any) => {
+        // Debug: Show all available fields
+        console.log("Item fields:", Object.keys(item), "Item data:", item);
+        const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
+        console.log("Using quantity field:", qty, "from item:", item);
+        return sum + qty;
+      }, 0);
+
+      console.log("Total quantity calculated:", totalQty);
+
+      // Get invoiced quantity from POS invoices
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details");
+        return { total_qty: totalQty, invoiced_qty: 0 };
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      console.log("Invoices for requisition", reqNo, ":", invoices);
+      let invoicedQty = 0;
+
+      // Fetch full invoice details for each invoice to get items
+      for (const invoice of invoices) {
+        console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
+        
+        try {
+          const fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+          
+          if (fullInvoiceResponse.ok) {
+            const fullInvoiceData = await fullInvoiceResponse.json();
+            const fullInvoice = fullInvoiceData.data;
+            
+            if (fullInvoice?.items) {
+              console.log("Invoice items:", fullInvoice.items);
+              const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+              invoicedQty += invoiceQty;
+              console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+        }
+      }
+
+      console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
+      return { total_qty: totalQty, invoiced_qty: invoicedQty };
+    } catch (error) {
+      console.error("Error getting requisition quantities:", error);
+      return { total_qty: 0, invoiced_qty: 0 };
+    }
+  };
+
+  // Function to check if requisition is fully completed
+  const isRequisitionFullyCompleted = async (reqNo: string): Promise<boolean> => {
+    const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
+    return total_qty > 0 && invoiced_qty >= total_qty;
+  };
+
+  // Function to update requisition status
+  const updateRequisitionStatus = async (reqNo: string, forceComplete: boolean = false): Promise<void> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      let status = "Pending";
+      
+      if (forceComplete) {
+        status = "Completed";
+        console.log("Force completing requisition:", reqNo);
+      } else {
+        // Check current status based on quantities
+        const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
+        console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
+        
+        if (total_qty > 0 && invoiced_qty >= total_qty) {
+          status = "Completed";
+          console.log("Requisition marked as Completed");
+        } else {
+          status = "Pending";
+          console.log("Requisition marked as Pending");
+        }
+      }
+
+      console.log("Updating requisition", reqNo, "status to:", status);
+
+      // Update the requisition status
+      const response = await fetch(
+        `${API_BASE_URL}/Patient%20Requisition/${reqNo}`,
+        {
+          method: 'PUT',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            custom_requisition_status: status
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to update requisition status:", errorData);
+      } else {
+        const result = await response.json();
+        console.log(`Requisition ${reqNo} status updated to: ${status}`, result);
+        
+        // Verify the update by fetching the requisition again
+        try {
+          const verifyResponse = await fetch(
+            `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","custom_requisition_status"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+          
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            console.log("Verification - Current status in database:", verifyData.data?.custom_requisition_status);
+          }
+        } catch (verifyError) {
+          console.error("Failed to verify status update:", verifyError);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating requisition status:", error);
+    }
+  };
+
   // --- START: Added function to clear file ---
   const handleClearFile = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the modal from opening
@@ -1774,11 +1949,14 @@ export default function NewBill() {
       return;
     }
 
-    // Check if sale exists for this requisition
+    // Check if requisition is fully completed
     if (sourceDocumentName && sourceDocumentType === 'requisition') {
-      const saleExists = await checkSaleExistsForRequisition(sourceDocumentName);
-      if (saleExists) {
-        showAlert("danger", "Error", "Cannot create sale for this requisition: Sale has already been generated against this requisition");
+      console.log("Checking requisition completion for:", sourceDocumentName);
+      const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
+      console.log("Is requisition fully completed?", isFullyCompleted);
+      
+      if (isFullyCompleted) {
+        showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
         return;
       }
     }
@@ -3098,6 +3276,11 @@ export default function NewBill() {
         // Update the docstatus state
         setLoadedInvoiceDocstatus(1);
 
+        // Update requisition status if this invoice is against a requisition
+        if (sourceDocumentName && sourceDocumentType === 'requisition') {
+          await updateRequisitionStatus(sourceDocumentName, isComplete);
+        }
+
         // Print the invoice
         const company = selectedCompany || result.data?.company || '';
         const printUrl = 'https://192.168.7.221:4422/printview?' +
@@ -3133,11 +3316,14 @@ export default function NewBill() {
         return;
       }
 
-      // Check if sale exists for this requisition
+      // Check if requisition is fully completed
       if (sourceDocumentName && sourceDocumentType === 'requisition') {
-        const saleExists = await checkSaleExistsForRequisition(sourceDocumentName);
-        if (saleExists) {
-          showAlert("danger", "Error", "Cannot create sale for this requisition: Sale has already been generated against this requisition");
+        console.log("Checking requisition completion for:", sourceDocumentName);
+        const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
+        console.log("Is requisition fully completed?", isFullyCompleted);
+        
+        if (isFullyCompleted) {
+          showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
           return;
         }
       }
@@ -3357,6 +3543,11 @@ export default function NewBill() {
         // Update state to reflect the loaded invoice
         setLoadedInvoiceName(invoiceName);
         setLoadedInvoiceDocstatus(1);
+
+        // Update requisition status if this invoice is against a requisition
+        if (sourceDocumentName && sourceDocumentType === 'requisition') {
+          await updateRequisitionStatus(sourceDocumentName, isComplete);
+        }
 
         // Print the invoice
         const company = selectedCompany || patientData.company || '';

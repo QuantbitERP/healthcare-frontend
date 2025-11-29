@@ -1086,6 +1086,10 @@ export default function IPDBill() {
   const selectedHospital = '';
   const [showViewPosInvoicesModal, setShowViewPosInvoicesModal] = useState(false); // New state for View POS Invoices modal
   const [_isItemsLoadedFromRequisitionOrPrescription, setIsItemsLoadedFromRequisitionOrPrescription] = useState(false); // Track if items are loaded from requisition or prescription
+  const [sourceDocumentName, setSourceDocumentName] = useState<string>(''); // Track the source document name (requisition or prescription)
+  const [sourceDocumentType, setSourceDocumentType] = useState<'requisition' | 'prescription' | ''>(''); // Track the source document type
+  const [isComplete, setIsComplete] = useState(false);
+  const [barcode, setBarcode] = useState('');
 
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
   const [showCreateReturnModal, setShowCreateReturnModal] = useState(false);
@@ -1195,6 +1199,10 @@ export default function IPDBill() {
     setIgstAccounts([]);
     setGstCategory('');
     setTotalBillAmount(0);
+    setSourceDocumentName('');
+    setSourceDocumentType('');
+    setIsComplete(false);
+    setBarcode('');
     setTotalDiscountAmount(0);
     setTotalCgstAmount(0);
     setTotalSgstAmount(0);
@@ -1240,11 +1248,119 @@ export default function IPDBill() {
     setShowDropdown(false);
     setItems([]);
     setIsItemsLoadedFromRequisitionOrPrescription(false);
+    setSourceDocumentName('');
+    setSourceDocumentType('');
     <Alerts
       heading="Sucess"
 
 
     />;
+  };
+
+  // Function to get total and invoiced quantities for a requisition
+  const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Get total quantity from requisition items
+      const reqResponse = await fetch(
+        `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","patient_requisition_item_details"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!reqResponse.ok) {
+        console.error("Failed to fetch requisition details");
+        return { total_qty: 0, invoiced_qty: 0 };
+      }
+
+      const reqData = await reqResponse.json();
+      const requisitionItems = reqData.data?.patient_requisition_item_details || [];
+      const totalQty = requisitionItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+
+      // Get invoiced quantity from POS invoices
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","items"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details");
+        return { total_qty: totalQty, invoiced_qty: 0 };
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      let invoicedQty = 0;
+
+      for (const invoice of invoices) {
+        if (invoice.items) {
+          invoicedQty += invoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+        }
+      }
+
+      return { total_qty: totalQty, invoiced_qty: invoicedQty };
+    } catch (error) {
+      console.error("Error getting requisition quantities:", error);
+      return { total_qty: 0, invoiced_qty: 0 };
+    }
+  };
+
+  // Function to check if requisition is fully completed
+  const isRequisitionFullyCompleted = async (reqNo: string): Promise<boolean> => {
+    const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
+    return total_qty > 0 && invoiced_qty >= total_qty;
+  };
+
+  // Function to update requisition status
+  const updateRequisitionStatus = async (reqNo: string, forceComplete: boolean = false): Promise<void> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      let status = "Pending";
+      
+      if (forceComplete) {
+        status = "Completed";
+      } else {
+        // Check current status based on quantities
+        const isFullyCompleted = await isRequisitionFullyCompleted(reqNo);
+        status = isFullyCompleted ? "Completed" : "Pending";
+      }
+
+      // Update the requisition status
+      const response = await fetch(
+        `${API_BASE_URL}/Patient%20Requisition/${reqNo}`,
+        {
+          method: 'PUT',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            custom_requisition_status: status
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to update requisition status");
+      } else {
+        console.log(`Requisition ${reqNo} status updated to: ${status}`);
+      }
+    } catch (error) {
+      console.error("Error updating requisition status:", error);
+    }
   };
 
   // useEffect to fetch kit options
@@ -1658,6 +1774,15 @@ export default function IPDBill() {
       return;
     }
 
+    // Check if requisition is fully completed
+    if (sourceDocumentName && sourceDocumentType === 'requisition') {
+      const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
+      if (isFullyCompleted) {
+        showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
+        return;
+      }
+    }
+
     // // Check if POS session is open
     // try {
     //    const isPosOpen = await checkOpenPOS(posProfile);
@@ -1962,6 +2087,10 @@ export default function IPDBill() {
 
   const handleSelectRequisition = async (requisition: any) => {
     console.log("Selected requisition:", requisition);
+    // Set source document information
+    setSourceDocumentName(requisition.name);
+    setSourceDocumentType('requisition');
+    setIsItemsLoadedFromRequisitionOrPrescription(true);
     // Fetch the full requisition document to ensure child tables are available
     let fullRequisitionData = requisition;
     try {
@@ -2932,6 +3061,11 @@ export default function IPDBill() {
         // Update the docstatus state
         setLoadedInvoiceDocstatus(1);
 
+        // Update requisition status if this invoice is against a requisition
+        if (sourceDocumentName && sourceDocumentType === 'requisition') {
+          await updateRequisitionStatus(sourceDocumentName, isComplete);
+        }
+
         // Print the invoice
         const company = selectedCompany || result.data?.company || '';
         const printUrl = 'https://192.168.7.221:4422/printview?' +
@@ -2965,6 +3099,15 @@ export default function IPDBill() {
         showAlert("danger", "Error", "Please select a POS profile.");
         setShowPosProfileSelector(true);
         return;
+      }
+
+      // Check if requisition is fully completed
+      if (sourceDocumentName && sourceDocumentType === 'requisition') {
+        const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
+        if (isFullyCompleted) {
+          showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
+          return;
+        }
       }
 
       const payload = {
@@ -3178,6 +3321,11 @@ export default function IPDBill() {
         // Update state to reflect the loaded invoice
         setLoadedInvoiceName(invoiceName);
         setLoadedInvoiceDocstatus(1);
+
+        // Update requisition status if this invoice is against a requisition
+        if (sourceDocumentName && sourceDocumentType === 'requisition') {
+          await updateRequisitionStatus(sourceDocumentName, isComplete);
+        }
 
         // Print the invoice
         const company = selectedCompany || patientData.company || '';
@@ -3550,6 +3698,11 @@ export default function IPDBill() {
                 calculateItemTaxAndTotals={calculateItemTaxAndTotals}
                 recalculateTotals={recalculateTotals}
                 fetchTaxDetails={fetchTaxDetails}
+                showAlert={showAlert}
+                barcode={barcode}
+                setBarcode={setBarcode}
+                isComplete={isComplete}
+                setIsComplete={setIsComplete}
               />
             </CardContent>
           </Card>

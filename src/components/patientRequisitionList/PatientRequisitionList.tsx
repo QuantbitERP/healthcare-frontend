@@ -60,6 +60,35 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Function to update requisition completion status
+  const updateRequisitionCompletion = async (requisitionName: string, isCompleted: boolean) => {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `token ${apiKey}:${apiSecret}`,
+      };
+
+      const status = isCompleted ? "Completed" : "Pending";
+      console.log(`Updating requisition ${requisitionName} to ${status}`);
+
+      const response = await axios.put(
+        `${API_BASE_URL}/Patient Requisition/${requisitionName}`,
+        {
+          custom_requisition_status: status,
+        },
+        { headers, withCredentials: true }
+      );
+
+      if (response.data) {
+        console.log(`Requisition ${requisitionName} updated to ${status}`);
+        // Refresh the requisition list
+        fetchRequisitions();
+      }
+    } catch (error) {
+      console.error("Error updating requisition completion:", error);
+    }
+  };
+
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {
     setLoading(true);
     try {
@@ -125,13 +154,119 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       });
 
       if (response.data.data) {
+        // Process each requisition to calculate status
+        const processedRequisitions = await Promise.all(
+          response.data.data.map(async (req: any) => {
+            // First, fetch the full requisition with child table data
+            let fullRequisitionData = req;
+            try {
+              const fullReqResponse = await axios.get(
+                `${API_BASE_URL}/Patient Requisition/${req.name}?fields=["name","patient_requisition_item_details"]`,
+                { headers, withCredentials: true }
+              );
+              
+              if (fullReqResponse.data?.data) {
+                fullRequisitionData = fullReqResponse.data.data;
+              }
+            } catch (error) {
+              console.error("Failed to fetch full requisition details for", req.name, ":", error);
+            }
+            
+            // Debug: Show the actual requisition items structure
+            console.log("Requisition items structure for", req.name, ":", fullRequisitionData.patient_requisition_item_details);
+            
+            // Get total quantity from requisition items
+            const totalQty = (fullRequisitionData.patient_requisition_item_details || [])
+              .reduce((sum: number, item: any) => {
+                // Try all possible field names and log what we find
+                console.log("Item fields:", Object.keys(item), "Item data:", item);
+                const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
+                console.log("Using quantity field:", qty, "from item:", item);
+                return sum + qty;
+              }, 0);
+
+            // Get invoiced quantity from POS invoices
+            try {
+              console.log("Searching for invoices with custom_req_no =", req.name);
+              const invoiceResponse = await axios.get(
+                `${API_BASE_URL}/POS Invoice?filters=[["custom_req_no","=","${req.name}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+                { headers, withCredentials: true }
+              );
+
+              console.log("Invoice query response:", invoiceResponse.data);
+              const invoices = invoiceResponse.data?.data || [];
+              console.log("Found invoices:", invoices.length, invoices);
+              
+              let invoicedQty = 0;
+
+              // Fetch full invoice details for each invoice to get items
+              for (const invoice of invoices) {
+                console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
+                
+                try {
+                  const fullInvoiceResponse = await axios.get(
+                    `${API_BASE_URL}/POS Invoice/${invoice.name}?fields=["name","items"]`,
+                    { headers, withCredentials: true }
+                  );
+                  
+                  const fullInvoice = fullInvoiceResponse.data?.data;
+                  if (fullInvoice?.items) {
+                    console.log("Invoice items:", fullInvoice.items);
+                    const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+                    invoicedQty += invoiceQty;
+                    console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
+                  }
+                } catch (error) {
+                  console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+                }
+              }
+
+              // Determine status
+              let requisitionStatus: "Pending" | "Completed" = "Pending";
+              if (totalQty > 0 && invoicedQty >= totalQty) {
+                requisitionStatus = "Completed";
+              }
+
+              console.log(`Requisition ${req.name}: Total=${totalQty}, Invoiced=${invoicedQty}, Status=${requisitionStatus}`);
+
+              return {
+                ...req,
+                requisition_status: requisitionStatus,
+                total_qty: totalQty,
+                invoiced_qty: invoicedQty,
+              };
+            } catch (error) {
+              console.error(`Error calculating status for requisition ${req.name}:`, error);
+              return {
+                ...req,
+                requisition_status: "Pending",
+                total_qty: totalQty,
+                invoiced_qty: 0,
+              };
+            }
+          })
+        );
+
         // Filter out completed requisitions if showCompleted is false
-        let filteredRequisitions = response.data.data;
+        let filteredRequisitions = processedRequisitions;
         if (!showCompleted) {
           filteredRequisitions = filteredRequisitions.filter(
             (req: PatientRequisition) => req.requisition_status !== "Completed"
           );
         }
+
+        // Debug: Show all processed requisitions and filtered results
+        console.log("All processed requisitions:", processedRequisitions.map(r => ({ name: r.name, status: r.requisition_status })));
+        console.log("Filtered requisitions (showCompleted=" + showCompleted + "):", filteredRequisitions.map(r => ({ name: r.name, status: r.requisition_status })));
+        
+        // Check for duplicates
+        const duplicateNames = processedRequisitions
+          .map(r => r.name)
+          .filter((name, index, arr) => arr.indexOf(name) !== index);
+        if (duplicateNames.length > 0) {
+          console.warn("Found duplicate requisition names:", duplicateNames);
+        }
+
         const transformedData = filteredRequisitions.map((item: any, index: number) => ({
           id: index + 1,
           name: item.name,
@@ -145,6 +280,9 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
           department: item.requisition_from || "",
           company: item.patient_company || "",
           remark: item.remark || "",
+          requisition_status: item.requisition_status,
+          total_qty: item.total_qty,
+          invoiced_qty: item.invoiced_qty,
         }));
 
         setRequisitions(transformedData);
@@ -155,7 +293,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [ipNo, isExpired, isStat, isDischarge, isRoutine, isASAP, showCompleted]);
+  }, [ipNo, isExpired, isStat, isDischarge, isRoutine, isASAP, showCompleted, apiKey, apiSecret]);
 
   // Debounced search implementation
   const debouncedFetch = useCallback((search: string, dateRange?: DateRange) => {
@@ -273,6 +411,26 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       },
     },
     {
+      id: "is_completed",
+      header: "Mark Completed",
+      cell: ({ row }: any) => {
+        const requisition = row.original;
+        const isCompleted = requisition.requisition_status === "Completed";
+        
+        return (
+          <input
+            type="checkbox"
+            checked={isCompleted}
+            onChange={(e) => {
+              e.stopPropagation();
+              updateRequisitionCompletion(requisition.name, e.target.checked);
+            }}
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+          />
+        );
+      },
+    },
+    {
       id: "select",
       header: "Select",
       cell: ({ row }: any) => (
@@ -377,7 +535,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                   checked={showCompleted}
                   onCheckedChange={(checked) => setShowCompleted(checked === true)}
                 />
-                <Label htmlFor="showCompleted" className="text-xs">Show Completed</Label>
+                <Label htmlFor="showCompleted" className="text-xs font-medium">Show Completed Requisitions</Label>
               </div>
             </div>
           </div>
