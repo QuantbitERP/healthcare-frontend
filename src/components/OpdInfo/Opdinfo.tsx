@@ -8,7 +8,6 @@ import Tags from '@/components/statusTags/Tags';
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import PosInfoCardDetails from '../posInfoCard/posInfoCardDetails';
 import { useFrappeApi } from "@/api/api";
-import { fetchUserDefaultBranch } from "@/api/userDefaultBranch";
 import { useAuth } from "@/context/AuthContext";
 import SelectInput from "@/components/form/Select";
 import Cash from "@/assets/icons/Cash.svg";
@@ -95,7 +94,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 }) => {
     const [open, setOpen] = useState<boolean>(false);
     const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors, doctors } = useFrappeApi();
-    const { apiKey, apiSecret } = useAuth();
+    const { apiKey, apiSecret, isInitialized } = useAuth();
     // fetchWarehouseForSubdepartment
     const { showAlert } = useAlert();
 
@@ -117,7 +116,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
     const [branches, setBranches] = useState<{ label: string; value: string }[]>([]);
-    const [defaultBranch, setDefaultBranch] = useState<string>("");
+    const [defaultBranch] = useState<string>("");
     // const [selectedWarehouse, setSelectedWarehouse] = useState<string>(''); // Removed
     // const [selectedCustomer, setSelectedCustomer] = useState<string>(''); // Removed
     // const [selectedCompany, setSelectedCompany] = useState<string>(''); // Removed
@@ -325,6 +324,8 @@ const OpdCard: React.FC<PatientCardProps> = ({
     };
 
     useEffect(() => {
+        if (!isInitialized) return; // Wait for auth initialization
+        
         const loadWarehouses = async () => {
             setLoading(true);
             try {
@@ -343,31 +344,19 @@ const OpdCard: React.FC<PatientCardProps> = ({
         };
 
         loadWarehouses();
-    }, [fetchWarehouses]);
+    }, [fetchWarehouses, isInitialized]);
 
     useEffect(() => {
+        if (!isInitialized) return; // Wait for auth initialization
+        
         // Fetch and set default branch (hospital) from session
-        const fetchDefaultBranch = async () => {
-            if (apiKey && apiSecret) {
-                try {
-                    const branch = await fetchUserDefaultBranch(apiKey, apiSecret);
-                    if (branch) {
-                        setDefaultBranch(branch);
-                        setSelectedBranch?.(branch);
-                    }
-                } catch (e) {
-                    console.error("Failed to fetch default branch", e);
-                }
-            }
-        };
-        fetchDefaultBranch();
-        // Existing branch loading logic
+        
         const loadBranches = async () => {
             setLoading(true);
             try {
                 const branchData = await fetchBranch();
                 const branchOptions = branchData.map((branch: any) => ({
-                    label: branch.name || branch.branch_name || 'Unnamed Branch',
+                    label: branch.name || 'Unnamed Branch',
                     value: branch.name,
                 }));
                 setBranches(branchOptions);
@@ -378,8 +367,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 setLoading(false);
             }
         };
+
         loadBranches();
-    }, [fetchBranch]);
+    }, [fetchBranch, isInitialized, apiKey, apiSecret]);
 
     const handleWarehouseChange = useCallback(
         (value: string) => {

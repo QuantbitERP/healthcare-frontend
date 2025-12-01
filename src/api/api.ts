@@ -58,8 +58,8 @@ const makeFrappeApiCall = async (url: string, resourceName: string, apiKey: stri
 
 // Custom hook to handle Frappe API calls with auth context and caching
 export const useFrappeApi = () => {
-  const { apiKey, apiSecret } = useAuth();
-  const isAuthenticated = !!apiKey && !!apiSecret;
+  const { apiKey, apiSecret, isInitialized } = useAuth();
+  const isAuthenticated = !!apiKey && !!apiSecret && isInitialized;
 
   // State to cache API results
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -75,10 +75,7 @@ export const useFrappeApi = () => {
 
   // Fetch warehouses
   const fetchWarehouses = useCallback(async () => {
-    if (!isAuthenticated) {
-      console.error("Not authenticated. Cannot fetch warehouses.");
-      throw new Error("Authentication required to fetch warehouses.");
-    }
+    
 
     if (warehouses.length > 0) {
       console.log("Returning cached warehouses:", warehouses);
@@ -116,7 +113,7 @@ export const useFrappeApi = () => {
       console.error(errorMessage);
       throw new Error(errorMessage);
     }
-  }, [isAuthenticated, apiKey, apiSecret, warehouses]);
+  }, [isAuthenticated, apiKey, apiSecret, warehouses, isInitialized]);
 
   // Fetch branches
   const fetchBranches = useCallback(async () => {
@@ -342,10 +339,7 @@ export const useFrappeApi = () => {
 
   // Fetch branches (local)
   const fetchBranch = useCallback(async () => {
-    if (!isAuthenticated) {
-      console.error("Not authenticated. Cannot fetch Branch.");
-      throw new Error("Authentication required to fetch Branch.");
-    }
+   
 
     if (localBranches.length > 0) {
       console.log("Returning cached branches:", localBranches);
@@ -382,7 +376,7 @@ export const useFrappeApi = () => {
       console.error(errorMessage);
       throw new Error(errorMessage);
     }
-  }, [isAuthenticated, apiKey, apiSecret, localBranches]);
+  }, [isAuthenticated, apiKey, apiSecret, localBranches, isInitialized]);
 
   // Fetch departments
   const fetchDepartment = useCallback(async () => {

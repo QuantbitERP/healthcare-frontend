@@ -96,6 +96,7 @@ interface ItemSearchProps {
   // showAlert: (variant: AlertState['variant'], heading: string, content: string) => void;
   selectedClassification?: string;
   isGeneric?: boolean;
+  isDisabled?: boolean; // Add disabled prop
 }
 
 type SelectedPatient = {
@@ -129,6 +130,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   // showAlert, // Destructure selectedWarehouse
   selectedClassification,
   isGeneric,
+  isDisabled = false, // Add disabled prop with default value
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [subSearchTerm, setSubSearchTerm] = useState('');
@@ -567,8 +569,13 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
               setShowSuggestions(true);
             }
           }}
-          placeholder={isGeneric ? "Search Generic Name" : placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+          placeholder={isDisabled ? "Items loaded from requisition/prescription" : (isGeneric ? "Search Generic Name" : placeholder)}
+          disabled={isDisabled}
+          className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
+            isDisabled 
+              ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed" 
+              : "border-gray-300 focus:border-blue-500"
+          }`}
           autoComplete="off"
         />
         {searchTerm && (
@@ -782,7 +789,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   let finalIgstPercent = item.igstPercent;
 
   if (includedInPrintRate) {
-    // For tax-inclusive rates, the rate already includes tax
+    // For tax-inclusive rates (MRP-based pricing), the rate already includes tax
     // First extract the taxable amount from the base amount (which includes tax)
     const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
 
@@ -825,6 +832,24 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     // Total amount includes the calculated tax
     totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
   }
+
+  console.log('calculateItemTaxAndTotals:', {
+    itemCode: item.itemCode,
+    rate,
+    saleQty: item.saleQty,
+    baseAmount,
+    includedInPrintRate,
+    discountPercent: item.discountPercent,
+    discountAmount,
+    taxableAmount,
+    cgstPercent: item.cgstPercent,
+    sgstPercent: item.sgstPercent,
+    igstPercent: item.igstPercent,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    totalAmount
+  });
 
   return {
     ...item,
@@ -3774,6 +3799,7 @@ export default function NewBill() {
                   // showAlert={showAlert}
                   selectedClassification={selectedSaleType}
                   isGeneric={isGeneric}
+                  isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
                   className="pt-2"// Pass getBatchQty as a prop
                 />
 

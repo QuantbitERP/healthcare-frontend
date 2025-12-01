@@ -183,15 +183,23 @@ export default function PatientRequisitionList() {
               header: "Status",
               cell: ({ getValue }: any) => {
                 const status = getValue();
+                let statusText = "";
+                let statusClass = "";
+
+                if (status === 0) {
+                  statusText = "Draft";
+                  statusClass = "bg-yellow-100 text-yellow-800";
+                } else if (status === 1) {
+                  statusText = "Submitted";
+                  statusClass = "bg-green-100 text-green-800";
+                } else if (status === 2) {
+                  statusText = "Cancelled";
+                  statusClass = "bg-red-100 text-red-800";
+                }
+
                 return (
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      status === 0
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {status === 0 ? "Draft" : "Submitted"}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                    {statusText}
                   </span>
                 );
               },

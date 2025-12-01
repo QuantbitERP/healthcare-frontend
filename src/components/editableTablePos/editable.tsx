@@ -321,7 +321,8 @@ const EditableTable = ({
   });
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     mrp: false, // Hide MRP column by default
-    itemAmount: false, // Hide Item Amount column by default
+    itemAmount: true, // Show Item Amount column by default
+    totalAmt: false, // Hide Total Amount column by default
   });
 
   const handleRemoveItemFromDetails = (itemId: string) => {
@@ -844,16 +845,26 @@ const EditableTable = ({
       {
         accessorKey: "batchNo",
         header: "Batch No.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600">
+              {item.batchNo || '-'}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "expiryDate",
         header: "Expiry Date",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="date" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600">
+              {item.expiryDate || '-'}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "stockQty",
@@ -1023,7 +1034,7 @@ const EditableTable = ({
       },
       {
         accessorKey: "itemAmount",
-        header: "Item Amount",
+        header: "Total Amount",
         cell: ({ row }) => {
           const item = row.original as Item;
           return (

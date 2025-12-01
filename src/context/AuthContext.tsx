@@ -60,9 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setIsInitialized(true);
 
-    // Fetch current user if authenticated
+    // Fetch current user if authenticated but no stored user
     if (storedApiKey && storedApiSecret && !storedUser) {
-      getCurrentUser().then((user) => {
+      getCurrentUser(storedApiKey, storedApiSecret).then((user) => {
         if (user) {
           setCurrentUser(user);
           localStorage.setItem("currentUser", user);
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("apiKey", apiKey);
     localStorage.setItem("apiSecret", apiSecret);
     // Fetch current user after login
-    getCurrentUser().then((user) => {
+    getCurrentUser(apiKey, apiSecret).then((user) => {
       if (user) {
         setCurrentUser(user);
         localStorage.setItem("currentUser", user);
@@ -99,8 +99,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     router.push("/login");
   };
 
-  const getCurrentUser = async (): Promise<string | null> => {
+  const getCurrentUser = async (key?: string, secret?: string): Promise<string | null> => {
     try {
+      const authKey = key || apiKey;
+      const authSecret = secret || apiSecret;
+      
+      if (!authKey || !authSecret) {
+        console.error("No API credentials available for getCurrentUser");
+        return null;
+      }
+
       const response = await fetch(
         "https://192.168.7.221:4422/api/method/frappe.auth.get_logged_user",
         {
@@ -108,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           headers: {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            Authorization: `token ${apiKey}:${apiSecret}`, // Use API key for consistency
+            Authorization: `token ${authKey}:${authSecret}`,
           },
           credentials: "include",
         }

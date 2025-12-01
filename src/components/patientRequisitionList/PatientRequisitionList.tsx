@@ -61,33 +61,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to update requisition completion status
-  const updateRequisitionCompletion = async (requisitionName: string, isCompleted: boolean) => {
-    try {
-      const headers = {
-        'Content-Type': 'application/json',
-        Authorization: `token ${apiKey}:${apiSecret}`,
-      };
-
-      const status = isCompleted ? "Completed" : "Pending";
-      console.log(`Updating requisition ${requisitionName} to ${status}`);
-
-      const response = await axios.put(
-        `${API_BASE_URL}/Patient Requisition/${requisitionName}`,
-        {
-          custom_requisition_status: status,
-        },
-        { headers, withCredentials: true }
-      );
-
-      if (response.data) {
-        console.log(`Requisition ${requisitionName} updated to ${status}`);
-        // Refresh the requisition list
-        fetchRequisitions();
-      }
-    } catch (error) {
-      console.error("Error updating requisition completion:", error);
-    }
-  };
+ 
 
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {
     setLoading(true);
@@ -411,26 +385,6 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       },
     },
     {
-      id: "is_completed",
-      header: "Mark Completed",
-      cell: ({ row }: any) => {
-        const requisition = row.original;
-        const isCompleted = requisition.requisition_status === "Completed";
-        
-        return (
-          <input
-            type="checkbox"
-            checked={isCompleted}
-            onChange={(e) => {
-              e.stopPropagation();
-              updateRequisitionCompletion(requisition.name, e.target.checked);
-            }}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-          />
-        );
-      },
-    },
-    {
       id: "select",
       header: "Select",
       cell: ({ row }: any) => (
@@ -443,6 +397,9 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
         </Button>
       ),
     },
+
+    
+    
   ];
 
   const columnNames = {

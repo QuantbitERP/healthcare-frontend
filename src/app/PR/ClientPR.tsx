@@ -484,6 +484,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const [_loading, setLoading] = useState<boolean>(false);
   const [_error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isLoadingRequisition, setIsLoadingRequisition] = useState<boolean>(false);
 
   // Track last added kit
   const lastAddedKit = useRef<string>("");
@@ -654,11 +655,18 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   // Centralised “add-or-update” logic (search, kit, barcode)
   // ---------------------------------------------------------------------
   const upsertItemWithStock = async (baseItem: Item, qtyIncrement: number = 1) => {
+    console.log('upsertItemWithStock called:', { baseItem, qtyIncrement, isLoadingRequisition });
     // 1. If we already have the item, just bump the requested qty
     const existingIdx = items.findIndex((i) => i.itemCode === baseItem.itemCode);
     if (existingIdx > -1) {
       const updated = [...items];
       const newReq = Number(updated[existingIdx].reqQty) + qtyIncrement;
+      console.log('Updating existing item:', {
+        itemCode: baseItem.itemCode,
+        currentQty: updated[existingIdx].reqQty,
+        increment: qtyIncrement,
+        newQty: newReq
+      });
       updated[existingIdx].reqQty = String(newReq);
 
       // 2. Refresh stock (in case the warehouse changed)
@@ -695,15 +703,18 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   };
 
   const handleUpdateQuantity = (itemId: string, newQty: string) => {
+    console.log('handleUpdateQuantity called:', { itemId, newQty });
     if (Number(newQty) <= 0) {
       handleRemoveItemFromDetails(itemId);
       return;
     }
-    setItems(prevItems =>
-      prevItems.map(item =>
+    setItems(prevItems => {
+      const updated = prevItems.map(item =>
         item.id === itemId ? { ...item, reqQty: newQty } : item
-      )
-    );
+      );
+      console.log('Items updated:', updated);
+      return updated;
+    });
     showAlert("success", "Success", "Quantity updated successfully");
   };
 
@@ -732,7 +743,6 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
             onBlur={(e) => {
               const v = Math.max(0, Math.floor(Number(e.target.value) || 0));
               handleUpdateQuantity(row.original.id, String(v));
-              e.target.value = String(v);
             }}
             placeholder="0"
             className="w-[50px]"
@@ -770,7 +780,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
-      setLoading(true);
+      setIsLoadingRequisition(true);
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -801,7 +811,13 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setRequisitionFrom(requisition.requisition_from || "");
       setRequisitionTo(requisition.requisition_to || "");
       setToLocation(requisition.to_location || "");
-      setSelectedKit(requisition.kit || "");
+      const loadedKit = requisition.kit || "";
+      console.log('Loading requisition with kit:', loadedKit);
+      setSelectedKit(loadedKit);
+      if (loadedKit) {
+        console.log('Setting lastAddedKit.current to loaded kit to prevent kit loading:', loadedKit);
+        lastAddedKit.current = loadedKit;
+      }
       setSelectedSaleType(requisition.sale_type || "");
       setSelectedClassification(requisition.classification || "");
       setIsGeneric(requisition.generic === "1");
@@ -842,24 +858,37 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setSearchValue(`${patient.name} (${patient.mrn})`);
 
       const requisitionItems = requisition.patient_requisition_item_details || [];
-      const itemsData: Item[] = requisitionItems.map((item: any, index: number) => ({
-        id: item.item_code ? String(item.item_code.hashCode()) : String(index + Date.now()),
-        itemCode: item.item_code || "",
-        itemName: item.item_name || "",
-        unit: item.unit || "",
-        stockQty: item.stock_qty || "0",
-        reqQty: item.req_qty ? String(item.req_qty) : "0",
-        kit: item.kit || "",
-        remark: item.remark || "",
-      }));
+      console.log('Loading requisition items:', requisitionItems);
+      const itemsData: Item[] = requisitionItems.map((item: any, index: number) => {
+        // Ensure we're getting the correct quantity field from the API response
+        const reqQty = item.req_qty || item.qty || 0;
+        console.log('Mapping item:', { itemCode: item.item_code, reqQty, originalReqQty: item.req_qty });
+        return {
+          id: item.item_code ? String(item.item_code.hashCode()) : String(index + Date.now()),
+          itemCode: item.item_code || "",
+          itemName: item.item_name || "",
+          unit: item.unit || "",
+          stockQty: item.stock_qty || "0",
+          reqQty: String(Number(reqQty) || 0), // Ensure it's a valid number and convert to string
+          kit: item.kit || "",
+          remark: item.remark || "",
+        };
+      });
+      console.log('Final items data to set:', itemsData);
+      console.log('Setting items with quantities:', itemsData.map(item => ({ itemCode: item.itemCode, reqQty: item.reqQty })));
       setItems(itemsData);
+      
+      // Log immediately after setting to verify
+      setTimeout(() => {
+        console.log('Items immediately after setItems:', items.map(item => ({ itemCode: item.itemCode, reqQty: item.reqQty })));
+      }, 100);
 
       showAlert("success", "Success", "Requisition loaded successfully");
     } catch (error) {
       console.error("Error fetching requisition:", error);
       showAlert("danger", "Error", "Failed to load requisition data");
     } finally {
-      setLoading(false);
+      setIsLoadingRequisition(false);
     }
   };
 
@@ -1278,7 +1307,9 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   };
 
   useEffect(() => {
-    if (selectedKit && selectedKit !== lastAddedKit.current) {
+    console.log('Kit useEffect triggered:', { selectedKit, lastAddedKit: lastAddedKit.current, isLoadingRequisition });
+    if (selectedKit && selectedKit !== lastAddedKit.current && !isLoadingRequisition) {
+      console.log('Kit useEffect proceeding to fetch kit items');
       const fetchKitItems = async () => {
         try {
           const headers = {
@@ -1344,6 +1375,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           }
 
           showAlert('success', 'Success', 'Kit items added to requisition');
+          console.log('Setting lastAddedKit.current to:', selectedKit);
           lastAddedKit.current = selectedKit;
         } catch (error) {
           console.error('Error fetching kit items:', error);
@@ -1353,11 +1385,12 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       fetchKitItems();
     }
-  }, [selectedKit, requisitionFrom, apiKey, apiSecret]);
+  }, [selectedKit, requisitionFrom, apiKey, apiSecret, isLoadingRequisition]);
 
   // Refresh stock when Requisition From changes
   useEffect(() => {
-    if (!requisitionFrom || items.length === 0) return;
+    console.log('Stock refresh useEffect triggered:', { requisitionFrom, itemsLength: items.length, isLoadingRequisition });
+    if (!requisitionFrom || items.length === 0 || isLoadingRequisition) return;
 
     const refreshAllStocks = async () => {
       const refreshed = await Promise.all(
@@ -1370,7 +1403,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     };
 
     refreshAllStocks();
-  }, [requisitionFrom, fetchStockQty]);
+  }, [requisitionFrom, fetchStockQty, isLoadingRequisition]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1387,8 +1420,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   }, [patientData]);
 
   useEffect(() => {
-    console.log("Selected value updated:", selectedValue);
-  }, [selectedValue]);
+    console.log('Items state changed:', items.map(item => ({ itemCode: item.itemCode, reqQty: item.reqQty })));
+  }, [items]);
 
   useEffect(() => {
     const fetchData = async () => {
