@@ -359,6 +359,63 @@ const EditableTable = ({
             }
           }
 
+          // Duplicate validation for itemCode or batchNo changes
+          if (columnId === 'itemCode' || columnId === 'batchNo') {
+            const newItemCode = columnId === 'itemCode' ? parsedValue : row.itemCode;
+            const newBatchNo = columnId === 'batchNo' ? parsedValue : row.batchNo;
+            
+            // Check for duplicate (excluding current row)
+            const duplicateIndex = old.findIndex((existingItem, existingIndex) => 
+              existingIndex !== rowIndex && // Exclude current row
+              existingItem.itemCode === newItemCode && 
+              existingItem.batchNo === newBatchNo &&
+              newBatchNo !== '' // Only check if batchNo is not empty
+            );
+            
+            if (duplicateIndex !== -1) {
+              const duplicateRow = duplicateIndex + 1; // Convert to 1-based row number
+              const currentRow = rowIndex + 1;
+              if (showAlert) {
+                showAlert("danger", "Duplicate Item", `Item ${newItemCode} with batch ${newBatchNo} already exists in grid at row number ${duplicateRow}. Current row: ${currentRow}.`);
+              } else {
+                alert(`Item ${newItemCode} with batch ${newBatchNo} already exists in grid at row number ${duplicateRow}. Current row: ${currentRow}.`);
+              }
+              return row; // Return original row without changes
+            }
+          }
+
+          // Batch expiry validation when expiry date is changed
+          if (columnId === 'expiryDate' && parsedValue) {
+            const daysUntilExpiry = Math.round((new Date(parsedValue).getTime() - Date.now()) / (1000 * 3600 * 24));
+            const customAllowSaleDays = row.custom_allow_sale_days || 0; // Default to 0 if undefined
+            
+            if (customAllowSaleDays > 0) {
+              if (daysUntilExpiry > 0 && daysUntilExpiry <= customAllowSaleDays) {
+                if (showAlert) {
+                  showAlert("warning", "Batch Expiry Warning", `Batch ${row.batchNo} of item ${row.itemName} will expire in ${daysUntilExpiry} days (Expiry Date: ${parsedValue}). This is within the allowed sale period of ${customAllowSaleDays} days.`);
+                } else {
+                  alert(`Batch ${row.batchNo} of item ${row.itemName} will expire in ${daysUntilExpiry} days (Expiry Date: ${parsedValue}). This is within the allowed sale period of ${customAllowSaleDays} days.`);
+                }
+                // Allow the change but show warning
+              } else if (daysUntilExpiry <= 0) {
+                if (showAlert) {
+                  showAlert("danger", "Batch Expired", `Batch ${row.batchNo} of item ${row.itemName} has already expired (Expiry Date: ${parsedValue}). Cannot add to bill.`);
+                } else {
+                  alert(`Batch ${row.batchNo} of item ${row.itemName} has already expired (Expiry Date: ${parsedValue}). Cannot add to bill.`);
+                }
+                return row; // Return original row without changes
+              }
+            } else if (daysUntilExpiry <= 0) {
+              // If no custom allow sale days, check if already expired
+              if (showAlert) {
+                showAlert("danger", "Batch Expired", `Batch ${row.batchNo} of item ${row.itemName} has already expired (Expiry Date: ${parsedValue}). Cannot add to bill.`);
+              } else {
+                alert(`Batch ${row.batchNo} of item ${row.itemName} has already expired (Expiry Date: ${parsedValue}). Cannot add to bill.`);
+              }
+              return row; // Return original row without changes
+            }
+          }
+
           let updatedRow = {
             ...row,
             [columnId]: parsedValue,

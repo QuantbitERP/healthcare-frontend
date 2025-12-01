@@ -29,7 +29,7 @@ interface PatientRequisition {
   department: string;
   company: string;
   remark: string;
-  requisition_status?: "Pending" | "Completed";
+  requisition_status?: "Pending" | "Completed" | "Partially Pending";
   total_qty?: number;
   invoiced_qty?: number;
 }
@@ -196,9 +196,13 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               }
 
               // Determine status
-              let requisitionStatus: "Pending" | "Completed" = "Pending";
-              if (totalQty > 0 && invoicedQty >= totalQty) {
-                requisitionStatus = "Completed";
+              let requisitionStatus: "Pending" | "Completed" | "Partially Pending" = "Pending";
+              if (totalQty > 0) {
+                if (invoicedQty >= totalQty) {
+                  requisitionStatus = "Completed";
+                } else if (invoicedQty > 0) {
+                  requisitionStatus = "Partially Pending";
+                }
               }
 
               console.log(`Requisition ${req.name}: Total=${totalQty}, Invoiced=${invoicedQty}, Status=${requisitionStatus}`);
@@ -376,6 +380,8 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
               status === "Completed" 
                 ? "bg-green-100 text-green-800" 
+                : status === "Partially Pending"
+                ? "bg-orange-100 text-orange-800"
                 : "bg-yellow-100 text-yellow-800"
             }`}>
               {status || "Pending"}
@@ -511,6 +517,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               onSearch={handleSearch}
               onDataChange={handleDateRangeChange}
               onFilterClick={() => { }}
+              onRowClick={(row) => onSelectRequisition(row)}
               isSearchFocus={true}
               hideFilters={false}
               hideDatePicker={false}

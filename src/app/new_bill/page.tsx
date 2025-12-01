@@ -412,7 +412,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       stockQty: batchStockQty, // Ensure stockQty also reflects the batch-specific quantity
       rate: itemRate,
       mrp: batchMRP, // Set MRP from fetched batch MRP
-      orderedQty: qtyToTake, // Set orderedQty to the quantity taken from this batch
+      orderedQty: item.orderedQty, // Preserve the original ordered quantity from the item
       saleQty: qtyToTake, // Set saleQty to the quantity taken from this batch
       use_serial_batch_fields: 1,
     };
@@ -1356,6 +1356,146 @@ export default function NewBill() {
     }
   };
 
+  // Function to get invoiced quantity for a specific item from a requisition
+  const getItemInvoicedQuantity = async (reqNo: string, itemCode: string): Promise<number> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
+      
+      // Get all invoices for this requisition
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details for item quantity calculation");
+        return 0;
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
+      
+      let totalInvoicedQty = 0;
+
+      // Fetch full invoice details for each invoice to get items
+      for (const invoice of invoices) {
+        try {
+          const fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+          
+          if (fullInvoiceResponse.ok) {
+            const fullInvoiceData = await fullInvoiceResponse.json();
+            const fullInvoice = fullInvoiceData.data;
+            
+            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
+            
+            if (fullInvoice?.items) {
+              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
+              
+              // Sum quantities for the specific item code
+              const itemInvoiceQty = fullInvoice.items
+                .filter((item: any) => item.item_code === itemCode)
+                .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+              
+              console.log(`Item ${itemCode} quantity in invoice ${invoice.name}: ${itemInvoiceQty}`);
+              totalInvoicedQty += itemInvoiceQty;
+            }
+          } else {
+            console.error(`Failed to fetch full invoice details for ${invoice.name}:`, fullInvoiceResponse.status);
+          }
+        } catch (error) {
+          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+        }
+      }
+
+      console.log(`Item ${itemCode} in requisition ${reqNo}: Invoiced quantity = ${totalInvoicedQty}`);
+      return totalInvoicedQty;
+    } catch (error) {
+      console.error("Error getting item invoiced quantity:", error);
+      return 0;
+    }
+  };
+
+  // Function to get invoiced quantity for a specific item from a prescription
+  const getItemInvoicedQuantityFromPrescription = async (prescriptionNo: string, itemCode: string): Promise<number> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Get all invoices for this prescription
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details for prescription item quantity calculation");
+        return 0;
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      let totalInvoicedQty = 0;
+
+      // Fetch full invoice details for each invoice to get items
+      for (const invoice of invoices) {
+        try {
+          const fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+          
+          if (fullInvoiceResponse.ok) {
+            const fullInvoiceData = await fullInvoiceResponse.json();
+            const fullInvoice = fullInvoiceData.data;
+            
+            if (fullInvoice?.items) {
+              // Sum quantities for the specific item code
+              const itemInvoiceQty = fullInvoice.items
+                .filter((item: any) => item.item_code === itemCode)
+                .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+              totalInvoicedQty += itemInvoiceQty;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+        }
+      }
+
+      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
+      return totalInvoicedQty;
+    } catch (error) {
+      console.error("Error getting prescription item invoiced quantity:", error);
+      return 0;
+    }
+  };
+
   // Function to check if requisition is fully completed
   const isRequisitionFullyCompleted = async (reqNo: string): Promise<boolean> => {
     const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
@@ -1867,6 +2007,26 @@ export default function NewBill() {
   const handleAddItemToDetails = async (item: Item) => {
     console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
+      // Check for duplicate item with same batch
+      console.log("Checking for duplicate:", {
+        newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
+        existingItems: items.map(i => ({ itemCode: i.itemCode, batchNo: i.batchNo, itemName: i.itemName, id: i.id }))
+      });
+      
+      const existingItemIndex = items.findIndex(existingItem => 
+        existingItem.itemCode === item.itemCode && 
+        existingItem.batchNo === item.batchNo &&
+        existingItem.batchNo !== '' // Only check if batchNo is not empty
+      );
+      
+      console.log("Duplicate check result:", { existingItemIndex, itemCode: item.itemCode, batchNo: item.batchNo });
+      
+      if (existingItemIndex !== -1) {
+        const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
+        showAlert("danger", "Duplicate Item", `Item ${item.itemName} with batch ${item.batchNo} already exists in grid at row number ${rowNum}.`);
+        return; // Don't add the duplicate item
+      }
+
       const taxDetails = await fetchTaxDetails(item.itemCode, item.rate || 0, 1, item.uom);
       // The item passed from EnhancedItemSearch should already have batchNo, expiryDate, and rate set.
       // We will use these directly.
@@ -1904,7 +2064,7 @@ export default function NewBill() {
         // Always add as a new item, as each batch-specific item has a unique ID now
         const newItemWithCalculations = calculateItemTaxAndTotals({
           ...item,
-          orderedQty: item.saleQty, // Use saleQty as the ordered quantity for the new row
+          orderedQty: item.orderedQty, // Preserve the original ordered quantity from requisition
           stockQty: finalBatchStockQty, // Set stockQty with batch-specific quantity for new item
           rate: finalRate, // Use the final rate from the item
           batchNo: finalBatchNo, // Use the final batch number
@@ -2386,11 +2546,29 @@ export default function NewBill() {
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
 
+      console.log(`Processing requisition item: ${itemCode}, requestedQty: ${requestedQty}`);
+
       try {
+        // Get the invoiced quantity for this specific item
+        const invoicedQty = await getItemInvoicedQuantity(requisition.name, itemCode);
+        let remainingQtyToAllocate = requestedQty - invoicedQty;
+        
+        console.log(`Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
+        
+        // Skip items that are already fully invoiced
+        if (remainingQtyToAllocate <= 0) {
+          console.log(`Skipping item ${itemCode} - already fully invoiced`);
+          continue;
+        }
+
+        // Skip items with zero remaining quantity
+        if (remainingQtyToAllocate === 0) {
+          console.log(`Skipping item ${itemCode} - no remaining quantity to allocate`);
+          continue;
+        }
+
         const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
-
-        let remainingQtyToAllocate = requestedQty;
 
         if (sortedBatches.length === 0) {
           showAlert("warning", "Warning", `No batches available for item ${itemCode} from requisition. Showing alternatives...`);
@@ -2403,8 +2581,8 @@ export default function NewBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: requestedQty,
-            saleQty: requestedQty,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2439,6 +2617,7 @@ export default function NewBill() {
           const qtyToTake = Math.min(remainingQtyToAllocate, batchAvailableQty);
 
           if (qtyToTake > 0) {
+            console.log(`Adding item: ${itemCode}, batch: ${batch.name}, qty: ${qtyToTake}`);
             const itemRate = await fetchItemPrice(itemCode, batch.name, 'Standard Selling');
             const batchStockQty = await getBatchQty(itemCode, batch.name, warehouse);
 
@@ -2489,8 +2668,8 @@ export default function NewBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: remainingQtyToAllocate,
-            saleQty: remainingQtyToAllocate,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2622,12 +2801,22 @@ export default function NewBill() {
       console.log('Processing item - itemCode:', itemCode, 'requestedQty:', requestedQty);
 
       try {
+        // Get the invoiced quantity for this specific item from prescription
+        const invoicedQty = await getItemInvoicedQuantityFromPrescription(prescription.prescription_number, itemCode);
+        let remainingQtyToAllocate = requestedQty - invoicedQty;
+        
+        console.log(`Prescription Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
+        
+        // Skip items that are already fully invoiced
+        if (remainingQtyToAllocate <= 0) {
+          console.log(`Skipping prescription item ${itemCode} - already fully invoiced`);
+          continue;
+        }
+
         const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
         console.log('handleSelectPrescription - fetched batches for', itemCode, ':', batches, 'Type:', typeof batches, 'Is Array:', Array.isArray(batches));
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
         console.log('handleSelectPrescription - sortedBatches for', itemCode, ':', sortedBatches, 'Length:', sortedBatches.length);
-
-        let remainingQtyToAllocate = requestedQty;
 
         if (sortedBatches.length === 0) {
           showAlert("warning", "Warning", `No batches available for item ${itemCode} from prescription. Showing alternatives...`);
@@ -2639,8 +2828,8 @@ export default function NewBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: requestedQty,
-            saleQty: requestedQty,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2725,8 +2914,8 @@ export default function NewBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: remainingQtyToAllocate,
-            saleQty: remainingQtyToAllocate,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -4004,10 +4193,13 @@ export default function NewBill() {
         </div>
         <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
           {loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
-            // Show only Print button for submitted invoices
-            <Button type="primary-button" size="button-medium" onClick={() => window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank')}>
-              Print Invoice
-            </Button>
+            // Show Print and Reset buttons for submitted invoices
+            <>
+              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
+              <Button type="primary-button" size="button-medium" onClick={() => window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank')}>
+                Print Invoice
+              </Button>
+            </>
           ) : (
             // Show all buttons for new invoices or drafts
             <>
