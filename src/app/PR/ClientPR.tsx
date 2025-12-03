@@ -985,7 +985,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           unit: item.unit,
           stock_qty: item.stockQty || "0",
           req_qty: parseInt(item.reqQty) || 0,
-          kit: item.kit || selectedKit || "",
+          kit: item.kit || "", // Only use kit value from item, not selectedKit
           instruction_of_language: "EN",
           remark: item.remark
         })),

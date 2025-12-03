@@ -81,6 +81,8 @@ export interface Item {
   mrp?: number; // Add MRP field for batch custom_mrp
   use_serial_batch_fields?: number;
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
+  hasStock?: boolean; // Add hasStock field to track if item has stock
+  req_qty?: number; // Add req_qty field for requisition/prescription requested quantity
 }
 
 interface ItemSearchProps {
@@ -790,30 +792,52 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   if (includedInPrintRate) {
     // For tax-inclusive rates (MRP-based pricing), the rate already includes tax
-    // First extract the taxable amount from the base amount (which includes tax)
+    // Apply discount to the total amount (including GST)
     const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
-
+    
     if (totalTaxRate > 0) {
-      // Extract taxable amount from the total (which includes tax)
-      taxableAmount = baseAmount / (1 + totalTaxRate);
+      // Calculate base price by excluding GST from MRP
+      // Base Price = MRP / (1 + (GST Rate / 100))
+      const basePrice = rate / (1 + totalTaxRate);
+      
+      // Calculate total base amount for the item quantity
+      const totalBaseAmount = basePrice * item.saleQty;
+      
+      // Calculate GST amounts on the base amount
+      cgstAmount = totalBaseAmount * (item.cgstPercent / 100);
+      sgstAmount = totalBaseAmount * (item.sgstPercent / 100);
+      igstAmount = totalBaseAmount * (item.igstPercent / 100);
+      
+      // Total amount including GST
+      const totalAmountWithTax = totalBaseAmount + cgstAmount + sgstAmount + igstAmount;
+      
+      // Apply discount to the TOTAL amount (including GST)
+      discountAmount = totalAmountWithTax * (item.discountPercent / 100);
+      const discountedTotalAmount = totalAmountWithTax - discountAmount;
+      
+      // Calculate the ratio to distribute discount proportionally
+      const discountRatio = totalAmountWithTax > 0 ? discountedTotalAmount / totalAmountWithTax : 0;
+      
+      // Apply discount ratio to base amount and taxes
+      const discountedBaseAmount = totalBaseAmount * discountRatio;
+      cgstAmount = cgstAmount * discountRatio;
+      sgstAmount = sgstAmount * discountRatio;
+      igstAmount = igstAmount * discountRatio;
+      
+      // Set taxable amount and item amount after discount
+      taxableAmount = discountedBaseAmount;
+      itemAmountAfterDiscount = discountedBaseAmount;
+      
+      // Total amount is the discounted total
+      totalAmount = discountedTotalAmount;
     } else {
-      // If no tax rates, taxable amount equals total amount
+      // If no tax rates, handle as normal amount
       taxableAmount = baseAmount;
+      discountAmount = taxableAmount * (item.discountPercent / 100);
+      itemAmountAfterDiscount = taxableAmount - discountAmount;
+      totalAmount = itemAmountAfterDiscount;
     }
-
-    // Apply discount to the taxable amount (not the total)
-    discountAmount = taxableAmount * (item.discountPercent / 100);
-    const discountedTaxableAmount = taxableAmount - discountAmount;
-
-    // Calculate individual tax amounts based on discounted taxable amount
-    cgstAmount = discountedTaxableAmount * (item.cgstPercent / 100);
-    sgstAmount = discountedTaxableAmount * (item.sgstPercent / 100);
-    igstAmount = discountedTaxableAmount * (item.igstPercent / 100);
-
-    // Total amount is discounted taxable amount + calculated taxes
-    itemAmountAfterDiscount = discountedTaxableAmount;
-    totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
-
+    
     // Keep the original percentages as they represent the tax rates
     finalCgstPercent = item.cgstPercent;
     finalSgstPercent = item.sgstPercent;
@@ -853,7 +877,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   return {
     ...item,
-    itemAmount: baseAmount, // Always the full amount before discount
+    itemAmount: itemAmountAfterDiscount, // Amount after discount (taxable amount)
     discountAmt: discountAmount, // Discount amount calculated on taxable amount
     cgstAmt: cgstAmount,
     sgstAmt: sgstAmount,
@@ -1656,6 +1680,9 @@ export default function NewBill() {
 
     const calculatedItems = itemsList.map(item => calculateItemTaxAndTotals(item, true));
 
+    // Update items in state with recalculated values
+    setItems(calculatedItems);
+
     const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
     const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmt, 0);
     const newTotalCgstAmount = calculatedItems.reduce((sum, item) => sum + item.cgstAmt, 0);
@@ -2081,8 +2108,23 @@ export default function NewBill() {
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         if (newItemWithCalculations) {
           const updatedItems = [...prevItems, newItemWithCalculations];
-          recalculateTotals(updatedItems);
-          return updatedItems;
+          // Recalculate totals for all items
+          const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
+          
+          // Update bill totals
+          const newTotalBillAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.totalAmt, 0);
+          const newTotalDiscountAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.discountAmt, 0);
+          const newTotalCgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.cgstAmt, 0);
+          const newTotalSgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.sgstAmt, 0);
+          const newTotalIgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.igstAmt, 0);
+          
+          setTotalBillAmount(newTotalBillAmount);
+          setTotalDiscountAmount(newTotalDiscountAmount);
+          setTotalCgstAmount(newTotalCgstAmount);
+          setTotalSgstAmount(newTotalSgstAmount);
+          setTotalIgstAmount(newTotalIgstAmount);
+          
+          return allCalculatedItems;
         } else {
           console.error("Error adding item to details: newItemWithCalculations is null or undefined");
           return prevItems;
@@ -2125,6 +2167,14 @@ export default function NewBill() {
 
     if (items.length === 0) {
       showAlert("danger", "Error", "Please add at least one item to the invoice.");
+      return;
+    }
+
+    // Check for items with zero or negative stock
+    const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
+    if (itemsWithZeroOrNegativeStock.length > 0) {
+      const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
+      showAlert("danger", "Error", `Cannot save invoice. The following items have zero or negative stock: ${itemNames}`);
       return;
     }
 
@@ -2173,30 +2223,40 @@ export default function NewBill() {
       included_in_print_rate: 1, // Always consider included_in_print_rate as true
 
       posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      items: items.map(item => ({
-        item_code: item.itemCode,
-        qty: isReturn ? (Number(item.saleQty) || 0) : (Number(item.saleQty) || 0),
-        uom: item.uom,
-        rate: Number(item.rate) || 0,
-        batch_no: item.batchNo || item.batch || "",
-        custom_expiry_date: item.expiryDate || "", // Add expiry date field
-        custom_bin_location: item.binLocation || "", // Add bin_location from item
-        warehouse: selectedWarehouse || item.warehouse || "",
-        margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
-        discount_percentage: Number(item.discountPercent) || 0,
-        base_amount: Number(item.itemAmount) || 0,
-        discount_amount: Number(item.discountAmt) || 0,
-        cgst_rate: Number(item.cgstPercent) || 0,
-        cgst_amount: Number(item.cgstAmt) || 0,
-        sgst_rate: Number(item.sgstPercent) || 0,
-        sgst_amount: Number(item.sgstAmt) || 0,
-        igst_rate: Number(item.igstPercent) || 0,
-        igst_amount: Number(item.igstAmt) || 0,
-        amount: Number(item.totalAmt) || 0,
-        item_tax_template: item.taxTemplate || "",
-        included_in_print_rate: 1, // Add to item payload
-        use_serial_batch_fields: 1,
-      })),
+      items: items.map(item => {
+        // Recalculate all items before saving to ensure correct values
+        const calculatedItem = calculateItemTaxAndTotals(item, true);
+        
+        // Calculate the rate after discount for the backend
+        const originalMRP = Number(calculatedItem.rate) || 0;
+        const discountPercent = Number(calculatedItem.discountPercent) || 0;
+        const rateAfterDiscount = originalMRP * (1 - discountPercent / 100);
+        
+        return {
+          item_code: calculatedItem.itemCode,
+          qty: isReturn ? (Number(calculatedItem.saleQty) || 0) : (Number(calculatedItem.saleQty) || 0),
+          uom: calculatedItem.uom,
+          rate: rateAfterDiscount, // Send rate after discount
+          batch_no: calculatedItem.batchNo || calculatedItem.batch || "",
+          custom_expiry_date: calculatedItem.expiryDate || "", // Add expiry date field
+          custom_bin_location: calculatedItem.binLocation || "", // Add bin_location from item
+          warehouse: selectedWarehouse || calculatedItem.warehouse || "",
+          margin_type: (Number(calculatedItem.discountPercent) || 0) > 0 ? "Percentage" : "",
+          discount_percentage: Number(calculatedItem.discountPercent) || 0,
+          base_amount: Number(calculatedItem.itemAmount) || 0,
+          discount_amount: Number(calculatedItem.discountAmt) || 0,
+          cgst_rate: Number(calculatedItem.cgstPercent) || 0,
+          cgst_amount: Number(calculatedItem.cgstAmt) || 0,
+          sgst_rate: Number(calculatedItem.sgstPercent) || 0,
+          sgst_amount: Number(calculatedItem.sgstAmt) || 0,
+          igst_rate: Number(calculatedItem.igstPercent) || 0,
+          igst_amount: Number(calculatedItem.igstAmt) || 0,
+          amount: Number(calculatedItem.totalAmt) || 0,
+          item_tax_template: calculatedItem.taxTemplate || "",
+          included_in_print_rate: 1, // Add to item payload
+          use_serial_batch_fields: 1,
+        };
+      }),
       payments: recordedPayments.map(p => ({
         mode_of_payment: p.paymentMode || "Cash",
         amount: parseFloat(p.paidAmount || "0") || 0,
@@ -2326,43 +2386,73 @@ export default function NewBill() {
       console.log("Final payload for saving draft:", finalPayload); // Log the final payload
       console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
       console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify(finalPayload),
-      });
-      console.log(response);
+      
+      // Check if a draft invoice is already loaded
+      if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
+        // Update existing draft invoice using PUT request
+        console.log("Updating existing draft invoice:", loadedInvoiceName);
+        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify(finalPayload),
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-
-        if (result.message?.status === "error") {
-          // When backend returns error status
-          showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
-          console.error("Draft save error:", result);
+        if (response.ok) {
+          const result = await response.json();
+          showAlert("success", "Success", `POS Invoice ${loadedInvoiceName} updated successfully!`);
+          console.log("Draft updated:", result);
+          // Keep the invoice loaded but don't reset
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to update draft:", response.status, errorData);
+          showAlert("danger", "Error", `Failed to update draft: ${errorData.message || 'Unknown error occurred.'}`);
         }
-        else if (result.message?.status === "success") {
-          // When draft saved successfully
-          showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
-          console.log("Draft saved:", result);
-          // clearPatient();
-          // router.push("/pos");
-        }
-        else {
-          // Unknown or unexpected response structure
-          showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
-          console.warn("Unexpected result:", result);
-        }
-
       } else {
-        // HTTP-level error (non-2xx)
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Failed to save draft:", response.status, errorData);
-        showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
+        // Create new draft invoice using POST request
+        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify(finalPayload),
+        });
+        console.log(response);
+
+        if (response.ok) {
+          const result = await response.json();
+
+          if (result.message?.status === "error") {
+            // When backend returns error status
+            showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
+            console.error("Draft save error:", result);
+          }
+          else if (result.message?.status === "success") {
+            // When draft saved successfully
+            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+            console.log("Draft saved:", result);
+            // Reset the form after successful save
+            handleReset();
+            // clearPatient();
+            // router.push("/pos");
+          }
+          else {
+            // Unknown or unexpected response structure
+            showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
+            console.warn("Unexpected result:", result);
+          }
+
+        } else {
+          // HTTP-level error (non-2xx)
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to save draft:", response.status, errorData);
+          showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
+        }
       }
 
     } catch (error) {
@@ -2571,10 +2661,9 @@ export default function NewBill() {
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
 
         if (sortedBatches.length === 0) {
-          showAlert("warning", "Warning", `No batches available for item ${itemCode} from requisition. Showing alternatives...`);
-          // Trigger alternative selection flow instead of adding without batch
-          const originalItemForAlt: Item = {
-            id: `${itemCode}-alt-${Date.now()}`,
+          // Add item without stock to grid with red color indicator
+          const itemWithoutStock: Item = {
+            id: `${itemCode}-nostock-${Date.now()}`,
             alternateBatches: "1", // Indicate it's an alternative item
             substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
@@ -2604,8 +2693,10 @@ export default function NewBill() {
             kitName: "",
             packageName: "",
             binLocation: "",
+            hasStock: false, // Mark as no stock
           };
-          await handleNoBatchesFound(originalItemForAlt);
+          await handleAddItemToDetails(itemWithoutStock);
+          showAlert("warning", "Warning", `No stock available for item ${itemCode} from requisition. Item added to grid with no stock indicator.`);
           remainingQtyToAllocate = 0; // Stop further processing for this item
           continue;
         }
@@ -2819,9 +2910,9 @@ export default function NewBill() {
         console.log('handleSelectPrescription - sortedBatches for', itemCode, ':', sortedBatches, 'Length:', sortedBatches.length);
 
         if (sortedBatches.length === 0) {
-          showAlert("warning", "Warning", `No batches available for item ${itemCode} from prescription. Showing alternatives...`);
-          const originalItemForAlt: Item = {
-            id: `${itemCode}-alt-${Date.now()}`,
+          // Add item without stock to grid with red color indicator
+          const itemWithoutStock: Item = {
+            id: `${itemCode}-nostock-${Date.now()}`,
             alternateBatches: "1", // Indicate it's an alternative item
             substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
@@ -2848,11 +2939,13 @@ export default function NewBill() {
             igstAmt: 0,
             totalAmt: 0,
             totalPckgAmt: 0,
-            kitName: "", // Add kitName
+            kitName: "",
             packageName: "",
             binLocation: "",
+            hasStock: false, // Mark as no stock
           };
-          await handleNoBatchesFound(originalItemForAlt);
+          await handleAddItemToDetails(itemWithoutStock);
+          showAlert("warning", "Warning", `No stock available for item ${itemCode} from prescription. Item added to grid with no stock indicator.`);
           remainingQtyToAllocate = 0;
           continue;
         }
@@ -3201,6 +3294,45 @@ export default function NewBill() {
     showAlert("success", "Success", `Applied ${globalDiscountPercent}% discount to all items.`);
   };
 
+  // Helper function to fetch req_qty from requisition/prescription
+  const fetchReqQtyForItem = async (sourceDocName: string, itemCode: string): Promise<number> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Fetch the requisition/prescription document
+      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${sourceDocName}?fields=["name","patient_requisition_item_details"]`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch requisition/prescription ${sourceDocName}`);
+        return 0;
+      }
+
+      const data = await response.json();
+      const requisitionItems = data.data?.patient_requisition_item_details || [];
+
+      // Find the matching item and return its req_qty
+      const matchingItem = requisitionItems.find((item: any) => item.item_code === itemCode);
+      if (matchingItem) {
+        const reqQty = matchingItem.req_qty || matchingItem.quantity || matchingItem.qty || 0;
+        console.log(`Found req_qty for item ${itemCode}: ${reqQty}`);
+        return reqQty;
+      }
+
+      console.warn(`Item ${itemCode} not found in requisition/prescription ${sourceDocName}`);
+      return 0;
+    } catch (error) {
+      console.error(`Error fetching req_qty for item ${itemCode}:`, error);
+      return 0;
+    }
+  };
+
   const handleLoadInvoice = async (invoice: any) => {
     try {
       // Set flag to prevent recalculation
@@ -3256,6 +3388,7 @@ export default function NewBill() {
       setSelectedCompany(fullInvoice.company || '');
       setRequisitionNo(fullInvoice.custom_req_no || '');
       setRequisitionFrom(fullInvoice.custom_requisition_from || '');
+      setRemarks(fullInvoice.remarks || ''); // Load remarks from invoice
       if (fullInvoice.posting_date) {
         setRequisitionDate(new Date(fullInvoice.posting_date));
       }
@@ -3369,6 +3502,12 @@ export default function NewBill() {
             });
           }
 
+          // Fetch req_qty from requisition/prescription if invoice has custom_req_no or custom_prescription_no
+          let reqQty = 0;
+          if (fullInvoice.custom_req_no) {
+            reqQty = await fetchReqQtyForItem(fullInvoice.custom_req_no, invItem.item_code);
+          }
+
           const item: Item = {
             id: `${invItem.item_code}-${invItem.batch_no || 'no-batch'}-${Date.now()}-${Math.random()}`,
             alternateBatches: "",
@@ -3377,7 +3516,7 @@ export default function NewBill() {
             itemName: invItem.item_name || "",
             uom: invItem.uom || "",
             stockQty: currentStockQty, // Use fetched current stock quantity
-            orderedQty: Math.abs(invItem.qty || 0),
+            orderedQty: Math.abs(reqQty || 0),
             saleQty: Math.abs(invItem.qty || 0),
             batch: invItem.batch_no || "",
             batchNo: invItem.batch_no || "",
@@ -3401,6 +3540,7 @@ export default function NewBill() {
             packageName: "",
             binLocation: invItem.custom_bin_location || "", // Load bin_location from invoice
             includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
+            req_qty: reqQty, // Add req_qty from requisition/prescription
           };
           loadedItems.push(item);
         }
@@ -3521,6 +3661,14 @@ export default function NewBill() {
 
       if (items.length === 0) {
         showAlert("danger", "Error", "Please add at least one item to the invoice.");
+        return;
+      }
+
+      // Check for items with zero or negative stock
+      const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
+      if (itemsWithZeroOrNegativeStock.length > 0) {
+        const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
+        showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
         return;
       }
 

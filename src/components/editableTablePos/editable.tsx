@@ -52,6 +52,7 @@ interface Item {
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   mrp?: number; // Add MRP field for batch custom_mrp
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
+  hasStock?: boolean; // Add hasStock field to track if item has stock
 }
 
 const EditableCell = ({
@@ -321,8 +322,8 @@ const EditableTable = ({
   });
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     mrp: false, // Hide MRP column by default
-    itemAmount: true, // Show Item Amount column by default
-    totalAmt: false, // Hide Total Amount column by default
+    itemAmount: false, // Show Item Amount column by default
+    totalAmt: true, // Hide Total Amount column by default
   });
 
   const handleRemoveItemFromDetails = (itemId: string) => {
@@ -1091,7 +1092,7 @@ const EditableTable = ({
       },
       {
         accessorKey: "itemAmount",
-        header: "Total Amount",
+        header: "Item Amt.",
         cell: ({ row }) => {
           const item = row.original as Item;
           return (
@@ -1310,22 +1311,37 @@ const EditableTable = ({
             ))}
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {table.getRowModel().rows.map((row, index) => (
-              <tr key={row.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${row.getIsSelected() ? 'bg-blue-50' : ''}`} >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={`px-2 py-1 whitespace-nowrap text-sm text-gray-900 ${cell.column.id === 'select'
-                      ? 'w-12'
-                      : 'min-w-[120px]'
-                      }`}
+            {table.getRowModel().rows.map((row, index) => {
+              const item = row.original as Item;
+              const isNoStock = item.hasStock === false;
+              return (
+                <tr 
+                  key={row.id} 
+                  className={`${
+                    isNoStock 
+                      ? 'bg-red-50 text-red-900' 
+                      : index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  } ${row.getIsSelected() ? 'bg-blue-50' : ''}`} 
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className={`px-2 py-1 whitespace-nowrap text-sm ${
+                        isNoStock 
+                          ? 'text-red-900 font-semibold' 
+                          : 'text-gray-900'
+                      } ${cell.column.id === 'select'
+                        ? 'w-12'
+                        : 'min-w-[120px]'
+                        }`}
 
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

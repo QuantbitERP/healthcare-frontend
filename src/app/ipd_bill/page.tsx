@@ -19,6 +19,7 @@ import PageHeader from "@/components/billbreakdown/PageHeader";
 import RenderFormElement from "@/components/form/RenderFormElement";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import Image from "next/image";
+import BillBreakdown from "@/components/billbreakdown/billbreakdown";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
 import { Search, X, Plus } from 'lucide-react';
 import OpdCard from "@/components/OpdInfo/Opdinfo";
@@ -34,7 +35,6 @@ import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import CreateReturnEntryModal from '@/components/return/CreateReturnEntryModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
-import IpdBillbreakDown from "@/components/billbreakdown/IpdBillbrekadown";
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -81,6 +81,7 @@ export interface Item {
   mrp?: number; // Add MRP field for batch custom_mrp
   use_serial_batch_fields?: number;
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
+  req_qty?: number; // Add req_qty field for requisition/prescription requested quantity
 }
 
 interface ItemSearchProps {
@@ -96,6 +97,7 @@ interface ItemSearchProps {
   // showAlert: (variant: AlertState['variant'], heading: string, content: string) => void;
   selectedClassification?: string;
   isGeneric?: boolean;
+  isDisabled?: boolean; // Add disabled prop
 }
 
 type SelectedPatient = {
@@ -129,6 +131,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   // showAlert, // Destructure selectedWarehouse
   selectedClassification,
   isGeneric,
+  isDisabled = false, // Add disabled prop with default value
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [subSearchTerm, setSubSearchTerm] = useState('');
@@ -410,7 +413,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       stockQty: batchStockQty, // Ensure stockQty also reflects the batch-specific quantity
       rate: itemRate,
       mrp: batchMRP, // Set MRP from fetched batch MRP
-      orderedQty: qtyToTake, // Set orderedQty to the quantity taken from this batch
+      orderedQty: item.orderedQty, // Preserve the original ordered quantity from the item
       saleQty: qtyToTake, // Set saleQty to the quantity taken from this batch
       use_serial_batch_fields: 1,
     };
@@ -567,8 +570,12 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
               setShowSuggestions(true);
             }
           }}
-          placeholder={isGeneric ? "Search Generic Name" : placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+          placeholder={isDisabled ? "Items loaded from requisition/prescription" : (isGeneric ? "Search Generic Name" : placeholder)}
+          disabled={isDisabled}
+          className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDisabled
+            ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+            : "border-gray-300 focus:border-blue-500"
+            }`}
           autoComplete="off"
         />
         {searchTerm && (
@@ -782,31 +789,53 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   let finalIgstPercent = item.igstPercent;
 
   if (includedInPrintRate) {
-    // For tax-inclusive rates, the rate already includes tax
-    // First extract the taxable amount from the base amount (which includes tax)
+    // For tax-inclusive rates (MRP-based pricing), the rate already includes tax
+    // Apply discount to the total amount (including GST)
     const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
-
+    
     if (totalTaxRate > 0) {
-      // Extract taxable amount from the total (which includes tax)
-      taxableAmount = baseAmount / (1 + totalTaxRate);
+      // Calculate base price by excluding GST from MRP
+      // Base Price = MRP / (1 + (GST Rate / 100))
+      const basePrice = rate / (1 + totalTaxRate);
+      
+      // Calculate total base amount for the item quantity
+      const totalBaseAmount = basePrice * item.saleQty;
+      
+      // Calculate GST amounts on the base amount
+      cgstAmount = totalBaseAmount * (item.cgstPercent / 100);
+      sgstAmount = totalBaseAmount * (item.sgstPercent / 100);
+      igstAmount = totalBaseAmount * (item.igstPercent / 100);
+      
+      // Total amount including GST
+      const totalAmountWithTax = totalBaseAmount + cgstAmount + sgstAmount + igstAmount;
+      
+      // Apply discount to the TOTAL amount (including GST)
+      discountAmount = totalAmountWithTax * (item.discountPercent / 100);
+      const discountedTotalAmount = totalAmountWithTax - discountAmount;
+      
+      // Calculate the ratio to distribute discount proportionally
+      const discountRatio = totalAmountWithTax > 0 ? discountedTotalAmount / totalAmountWithTax : 0;
+      
+      // Apply discount ratio to base amount and taxes
+      const discountedBaseAmount = totalBaseAmount * discountRatio;
+      cgstAmount = cgstAmount * discountRatio;
+      sgstAmount = sgstAmount * discountRatio;
+      igstAmount = igstAmount * discountRatio;
+      
+      // Set taxable amount and item amount after discount
+      taxableAmount = discountedBaseAmount;
+      itemAmountAfterDiscount = discountedBaseAmount;
+      
+      // Total amount is the discounted total
+      totalAmount = discountedTotalAmount;
     } else {
-      // If no tax rates, taxable amount equals total amount
+      // If no tax rates, handle as normal amount
       taxableAmount = baseAmount;
+      discountAmount = taxableAmount * (item.discountPercent / 100);
+      itemAmountAfterDiscount = taxableAmount - discountAmount;
+      totalAmount = itemAmountAfterDiscount;
     }
-
-    // Apply discount to the taxable amount (not the total)
-    discountAmount = taxableAmount * (item.discountPercent / 100);
-    const discountedTaxableAmount = taxableAmount - discountAmount;
-
-    // Calculate individual tax amounts based on discounted taxable amount
-    cgstAmount = discountedTaxableAmount * (item.cgstPercent / 100);
-    sgstAmount = discountedTaxableAmount * (item.sgstPercent / 100);
-    igstAmount = discountedTaxableAmount * (item.igstPercent / 100);
-
-    // Total amount is discounted taxable amount + calculated taxes
-    itemAmountAfterDiscount = discountedTaxableAmount;
-    totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
-
+    
     // Keep the original percentages as they represent the tax rates
     finalCgstPercent = item.cgstPercent;
     finalSgstPercent = item.sgstPercent;
@@ -826,6 +855,24 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
   }
 
+  console.log('calculateItemTaxAndTotals:', {
+    itemCode: item.itemCode,
+    rate,
+    saleQty: item.saleQty,
+    baseAmount,
+    includedInPrintRate,
+    discountPercent: item.discountPercent,
+    discountAmount,
+    taxableAmount,
+    cgstPercent: item.cgstPercent,
+    sgstPercent: item.sgstPercent,
+    igstPercent: item.igstPercent,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    totalAmount
+  });
+
   return {
     ...item,
     itemAmount: baseAmount, // Always the full amount before discount
@@ -840,7 +887,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   };
 };
 
-export default function IPDBill() {
+export default function NewBill() {
   const [remarks, setRemarks] = useState('');
 
   // --- START: Added state for file upload ---
@@ -1049,6 +1096,67 @@ export default function IPDBill() {
     return rate; // Return null if no rate is found
   };
 
+  // Function to fetch bin_location from Item doctype's custom_item_consumption_details
+  const fetchBinLocationFromItem = async (itemCode: string) => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      console.log(`[BinLocation] Fetching item: ${itemCode}`);
+
+      // Fetch the entire Item document
+      const response = await fetch(`${API_BASE_URL}/Item/${itemCode}`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.log(`[BinLocation] Failed to fetch item ${itemCode}, status: ${response.status}`);
+        return "";
+      }
+
+      const data = await response.json();
+      console.log(`[BinLocation] Item data received:`, data.data);
+
+      // Log all keys in the data object
+      if (data.data) {
+        console.log(`[BinLocation] Available fields:`, Object.keys(data.data));
+      }
+
+      // Try different possible field names for the child table
+      const childTableNames = ['custom_item_consumption_details', 'item_consumption_details', 'consumption_details'];
+
+      for (const fieldName of childTableNames) {
+        console.log(`[BinLocation] Checking field: ${fieldName}`);
+        if (data.data?.[fieldName]) {
+          console.log(`[BinLocation] Found field ${fieldName}:`, data.data[fieldName]);
+          if (Array.isArray(data.data[fieldName]) && data.data[fieldName].length > 0) {
+            const binLocation = data.data[fieldName][0].bin_location;
+            console.log(`[BinLocation] Found bin_location from ${fieldName}:`, binLocation);
+            if (binLocation) {
+              return binLocation;
+            }
+          }
+        }
+      }
+
+      // If no child table found, try direct bin_location field
+      if (data.data?.bin_location) {
+        console.log('[BinLocation] Found direct bin_location field:', data.data.bin_location);
+        return data.data.bin_location;
+      }
+
+      console.log(`[BinLocation] No bin_location found for item ${itemCode}`);
+      return "";
+    } catch (error) {
+      console.error('[BinLocation] Error fetching bin location:', error);
+      return "";
+    }
+  };
+
   const classificationTypeOptions = classifications;
 
   // const [searchValue, setSearchValue] = useState<string>("");
@@ -1056,7 +1164,9 @@ export default function IPDBill() {
   const [requisitionNo, setRequisitionNo] = useState('');
   const [requisitionFrom, setRequisitionFrom] = useState('');
   const [requisitionTo] = useState('');
-  const [toLocation, setToLocation] = useState('');
+  const [_toLocation, setToLocation] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
@@ -1088,8 +1198,6 @@ export default function IPDBill() {
   const [_isItemsLoadedFromRequisitionOrPrescription, setIsItemsLoadedFromRequisitionOrPrescription] = useState(false); // Track if items are loaded from requisition or prescription
   const [sourceDocumentName, setSourceDocumentName] = useState<string>(''); // Track the source document name (requisition or prescription)
   const [sourceDocumentType, setSourceDocumentType] = useState<'requisition' | 'prescription' | ''>(''); // Track the source document type
-  const [isComplete, setIsComplete] = useState(false);
-  const [barcode, setBarcode] = useState('');
 
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
   const [showCreateReturnModal, setShowCreateReturnModal] = useState(false);
@@ -1101,9 +1209,9 @@ export default function IPDBill() {
   // Global discount state
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
 
-  const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('credit');
+  const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('cash');
 
-  const [isOpdEffect, setIsOpdEffect] = useState(true);
+  const [isOpdEffect, setIsOpdEffect] = useState(false);
 
   // New state variables for tax details
   const [taxTemplate, setTaxTemplate] = useState<string>('');
@@ -1119,7 +1227,7 @@ export default function IPDBill() {
   const [showClosingEntryModal, setShowClosingEntryModal] = useState(false); // New state
   const [CompanyAddress, setCompanyAddress] = useState<string | null>(null);
   const [isReturn, setIsReturn] = useState(false);
-  const [roundedGrandTotal] = useState<number>(0);
+  const [roundedGrandTotal, setRoundedGrandTotal] = useState<number>(0);
   // Payments captured from RecordPaymentModal
   const [recordedPayments, setRecordedPayments] = useState<Array<{
     id: number;
@@ -1146,6 +1254,349 @@ export default function IPDBill() {
     }
   }, [customers, selectedCustomer]);
 
+  // Function to check if sale exists for requisition
+  // const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
+  //   try {
+  //     const headers: HeadersInit = {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `token ${apiKey}:${apiSecret}`,
+  //     };
+
+  //     const response = await fetch(
+  //       `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+  //       {
+  //         method: 'GET',
+  //         headers,
+  //         credentials: 'include',
+  //       }
+  //     );
+
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       return data.data && data.data.length > 0;
+  //     }
+  //     return false;
+  //   } catch (error) {
+  //     console.error("Error checking sale for requisition:", error);
+  //     return false;
+  //   }
+  // };
+
+  // Function to get total and invoiced quantities for a requisition
+  const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Get total quantity from requisition items
+      const reqResponse = await fetch(
+        `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","patient_requisition_item_details"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!reqResponse.ok) {
+        console.error("Failed to fetch requisition details");
+        return { total_qty: 0, invoiced_qty: 0 };
+      }
+
+      const reqData = await reqResponse.json();
+      const requisitionItems = reqData.data?.patient_requisition_item_details || [];
+      console.log("Requisition items for", reqNo, ":", requisitionItems);
+
+      // Try different field names for quantity
+      const totalQty = requisitionItems.reduce((sum: number, item: any) => {
+        // Debug: Show all available fields
+        console.log("Item fields:", Object.keys(item), "Item data:", item);
+        const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
+        console.log("Using quantity field:", qty, "from item:", item);
+        return sum + qty;
+      }, 0);
+
+      console.log("Total quantity calculated:", totalQty);
+
+      // Get invoiced quantity from POS invoices
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details");
+        return { total_qty: totalQty, invoiced_qty: 0 };
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      console.log("Invoices for requisition", reqNo, ":", invoices);
+      let invoicedQty = 0;
+
+      // Fetch full invoice details for each invoice to get items
+      for (const invoice of invoices) {
+        console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
+
+        try {
+          const fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+
+          if (fullInvoiceResponse.ok) {
+            const fullInvoiceData = await fullInvoiceResponse.json();
+            const fullInvoice = fullInvoiceData.data;
+
+            if (fullInvoice?.items) {
+              console.log("Invoice items:", fullInvoice.items);
+              const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+              invoicedQty += invoiceQty;
+              console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+        }
+      }
+
+      console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
+      return { total_qty: totalQty, invoiced_qty: invoicedQty };
+    } catch (error) {
+      console.error("Error getting requisition quantities:", error);
+      return { total_qty: 0, invoiced_qty: 0 };
+    }
+  };
+
+  // Function to get invoiced quantity for a specific item from a requisition
+  const getItemInvoicedQuantity = async (reqNo: string, itemCode: string): Promise<number> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
+
+      // Get all invoices for this requisition
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details for item quantity calculation");
+        return 0;
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
+
+      let totalInvoicedQty = 0;
+
+      // Fetch full invoice details for each invoice to get items
+      for (const invoice of invoices) {
+        try {
+          const fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+
+          if (fullInvoiceResponse.ok) {
+            const fullInvoiceData = await fullInvoiceResponse.json();
+            const fullInvoice = fullInvoiceData.data;
+
+            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
+
+            if (fullInvoice?.items) {
+              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
+
+              // Sum quantities for the specific item code
+              const itemInvoiceQty = fullInvoice.items
+                .filter((item: any) => item.item_code === itemCode)
+                .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+
+              console.log(`Item ${itemCode} quantity in invoice ${invoice.name}: ${itemInvoiceQty}`);
+              totalInvoicedQty += itemInvoiceQty;
+            }
+          } else {
+            console.error(`Failed to fetch full invoice details for ${invoice.name}:`, fullInvoiceResponse.status);
+          }
+        } catch (error) {
+          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+        }
+      }
+
+      console.log(`Item ${itemCode} in requisition ${reqNo}: Invoiced quantity = ${totalInvoicedQty}`);
+      return totalInvoicedQty;
+    } catch (error) {
+      console.error("Error getting item invoiced quantity:", error);
+      return 0;
+    }
+  };
+
+  // Function to get invoiced quantity for a specific item from a prescription
+  const getItemInvoicedQuantityFromPrescription = async (prescriptionNo: string, itemCode: string): Promise<number> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Get all invoices for this prescription
+      const invoiceResponse = await fetch(
+        `${API_BASE_URL}/POS%20Invoice?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
+        {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        }
+      );
+
+      if (!invoiceResponse.ok) {
+        console.error("Failed to fetch invoice details for prescription item quantity calculation");
+        return 0;
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoices = invoiceData.data || [];
+      let totalInvoicedQty = 0;
+
+      // Fetch full invoice details for each invoice to get items
+      for (const invoice of invoices) {
+        try {
+          const fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+
+          if (fullInvoiceResponse.ok) {
+            const fullInvoiceData = await fullInvoiceResponse.json();
+            const fullInvoice = fullInvoiceData.data;
+
+            if (fullInvoice?.items) {
+              // Sum quantities for the specific item code
+              const itemInvoiceQty = fullInvoice.items
+                .filter((item: any) => item.item_code === itemCode)
+                .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+              totalInvoicedQty += itemInvoiceQty;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+        }
+      }
+
+      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
+      return totalInvoicedQty;
+    } catch (error) {
+      console.error("Error getting prescription item invoiced quantity:", error);
+      return 0;
+    }
+  };
+
+  // Function to check if requisition is fully completed
+  const isRequisitionFullyCompleted = async (reqNo: string): Promise<boolean> => {
+    const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
+    return total_qty > 0 && invoiced_qty >= total_qty;
+  };
+
+  // Function to update requisition status
+  const updateRequisitionStatus = async (reqNo: string, forceComplete: boolean = false): Promise<void> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      let status = "Pending";
+
+      if (forceComplete) {
+        status = "Completed";
+        console.log("Force completing requisition:", reqNo);
+      } else {
+        // Check current status based on quantities
+        const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
+        console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
+
+        if (total_qty > 0 && invoiced_qty >= total_qty) {
+          status = "Completed";
+          console.log("Requisition marked as Completed");
+        } else {
+          status = "Pending";
+          console.log("Requisition marked as Pending");
+        }
+      }
+
+      console.log("Updating requisition", reqNo, "status to:", status);
+
+      // Update the requisition status
+      const response = await fetch(
+        `${API_BASE_URL}/Patient%20Requisition/${reqNo}`,
+        {
+          method: 'PUT',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            custom_requisition_status: status
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to update requisition status:", errorData);
+      } else {
+        const result = await response.json();
+        console.log(`Requisition ${reqNo} status updated to: ${status}`, result);
+
+        // Verify the update by fetching the requisition again
+        try {
+          const verifyResponse = await fetch(
+            `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","custom_requisition_status"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            console.log("Verification - Current status in database:", verifyData.data?.custom_requisition_status);
+          }
+        } catch (verifyError) {
+          console.error("Failed to verify status update:", verifyError);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating requisition status:", error);
+    }
+  };
+
   // --- START: Added function to clear file ---
   const handleClearFile = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the modal from opening
@@ -1169,6 +1620,9 @@ export default function IPDBill() {
     setIsAsap(false);
     setIsExpired(false);
     setIsGeneric(false);
+    setIsItemsLoadedFromRequisitionOrPrescription(false);
+    setSourceDocumentName('');
+    setSourceDocumentType('');
     setItems([]);
     setPatientData(null);
     setShowDropdown(false);
@@ -1199,10 +1653,6 @@ export default function IPDBill() {
     setIgstAccounts([]);
     setGstCategory('');
     setTotalBillAmount(0);
-    setSourceDocumentName('');
-    setSourceDocumentType('');
-    setIsComplete(false);
-    setBarcode('');
     setTotalDiscountAmount(0);
     setTotalCgstAmount(0);
     setTotalSgstAmount(0);
@@ -1227,6 +1677,9 @@ export default function IPDBill() {
     }
 
     const calculatedItems = itemsList.map(item => calculateItemTaxAndTotals(item, true));
+
+    // Update items in state with recalculated values
+    setItems(calculatedItems);
 
     const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
     const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmt, 0);
@@ -1257,112 +1710,6 @@ export default function IPDBill() {
     />;
   };
 
-  // Function to get total and invoiced quantities for a requisition
-  const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
-    try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
-
-      // Get total quantity from requisition items
-      const reqResponse = await fetch(
-        `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","patient_requisition_item_details"]`,
-        {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        }
-      );
-
-      if (!reqResponse.ok) {
-        console.error("Failed to fetch requisition details");
-        return { total_qty: 0, invoiced_qty: 0 };
-      }
-
-      const reqData = await reqResponse.json();
-      const requisitionItems = reqData.data?.patient_requisition_item_details || [];
-      const totalQty = requisitionItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
-
-      // Get invoiced quantity from POS invoices
-      const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","items"]`,
-        {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        }
-      );
-
-      if (!invoiceResponse.ok) {
-        console.error("Failed to fetch invoice details");
-        return { total_qty: totalQty, invoiced_qty: 0 };
-      }
-
-      const invoiceData = await invoiceResponse.json();
-      const invoices = invoiceData.data || [];
-      let invoicedQty = 0;
-
-      for (const invoice of invoices) {
-        if (invoice.items) {
-          invoicedQty += invoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
-        }
-      }
-
-      return { total_qty: totalQty, invoiced_qty: invoicedQty };
-    } catch (error) {
-      console.error("Error getting requisition quantities:", error);
-      return { total_qty: 0, invoiced_qty: 0 };
-    }
-  };
-
-  // Function to check if requisition is fully completed
-  const isRequisitionFullyCompleted = async (reqNo: string): Promise<boolean> => {
-    const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
-    return total_qty > 0 && invoiced_qty >= total_qty;
-  };
-
-  // Function to update requisition status
-  const updateRequisitionStatus = async (reqNo: string, forceComplete: boolean = false): Promise<void> => {
-    try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
-
-      let status = "Pending";
-      
-      if (forceComplete) {
-        status = "Completed";
-      } else {
-        // Check current status based on quantities
-        const isFullyCompleted = await isRequisitionFullyCompleted(reqNo);
-        status = isFullyCompleted ? "Completed" : "Pending";
-      }
-
-      // Update the requisition status
-      const response = await fetch(
-        `${API_BASE_URL}/Patient%20Requisition/${reqNo}`,
-        {
-          method: 'PUT',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({
-            custom_requisition_status: status
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        console.error("Failed to update requisition status");
-      } else {
-        console.log(`Requisition ${reqNo} status updated to: ${status}`);
-      }
-    } catch (error) {
-      console.error("Error updating requisition status:", error);
-    }
-  };
-
   // useEffect to fetch kit options
   useEffect(() => {
     const fetchKitOptions = async () => {
@@ -1389,7 +1736,8 @@ export default function IPDBill() {
             label: kit.name,
             value: kit.name,
           }));
-          setKitOptions(fetchedKitOptions);
+          // Add empty option at the beginning
+          setKitOptions([{ label: "", value: "CLEAR" }, ...fetchedKitOptions]);
         }
       } catch (error: any) {
         console.error('Error fetching kit options:', error);
@@ -1566,8 +1914,19 @@ export default function IPDBill() {
     fetchCompanyAddress();
   }, [selectedCustomer, apiKey, apiSecret]);
 
+  const handleClassificationChange = (value: string) => {
+    if (value === "CLEAR") {
+      setSelectedSaleType("");
+      return;
+    }
+    setSelectedSaleType(value);
+  };
 
   const handleSelectKit = async (kitName: string) => {
+    if (kitName === "CLEAR") {
+      setSelectedKit("");
+      return;
+    }
     setSelectedKit(kitName);
     if (!kitName) {
       showAlert("primary", "Information", "No kit selected.");
@@ -1673,6 +2032,26 @@ export default function IPDBill() {
   const handleAddItemToDetails = async (item: Item) => {
     console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
+      // Check for duplicate item with same batch
+      console.log("Checking for duplicate:", {
+        newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
+        existingItems: items.map(i => ({ itemCode: i.itemCode, batchNo: i.batchNo, itemName: i.itemName, id: i.id }))
+      });
+
+      const existingItemIndex = items.findIndex(existingItem =>
+        existingItem.itemCode === item.itemCode &&
+        existingItem.batchNo === item.batchNo &&
+        existingItem.batchNo !== '' // Only check if batchNo is not empty
+      );
+
+      console.log("Duplicate check result:", { existingItemIndex, itemCode: item.itemCode, batchNo: item.batchNo });
+
+      if (existingItemIndex !== -1) {
+        const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
+        showAlert("danger", "Duplicate Item", `Item ${item.itemName} with batch ${item.batchNo} already exists in grid at row number ${rowNum}.`);
+        return; // Don't add the duplicate item
+      }
+
       const taxDetails = await fetchTaxDetails(item.itemCode, item.rate || 0, 1, item.uom);
       // The item passed from EnhancedItemSearch should already have batchNo, expiryDate, and rate set.
       // We will use these directly.
@@ -1680,6 +2059,11 @@ export default function IPDBill() {
       const finalExpiryDate = item.expiryDate;
       const finalRate = item.rate !== null ? item.rate : 0; // Use item's rate, ensure it's not null
       const finalBatchStockQty = item.batchStockQty; // Use item's batchStockQty
+
+      // Fetch bin_location from Item doctype
+      console.log(`[BinLocation] Fetching bin_location for item: ${item.itemCode}`);
+      const binLocation = await fetchBinLocationFromItem(item.itemCode);
+      console.log(`[BinLocation] Fetched bin_location: ${binLocation}`);
 
       // Batch expiry warning check
       console.log("Batch Expiry Warning Check - finalExpiryDate:", finalExpiryDate);
@@ -1705,11 +2089,12 @@ export default function IPDBill() {
         // Always add as a new item, as each batch-specific item has a unique ID now
         const newItemWithCalculations = calculateItemTaxAndTotals({
           ...item,
-          orderedQty: item.saleQty, // Use saleQty as the ordered quantity for the new row
+          orderedQty: item.orderedQty, // Preserve the original ordered quantity from requisition
           stockQty: finalBatchStockQty, // Set stockQty with batch-specific quantity for new item
           rate: finalRate, // Use the final rate from the item
           batchNo: finalBatchNo, // Use the final batch number
           expiryDate: finalExpiryDate, // Use the final expiry date
+          binLocation: binLocation, // Set the fetched bin_location
           cgstPercent: taxDetails.cgstRate,
           sgstPercent: taxDetails.sgstRate,
           igstPercent: taxDetails.igstRate,
@@ -1721,8 +2106,23 @@ export default function IPDBill() {
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         if (newItemWithCalculations) {
           const updatedItems = [...prevItems, newItemWithCalculations];
-          recalculateTotals(updatedItems);
-          return updatedItems;
+          // Recalculate totals for all items
+          const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
+          
+          // Update bill totals
+          const newTotalBillAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.totalAmt, 0);
+          const newTotalDiscountAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.discountAmt, 0);
+          const newTotalCgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.cgstAmt, 0);
+          const newTotalSgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.sgstAmt, 0);
+          const newTotalIgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.igstAmt, 0);
+          
+          setTotalBillAmount(newTotalBillAmount);
+          setTotalDiscountAmount(newTotalDiscountAmount);
+          setTotalCgstAmount(newTotalCgstAmount);
+          setTotalSgstAmount(newTotalSgstAmount);
+          setTotalIgstAmount(newTotalIgstAmount);
+          
+          return allCalculatedItems;
         } else {
           console.error("Error adding item to details: newItemWithCalculations is null or undefined");
           return prevItems;
@@ -1776,7 +2176,10 @@ export default function IPDBill() {
 
     // Check if requisition is fully completed
     if (sourceDocumentName && sourceDocumentType === 'requisition') {
+      console.log("Checking requisition completion for:", sourceDocumentName);
       const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
+      console.log("Is requisition fully completed?", isFullyCompleted);
+
       if (isFullyCompleted) {
         showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
         return;
@@ -1797,7 +2200,7 @@ export default function IPDBill() {
     // }
 
     const payload = {
-      doctype: "POS Invoice",
+      doctype: "IPD BIll",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd", // Using selectedCustomer
       pos_profile: posProfile,
       is_pos: 1,
@@ -1810,28 +2213,40 @@ export default function IPDBill() {
       included_in_print_rate: 1, // Always consider included_in_print_rate as true
 
       posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      items: items.map(item => ({
-        item_code: item.itemCode,
-        qty: isReturn ? (Number(item.saleQty) || 0) : (Number(item.saleQty) || 0),
-        uom: item.uom,
-        rate: Number(item.rate) || 0,
-        batch_no: item.batchNo || item.batch || "",
-        warehouse: selectedWarehouse || item.warehouse || "",
-        margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
-        discount_percentage: Number(item.discountPercent) || 0,
-        base_amount: Number(item.itemAmount) || 0,
-        discount_amount: Number(item.discountAmt) || 0,
-        cgst_rate: Number(item.cgstPercent) || 0,
-        cgst_amount: Number(item.cgstAmt) || 0,
-        sgst_rate: Number(item.sgstPercent) || 0,
-        sgst_amount: Number(item.sgstAmt) || 0,
-        igst_rate: Number(item.igstPercent) || 0,
-        igst_amount: Number(item.igstAmt) || 0,
-        amount: Number(item.totalAmt) || 0,
-        item_tax_template: item.taxTemplate || "",
-        included_in_print_rate: 1, // Add to item payload
-        use_serial_batch_fields: 1,
-      })),
+      items: items.map(item => {
+        // Recalculate all items before saving to ensure correct values
+        const calculatedItem = calculateItemTaxAndTotals(item, true);
+        
+        // Calculate the rate after discount for the backend
+        const originalMRP = Number(calculatedItem.rate) || 0;
+        const discountPercent = Number(calculatedItem.discountPercent) || 0;
+        const rateAfterDiscount = originalMRP * (1 - discountPercent / 100);
+        
+        return {
+          item_code: calculatedItem.itemCode,
+          qty: isReturn ? (Number(calculatedItem.saleQty) || 0) : (Number(calculatedItem.saleQty) || 0),
+          uom: calculatedItem.uom,
+          rate: rateAfterDiscount, // Send rate after discount
+          batch_no: calculatedItem.batchNo || calculatedItem.batch || "",
+          custom_expiry_date: calculatedItem.expiryDate || "", // Add expiry date field
+          custom_bin_location: calculatedItem.binLocation || "", // Add bin_location from item
+          warehouse: selectedWarehouse || calculatedItem.warehouse || "",
+          margin_type: (Number(calculatedItem.discountPercent) || 0) > 0 ? "Percentage" : "",
+          discount_percentage: Number(calculatedItem.discountPercent) || 0,
+          base_amount: Number(calculatedItem.itemAmount) || 0,
+          discount_amount: Number(calculatedItem.discountAmt) || 0,
+          cgst_rate: Number(calculatedItem.cgstPercent) || 0,
+          cgst_amount: Number(calculatedItem.cgstAmt) || 0,
+          sgst_rate: Number(calculatedItem.sgstPercent) || 0,
+          sgst_amount: Number(calculatedItem.sgstAmt) || 0,
+          igst_rate: Number(calculatedItem.igstPercent) || 0,
+          igst_amount: Number(calculatedItem.igstAmt) || 0,
+          amount: Number(calculatedItem.totalAmt) || 0,
+          item_tax_template: calculatedItem.taxTemplate || "",
+          included_in_print_rate: 1, // Add to item payload
+          use_serial_batch_fields: 1,
+        };
+      }),
       payments: recordedPayments.map(p => ({
         mode_of_payment: p.paymentMode || "Cash",
         amount: parseFloat(p.paidAmount || "0") || 0,
@@ -1871,7 +2286,7 @@ export default function IPDBill() {
       custom_uhid: patientData?.mrn || "",
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
-      custom_req_no: requisitionNo || "",
+      custom_req_no: sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
@@ -1959,43 +2374,73 @@ export default function IPDBill() {
 
     try {
       console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify(finalPayload),
-      });
-      console.log(response);
+      console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
+      console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
+      
+      // Check if a draft invoice is already loaded
+      if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
+        // Update existing draft invoice using PUT request
+        console.log("Updating existing draft invoice:", loadedInvoiceName);
+        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify(finalPayload),
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-
-        if (result.message?.status === "error") {
-          // When backend returns error status
-          showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
-          console.error("Draft save error:", result);
+        if (response.ok) {
+          const result = await response.json();
+          showAlert("success", "Success", `POS Invoice ${loadedInvoiceName} updated successfully!`);
+          console.log("Draft updated:", result);
+          // Keep the invoice loaded but don't reset
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to update draft:", response.status, errorData);
+          showAlert("danger", "Error", `Failed to update draft: ${errorData.message || 'Unknown error occurred.'}`);
         }
-        else if (result.message?.status === "success") {
-          // When draft saved successfully
-          showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
-          console.log("Draft saved:", result);
-          // clearPatient();
-          // router.push("/pos");
-        }
-        else {
-          // Unknown or unexpected response structure
-          showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
-          console.warn("Unexpected result:", result);
-        }
-
       } else {
-        // HTTP-level error (non-2xx)
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Failed to save draft:", response.status, errorData);
-        showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
+        // Create new draft invoice using POST request
+        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify(finalPayload),
+        });
+        console.log(response);
+
+        if (response.ok) {
+          const result = await response.json();
+
+          if (result.message?.status === "error") {
+            // When backend returns error status
+            showAlert("danger", "Error", result.message?.message || "Something went wrong while saving draft.");
+            console.error("Draft save error:", result);
+          }
+          else if (result.message?.status === "success") {
+            // When draft saved successfully
+            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+            console.log("Draft saved:", result);
+            // clearPatient();
+            // router.push("/pos");
+          }
+          else {
+            // Unknown or unexpected response structure
+            showAlert("warning", "Unexpected Response", "Received an unexpected response from the server.");
+            console.warn("Unexpected result:", result);
+          }
+
+        } else {
+          // HTTP-level error (non-2xx)
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to save draft:", response.status, errorData);
+          showAlert("danger", "Error", `Failed to save draft: ${errorData.message || 'Unknown error occurred.'}`);
+        }
       }
 
     } catch (error) {
@@ -2091,6 +2536,7 @@ export default function IPDBill() {
     setSourceDocumentName(requisition.name);
     setSourceDocumentType('requisition');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
+
     // Fetch the full requisition document to ensure child tables are available
     let fullRequisitionData = requisition;
     try {
@@ -2178,11 +2624,29 @@ export default function IPDBill() {
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
 
+      console.log(`Processing requisition item: ${itemCode}, requestedQty: ${requestedQty}`);
+
       try {
+        // Get the invoiced quantity for this specific item
+        const invoicedQty = await getItemInvoicedQuantity(requisition.name, itemCode);
+        let remainingQtyToAllocate = requestedQty - invoicedQty;
+
+        console.log(`Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
+
+        // Skip items that are already fully invoiced
+        if (remainingQtyToAllocate <= 0) {
+          console.log(`Skipping item ${itemCode} - already fully invoiced`);
+          continue;
+        }
+
+        // Skip items with zero remaining quantity
+        if (remainingQtyToAllocate === 0) {
+          console.log(`Skipping item ${itemCode} - no remaining quantity to allocate`);
+          continue;
+        }
+
         const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
-
-        let remainingQtyToAllocate = requestedQty;
 
         if (sortedBatches.length === 0) {
           showAlert("warning", "Warning", `No batches available for item ${itemCode} from requisition. Showing alternatives...`);
@@ -2195,8 +2659,8 @@ export default function IPDBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: requestedQty,
-            saleQty: requestedQty,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2231,6 +2695,7 @@ export default function IPDBill() {
           const qtyToTake = Math.min(remainingQtyToAllocate, batchAvailableQty);
 
           if (qtyToTake > 0) {
+            console.log(`Adding item: ${itemCode}, batch: ${batch.name}, qty: ${qtyToTake}`);
             const itemRate = await fetchItemPrice(itemCode, batch.name, 'Standard Selling');
             const batchStockQty = await getBatchQty(itemCode, batch.name, warehouse);
 
@@ -2242,8 +2707,8 @@ export default function IPDBill() {
               itemName: reqItem.item_name,
               uom: reqItem.unit,
               stockQty: batchStockQty,
-              orderedQty: qtyToTake,
-              saleQty: qtyToTake,
+              orderedQty: requestedQty, // Use full requisition quantity instead of batch quantity
+              saleQty: qtyToTake, // Keep saleQty as the actual batch quantity being allocated
               batch: batch.name,
               batchNo: batch.name,
               expiryDate: batch.expiry_date,
@@ -2281,8 +2746,8 @@ export default function IPDBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: remainingQtyToAllocate,
-            saleQty: remainingQtyToAllocate,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2319,6 +2784,11 @@ export default function IPDBill() {
 
   const handleSelectPrescription = async (prescription: any) => {
     console.log("Selected prescription:", prescription);
+    // Set source document information
+    setSourceDocumentName(prescription.prescription_number);
+    setSourceDocumentType('prescription');
+    setIsItemsLoadedFromRequisitionOrPrescription(true);
+
     // Fetch the full prescription document to ensure child tables are available
     let fullPrescriptionData = prescription;
     try {
@@ -2409,12 +2879,22 @@ export default function IPDBill() {
       console.log('Processing item - itemCode:', itemCode, 'requestedQty:', requestedQty);
 
       try {
+        // Get the invoiced quantity for this specific item from prescription
+        const invoicedQty = await getItemInvoicedQuantityFromPrescription(prescription.prescription_number, itemCode);
+        let remainingQtyToAllocate = requestedQty - invoicedQty;
+
+        console.log(`Prescription Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
+
+        // Skip items that are already fully invoiced
+        if (remainingQtyToAllocate <= 0) {
+          console.log(`Skipping prescription item ${itemCode} - already fully invoiced`);
+          continue;
+        }
+
         const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
         console.log('handleSelectPrescription - fetched batches for', itemCode, ':', batches, 'Type:', typeof batches, 'Is Array:', Array.isArray(batches));
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
         console.log('handleSelectPrescription - sortedBatches for', itemCode, ':', sortedBatches, 'Length:', sortedBatches.length);
-
-        let remainingQtyToAllocate = requestedQty;
 
         if (sortedBatches.length === 0) {
           showAlert("warning", "Warning", `No batches available for item ${itemCode} from prescription. Showing alternatives...`);
@@ -2426,8 +2906,8 @@ export default function IPDBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: requestedQty,
-            saleQty: requestedQty,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2473,8 +2953,8 @@ export default function IPDBill() {
               itemName: reqItem.item_name,
               uom: reqItem.unit,
               stockQty: batchStockQty,
-              orderedQty: qtyToTake,
-              saleQty: qtyToTake,
+              orderedQty: requestedQty, // Use full prescription quantity instead of batch quantity
+              saleQty: qtyToTake, // Keep saleQty as the actual batch quantity being allocated
               batch: batch.name,
               batchNo: batch.name,
               expiryDate: batch.expiry_date,
@@ -2512,8 +2992,8 @@ export default function IPDBill() {
             itemName: reqItem.item_name,
             uom: reqItem.unit,
             stockQty: 0,
-            orderedQty: remainingQtyToAllocate,
-            saleQty: remainingQtyToAllocate,
+            orderedQty: requestedQty, // Show original requested quantity
+            saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
             batch: "",
             batchNo: "",
             expiryDate: "",
@@ -2799,6 +3279,45 @@ export default function IPDBill() {
     showAlert("success", "Success", `Applied ${globalDiscountPercent}% discount to all items.`);
   };
 
+  // Helper function to fetch req_qty from requisition/prescription
+  const fetchReqQtyForItem = async (sourceDocName: string, itemCode: string): Promise<number> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Fetch the requisition/prescription document
+      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${sourceDocName}?fields=["name","patient_requisition_item_details"]`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch requisition/prescription ${sourceDocName}`);
+        return 0;
+      }
+
+      const data = await response.json();
+      const requisitionItems = data.data?.patient_requisition_item_details || [];
+
+      // Find the matching item and return its req_qty
+      const matchingItem = requisitionItems.find((item: any) => item.item_code === itemCode);
+      if (matchingItem) {
+        const reqQty = matchingItem.req_qty || matchingItem.quantity || matchingItem.qty || 0;
+        console.log(`Found req_qty for item ${itemCode}: ${reqQty}`);
+        return reqQty;
+      }
+
+      console.warn(`Item ${itemCode} not found in requisition/prescription ${sourceDocName}`);
+      return 0;
+    } catch (error) {
+      console.error(`Error fetching req_qty for item ${itemCode}:`, error);
+      return 0;
+    }
+  };
+
   const handleLoadInvoice = async (invoice: any) => {
     try {
       // Set flag to prevent recalculation
@@ -2940,6 +3459,39 @@ export default function IPDBill() {
           const igstAmount = Math.abs(invItem.igst_amount || 0);
           const totalAmount = Math.abs(invItem.amount || 0);
 
+          // Fetch current stock quantity for the batch in the warehouse
+          let currentStockQty = 0;
+          console.log('Loading item:', {
+            item_code: invItem.item_code,
+            batch_no: invItem.batch_no,
+            warehouse: fullInvoice.warehouse,
+            set_warehouse: fullInvoice.set_warehouse
+          });
+
+          if (invItem.batch_no && invItem.item_code && (fullInvoice.warehouse || fullInvoice.set_warehouse)) {
+            const warehouse = fullInvoice.warehouse || fullInvoice.set_warehouse;
+            try {
+              console.log(`Fetching stock for ${invItem.item_code}, batch ${invItem.batch_no}, warehouse ${warehouse}`);
+              currentStockQty = await getBatchQty(invItem.item_code, invItem.batch_no, warehouse);
+              console.log(`Stock qty fetched: ${currentStockQty}`);
+            } catch (error) {
+              console.error(`Error fetching stock qty for ${invItem.item_code} batch ${invItem.batch_no}:`, error);
+              currentStockQty = 0;
+            }
+          } else {
+            console.log('Missing required data for stock fetch:', {
+              hasBatchNo: !!invItem.batch_no,
+              hasItemCode: !!invItem.item_code,
+              hasWarehouse: !!(fullInvoice.warehouse || fullInvoice.set_warehouse)
+            });
+          }
+
+          // Fetch req_qty from requisition/prescription if invoice has custom_req_no or custom_prescription_no
+          let reqQty = 0;
+          if (fullInvoice.custom_req_no) {
+            reqQty = await fetchReqQtyForItem(fullInvoice.custom_req_no, invItem.item_code);
+          }
+
           const item: Item = {
             id: `${invItem.item_code}-${invItem.batch_no || 'no-batch'}-${Date.now()}-${Math.random()}`,
             alternateBatches: "",
@@ -2947,13 +3499,13 @@ export default function IPDBill() {
             itemCode: invItem.item_code || "",
             itemName: invItem.item_name || "",
             uom: invItem.uom || "",
-            stockQty: invItem.actual_qty || 0,
-            orderedQty: Math.abs(invItem.qty || 0),
+            stockQty: currentStockQty, // Use fetched current stock quantity
+            orderedQty: Math.abs(reqQty || 0),
             saleQty: Math.abs(invItem.qty || 0),
             batch: invItem.batch_no || "",
             batchNo: invItem.batch_no || "",
-            expiryDate: invItem.expiry_date || "",
-            batchStockQty: invItem.actual_batch_qty || 0,
+            expiryDate: invItem.custom_expiry_date || "",
+            batchStockQty: currentStockQty, // Use fetched current stock quantity for batch stock
             rate: invItem.rate || 0,
             taxTemplate: taxDetails.taxTemplate,
             description: invItem.description || "",
@@ -2966,12 +3518,13 @@ export default function IPDBill() {
             sgstAmt: sgstAmount, // Use exact amount from invoice
             igstPercent: taxDetails.igstRate,
             igstAmt: igstAmount, // Use exact amount from invoice
-            totalAmt: totalAmount, // Use exact total from invoice
+            totalAmt: totalAmount,
             totalPckgAmt: 0,
             kitName: "",
             packageName: "",
-            binLocation: "",
+            binLocation: invItem.custom_bin_location || "", // Load bin_location from invoice
             includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
+            req_qty: reqQty, // Add req_qty from requisition/prescription
           };
           loadedItems.push(item);
         }
@@ -3103,7 +3656,10 @@ export default function IPDBill() {
 
       // Check if requisition is fully completed
       if (sourceDocumentName && sourceDocumentType === 'requisition') {
+        console.log("Checking requisition completion for:", sourceDocumentName);
         const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
+        console.log("Is requisition fully completed?", isFullyCompleted);
+
         if (isFullyCompleted) {
           showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
           return;
@@ -3130,6 +3686,8 @@ export default function IPDBill() {
           uom: item.uom,
           rate: Number(item.rate) || 0,
           batch_no: item.batchNo || item.batch || "",
+          custom_expiry_date: item.expiryDate || "", // Add expiry date field
+          custom_bin_location: item.binLocation || "", // Add bin_location from item
           warehouse: selectedWarehouse || item.warehouse || "",
           margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
           discount_percentage: Number(item.discountPercent) || 0,
@@ -3183,7 +3741,7 @@ export default function IPDBill() {
         custom_uhid: patientData?.mrn || "",
         custom_abha_id: patientData?.ABHAID || "",
         custom_age: patientData?.age || "",
-        custom_req_no: requisitionNo || "",
+        custom_req_no: sourceDocumentName || requisitionNo || "",
         custom_visit_code: patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
@@ -3271,6 +3829,8 @@ export default function IPDBill() {
 
       try {
         console.log("Final payload for creating submitted invoice:", finalPayload);
+        console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
+        console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers: {
@@ -3510,13 +4070,14 @@ export default function IPDBill() {
               </div>
             )}
           </div>
-          <IpdBillbreakDown
+          <BillBreakdown
             totalBillAmount={totalBillAmount}
             totalDiscountAmount={totalDiscountAmount}
             totalCgstAmount={totalCgstAmount}
             totalSgstAmount={totalSgstAmount}
             totalIgstAmount={totalIgstAmount}
             posProfile={posProfile || undefined}
+            onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
           // onRecordPayments prop is removed
           />
         </div>
@@ -3534,8 +4095,8 @@ export default function IPDBill() {
                 <RenderFormElement
                   inputType="select"
                   value={selectedSaleType}
-                  onChange={setSelectedSaleType}
-                  data={classificationTypeOptions}
+                  onChange={handleClassificationChange}
+                  data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
                   placeholder="Select Classification"
                 />
 
@@ -3551,6 +4112,7 @@ export default function IPDBill() {
                   // showAlert={showAlert}
                   selectedClassification={selectedSaleType}
                   isGeneric={isGeneric}
+                  isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
                   className="pt-2"// Pass getBatchQty as a prop
                 />
 
@@ -3598,7 +4160,7 @@ export default function IPDBill() {
 
 
                   {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                  <div className="w-full sm:w-auto flex-1 min-w-[150px]">
+                  {/* <div className="w-full sm:w-auto flex-1 min-w-[150px]">
                     <RenderFormElement
                       inputType="input"
                       InputValueType="text"
@@ -3606,7 +4168,7 @@ export default function IPDBill() {
                       onChange={setToLocation}
                       placeholder="Barcode"
                     />
-                  </div>
+                  </div> */}
 
 
                 </div>
@@ -3641,6 +4203,7 @@ export default function IPDBill() {
                     Apply Discount
                   </Button>
 
+
                   {/* Transaction Type Toggle*/}
                   <div className="flex items-center gap-2 ml-2">
                     <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
@@ -3666,6 +4229,7 @@ export default function IPDBill() {
                     </div>
                   </div>
 
+
                   {/* OPD Effect Checkbox */}
                   <div className="flex items-center gap-2 pl-2">
                     <Checkbox
@@ -3679,13 +4243,14 @@ export default function IPDBill() {
                       htmlFor="Opd-effect"
                       className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
                     >
-                      IPD Effect
+                      OPD Effect
                     </Label>
                   </div>
 
                 </div>
 
               </div>
+
 
               <HorizontallyScrollableTable
                 items={items}
@@ -3694,6 +4259,7 @@ export default function IPDBill() {
                 fetchSubstituteItems={fetchSubstituteItems}
                 fetchItemPrice={fetchItemPrice}
                 getBatchQty={getBatchQty}
+                fetchBinLocationFromItem={fetchBinLocationFromItem}
                 selectedWarehouse={selectedWarehouse}
                 calculateItemTaxAndTotals={calculateItemTaxAndTotals}
                 recalculateTotals={recalculateTotals}
@@ -3750,19 +4316,32 @@ export default function IPDBill() {
           <Button type="secondary-button" size="button-medium">Preview & Print</Button>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
-          <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-          <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
-            Save as Draft
-          </Button>
-          <Button type="primary-outlined-button" size="button-medium" onClick={() => setShowSelectInvoiceModal(true)}>
-            Return Bill
-          </Button>
-          <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
-            Closing Entry
-          </Button>
-          <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
-            {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print'}
-          </Button>
+          {loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
+            // Show Print and Reset buttons for submitted invoices
+            <>
+              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
+              <Button type="primary-button" size="button-medium" onClick={() => window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank')}>
+                Print Invoice
+              </Button>
+            </>
+          ) : (
+            // Show all buttons for new invoices or drafts
+            <>
+              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
+              <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
+                Save as Draft
+              </Button>
+              <Button type="primary-outlined-button" size="button-medium" onClick={() => setShowSelectInvoiceModal(true)}>
+                Return Bill
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
+                Closing Entry
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+                {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
