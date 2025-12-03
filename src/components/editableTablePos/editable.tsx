@@ -55,6 +55,11 @@ interface Item {
   hasStock?: boolean; // Add hasStock field to track if item has stock
 }
 
+// Helper function to truncate to 2 decimal places (not round)
+const truncateToTwoDecimals = (value: number): number => {
+  return Math.floor(value * 100) / 100;
+};
+
 const EditableCell = ({
   value: initialValue,
   row,
@@ -111,7 +116,7 @@ const EditableCell = ({
     >
       {type === 'number' && typeof value === 'number'
         ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
-          ? `₹${value.toFixed(2)}`
+          ? `₹${truncateToTwoDecimals(value).toFixed(2)}`
           : value.toString()
         : value || '-'
       }
@@ -960,7 +965,7 @@ const EditableTable = ({
           const rate = item.rate !== null ? item.rate : 0;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{rate.toFixed(2)}
+              ₹{truncateToTwoDecimals(rate).toFixed(2)}
             </div>
           );
         },
@@ -999,7 +1004,7 @@ const EditableTable = ({
 
           return (
             <div className="px-2 py-1 text-sm">
-              ₹{discountedTaxableAmount.toFixed(2)}
+              ₹{truncateToTwoDecimals(discountedTaxableAmount).toFixed(2)}
             </div>
           );
         },
@@ -1037,7 +1042,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{item.cgstAmt.toFixed(2)}
+              ₹{truncateToTwoDecimals(item.cgstAmt).toFixed(2)}
             </div>
           );
         },
@@ -1061,7 +1066,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{item.sgstAmt.toFixed(2)}
+              ₹{truncateToTwoDecimals(item.sgstAmt).toFixed(2)}
             </div>
           );
         },
@@ -1085,7 +1090,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{item.igstAmt.toFixed(2)}
+              ₹{truncateToTwoDecimals(item.igstAmt).toFixed(2)}
             </div>
           );
         },
@@ -1097,7 +1102,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{item.itemAmount.toFixed(2)}
+              ₹{truncateToTwoDecimals(item.itemAmount).toFixed(2)}
             </div>
           );
         },
@@ -1109,7 +1114,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{item.totalAmt.toFixed(2)}
+              ₹{truncateToTwoDecimals(item.totalAmt).toFixed(2)}
             </div>
           );
         },
@@ -1133,7 +1138,7 @@ const EditableTable = ({
           const item = row.original as Item;
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{item.totalPckgAmt.toFixed(2)}
+              ₹{truncateToTwoDecimals(item.totalPckgAmt).toFixed(2)}
             </div>
           );
         },

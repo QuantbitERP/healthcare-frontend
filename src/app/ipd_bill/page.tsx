@@ -82,6 +82,7 @@ export interface Item {
   use_serial_batch_fields?: number;
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
   req_qty?: number; // Add req_qty field for requisition/prescription requested quantity
+  custom_classification?: string; // Add custom_classification field for high-alert items
 }
 
 interface ItemSearchProps {
@@ -2028,10 +2029,37 @@ export default function NewBill() {
     }
   };
 
+  // Helper function to check for high-alert classifications
+  const checkHighAlertClassification = (item: Item): boolean => {
+    const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
+    return highAlertClassifications.includes(item.custom_classification || "");
+  };
+
   // Item handling
   const handleAddItemToDetails = async (item: Item) => {
     console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
+      // Check for high-alert classification
+      if (checkHighAlertClassification(item)) {
+        // const alertMessage = `
+        //   <p>The following items belong to <b>${item.custom_classification}</b> <b style="color:red;">High Alert Classification</b>. Handle with care.</p>
+        //   <ul>
+        //     <li><b>${item.itemName}</b> (${item.itemCode})</li>
+        //   </ul>
+        //   <p>Do you want to proceed?</p>
+        // `;
+        
+        // Show confirmation alert
+        const userConfirmed = window.confirm(
+          `The following items belong to ${item.custom_classification} High Alert Classification. Handle with care.\n\n${item.itemName} (${item.itemCode})\n\nDo you want to proceed?`
+        );
+        
+        if (!userConfirmed) {
+          console.log("User cancelled adding high-alert item");
+          return; // Don't add the item if user cancels
+        }
+      }
+
       // Check for duplicate item with same batch
       console.log("Checking for duplicate:", {
         newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },

@@ -11,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -66,6 +74,7 @@ interface Item {
   expiryDate?: string;
   visitDateTime?: string;
   aadhaarNo?: string;
+  custom_classification?: string; // Add custom_classification field for high-alert items
 }
 
 interface ItemSearchProps {
@@ -131,7 +140,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       }
 
       const response = await fetch(
-        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["name","item_name","stock_uom","custom_classification","custom_is_generic"]&limit_page_length=10`,
+        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["name","item_name","stock_uom","custom_classification","custom_is_generic"]`,
         {
           method: 'GET',
           headers,
@@ -145,7 +154,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
         const fetchedItems: Item[] = data.data.map((item: any, index: number) => {
           const unit = item.stock_uom || 'Unit';
-          console.log(`Mapping item: ${item.item_name}, Unit: ${unit}`);
+          console.log(`Mapping item: ${item.item_name}, Unit: ${unit}, Classification: ${item.custom_classification}`);
           return {
             id: item.name ? String(item.name.hashCode()) : String(index + Date.now()),
             itemCode: item.name || '',
@@ -156,6 +165,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
             kit: '',
             remark: '',
             expiryDate: item.end_of_life || '',
+            custom_classification: item.custom_classification || '',
           };
         });
         console.log('Mapped Items:', fetchedItems);
@@ -467,6 +477,12 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     content: ""
   });
 
+  // High-alert confirmation dialog state
+  const [showHighAlertDialog, setShowHighAlertDialog] = useState(false);
+  const [highAlertItem, setHighAlertItem] = useState<Item | null>(null);
+  const [pendingItem, setPendingItem] = useState<Item | null>(null);
+  const [pendingQtyIncrement, setPendingQtyIncrement] = useState<number>(0);
+
   // Priority checkboxes state
   const [priorities, setPriorities] = useState({
     routine: false,
@@ -654,8 +670,33 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   // ---------------------------------------------------------------------
   // Centralised “add-or-update” logic (search, kit, barcode)
   // ---------------------------------------------------------------------
+  // Helper function to check for high-alert classifications
+  const checkHighAlertClassification = (item: Item): boolean => {
+    const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
+    const classification = item.custom_classification || "";
+    const isHighAlert = highAlertClassifications.includes(classification);
+    console.log('Checking high-alert classification:', { 
+      itemCode: item.itemCode, 
+      itemName: item.itemName, 
+      classification, 
+      isHighAlert 
+    });
+    return isHighAlert;
+  };
+
   const upsertItemWithStock = async (baseItem: Item, qtyIncrement: number = 1) => {
     console.log('upsertItemWithStock called:', { baseItem, qtyIncrement, isLoadingRequisition });
+    
+    // Check for high-alert classification
+    if (checkHighAlertClassification(baseItem)) {
+      // Store the pending item and show custom dialog
+      setPendingItem(baseItem);
+      setPendingQtyIncrement(qtyIncrement);
+      setHighAlertItem(baseItem);
+      setShowHighAlertDialog(true);
+      return; // Wait for user confirmation
+    }
+    
     // 1. If we already have the item, just bump the requested qty
     const existingIdx = items.findIndex((i) => i.itemCode === baseItem.itemCode);
     if (existingIdx > -1) {
@@ -718,20 +759,68 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     showAlert("success", "Success", "Quantity updated successfully");
   };
 
+  // High-alert dialog handlers
+  const handleHighAlertConfirm = async () => {
+    if (pendingItem && pendingQtyIncrement !== undefined) {
+      console.log("User confirmed high-alert item, proceeding with:", pendingItem);
+      
+      // Proceed with adding the item (bypass the high-alert check this time)
+      const existingIdx = items.findIndex((i) => i.itemCode === pendingItem.itemCode);
+      if (existingIdx > -1) {
+        const updated = [...items];
+        const newReq = Number(updated[existingIdx].reqQty) + pendingQtyIncrement;
+        updated[existingIdx].reqQty = String(newReq);
+        
+        const newStock = await fetchStockQty(updated[existingIdx].itemCode, requisitionFrom);
+        updated[existingIdx].stockQty = newStock;
+        
+        setItems(updated);
+        showAlert("success", "Success", `${pendingItem.itemName} quantity updated (stock: ${newStock})`);
+      } else {
+        const stock = await fetchStockQty(pendingItem.itemCode, requisitionFrom);
+        const newItem: Item = {
+          ...pendingItem,
+          id: pendingItem.itemCode ? String(pendingItem.itemCode.hashCode()) : String(Date.now()),
+          reqQty: String(pendingQtyIncrement),
+          stockQty: stock,
+          kit: pendingItem.kit || "",
+          remark: pendingItem.remark || "",
+        };
+        
+        setItems((prev) => [...prev, newItem]);
+        showAlert("success", "Success", `${pendingItem.itemName} added (stock: ${stock})`);
+      }
+    }
+    
+    // Reset dialog state
+    setShowHighAlertDialog(false);
+    setHighAlertItem(null);
+    setPendingItem(null);
+    setPendingQtyIncrement(0);
+  };
+
+  const handleHighAlertCancel = () => {
+    console.log("User cancelled adding high-alert item");
+    setShowHighAlertDialog(false);
+    setHighAlertItem(null);
+    setPendingItem(null);
+    setPendingQtyIncrement(0);
+  };
+
   const columns: ColumnDef<Item, any>[] = useMemo(
     () => [
       { accessorKey: "itemCode", header: "Item Code" },
       { accessorKey: "itemName", header: "Item Name" },
       { accessorKey: "unit", header: "Unit" },
-      {
-        accessorKey: "stockQty",
-        header: "Stock Qty",
-        cell: ({ row }) => (
-          <span className={row.original.stockQty === "0" ? "text-gray-400" : ""}>
-            {row.original.stockQty || "–"}
-          </span>
-        ),
-      },
+      // {
+      //   accessorKey: "stockQty",
+      //   header: "Stock Qty",
+      //   cell: ({ row }) => (
+      //     <span className={row.original.stockQty === "0" ? "text-gray-400" : ""}>
+      //       {row.original.stockQty || "–"}
+      //     </span>
+      //   ),
+      // },
       {
         accessorKey: "reqQty",
         header: "Required Qty",
@@ -2277,6 +2366,42 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           )}
         </div>
       </div>
+
+      {/* High-Alert Confirmation Dialog */}
+      <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
+            <DialogDescription>
+              The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
+              <p className="text-sm text-gray-700">
+                <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              type="secondary-button"
+              size="button-medium"
+              onClick={handleHighAlertCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="primary-button"
+              size="button-medium"
+              onClick={handleHighAlertConfirm}
+            >
+              Proceed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <style jsx>{`
         .autocomplete-dropdown {

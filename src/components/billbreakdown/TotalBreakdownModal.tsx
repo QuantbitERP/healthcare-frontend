@@ -82,7 +82,7 @@ const TotalBreakdownModal: React.FC<TotalBreakdownModalProps> = ({
 
     const parsedInsuranceDeposit = parseFloat(insuranceDep) || 0;
 
-    setAmount('inline', billAmount - (cgstAmt + sgstAmt + igstAmt) + discountAmount);
+    // setAmount('inline', billAmount - (cgstAmt + sgstAmt + igstAmt) + discountAmount);
     setAmount('totalServiceGST', cgstAmt + sgstAmt + igstAmt);
     setAmount('cgstService', cgstAmt);
     setAmount('sgstService', sgstAmt);
@@ -119,7 +119,7 @@ const TotalBreakdownModal: React.FC<TotalBreakdownModalProps> = ({
       { id: 'employeeId', description: 'Employee ID', amount: 0, isMain: true, isEditable: false, isIndented: false }, // Non-editable
       { id: 'employeeBalance', description: 'Employee Balance', amount: employeeBalance, isMain: true, isBlue: true, isEditable: false }, // Non-editable
       { id: 'totalEmployeeBalanceUtilized', description: 'Total Employee Balance Utilized', amount: balanceUtilized, isMain: true, isRed: true, isEditable: true }, // Editable
-      { id: 'inline', description: 'Inline', amount: 0, isIndented: true, isEditable: true },
+      // { id: 'inline', description: 'Inline', amount: 0, isIndented: true, isEditable: true },
       { id: 'totalServiceGST', description: 'Total Service GST Amount', amount: 0, isMain: true, isEditable: false },
       { id: 'cgstService', description: 'CGST (0.00%)', amount: 0, isIndented: true, isEditable: true, isPercentage: true, parentId: 'totalServiceGST' },
       { id: 'sgstService', description: 'SGST (0.00%)', amount: 0, isIndented: true, isEditable: true, isPercentage: true, parentId: 'totalServiceGST' },
@@ -209,8 +209,13 @@ const TotalBreakdownModal: React.FC<TotalBreakdownModalProps> = ({
     setTempValue(value);
   };
 
+  // Helper function to truncate to 2 decimal places (not round)
+  const truncateToTwoDecimals = (value: number): number => {
+    return Math.floor(value * 100) / 100;
+  };
+
   const formatAmount = (amount: number): string => {
-    return `₹${amount.toFixed(2)}`;
+    return `₹${truncateToTwoDecimals(amount).toFixed(2)}`;
   };
 
   const renderEditableCell = (item: BreakdownItem) => {

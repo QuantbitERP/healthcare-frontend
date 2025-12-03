@@ -390,7 +390,7 @@ export const useFrappeApi = () => {
       return departments;
     }
 
-    const DEPARTMENT_API_URL = `${FRAPPE_BASE_URL}/api/resource/Department?fields=["name"]&limit_page_length=10000`;
+    const DEPARTMENT_API_URL = `${FRAPPE_BASE_URL}/api/resource/Department?fields=["name"]&filters=[["custom_is_store","=",1]]`;
 
     try {
       const data = await makeFrappeApiCall(DEPARTMENT_API_URL, "Departments", apiKey!, apiSecret!);

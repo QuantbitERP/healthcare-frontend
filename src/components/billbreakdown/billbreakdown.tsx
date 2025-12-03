@@ -188,6 +188,11 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
     return recordedPayments.reduce((sum, payment) => sum + (parseFloat(payment.paidAmount) || 0), 0);
   };
 
+  // Helper function to truncate to 2 decimal places (not round)
+  const truncateToTwoDecimals = (value: number): number => {
+    return Math.floor(value * 100) / 100;
+  };
+
   const calculateOutstandingAmount = () => {
     const totalPaidAmount = calculateTotalPaidAmount();
     const outstanding = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value - totalPaidAmount;
@@ -294,13 +299,13 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Taxable Amount</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{calculateNetTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{truncateToTwoDecimals(calculateNetTotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Grand Total</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{totalBillAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{truncateToTwoDecimals(totalBillAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex items-center justify-between">

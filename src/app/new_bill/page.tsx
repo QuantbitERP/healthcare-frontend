@@ -11,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -83,6 +91,8 @@ export interface Item {
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
   hasStock?: boolean; // Add hasStock field to track if item has stock
   req_qty?: number; // Add req_qty field for requisition/prescription requested quantity
+  custom_classification?: string; // Add custom_classification field for high-alert items
+  _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
 }
 
 interface ItemSearchProps {
@@ -171,7 +181,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
-      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days"]; // Add any fields you need
+      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification"]; // Add any fields you need
 
 
       const response = await fetch(
@@ -221,6 +231,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           binLocation: '',
           genericName: item.custom_generic_name, // Map generic name from API
           custom_allow_sale_days: item.custom_allow_sale_days || 0, // Map custom_allow_sale_days from API
+          custom_classification: item.custom_classification || '', // Map custom_classification from API
         }));
         return isGeneric ? fetchedItems : fetchedItems.slice(0, 10);
       } else {
@@ -774,9 +785,18 @@ interface CalculatedItem extends Item {
   totalAmt: number;
 }
 
+// Helper function to truncate to 2 decimal places (not round)
+const truncateToTwoDecimals = (value: number): number => {
+  return Math.floor(value * 100) / 100;
+};
+
 const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = false): CalculatedItem => {
-  const rate = item.rate !== null ? item.rate : 0;
-  const baseAmount = item.saleQty * rate;
+  const mrp = item.rate !== null ? item.rate : 0; // MRP (already includes GST)
+  const saleQty = item.saleQty || 0;
+  const discountPercent = item.discountPercent || 0;
+  const cgstPercent = item.cgstPercent || 0;
+  const sgstPercent = item.sgstPercent || 0;
+  const igstPercent = item.igstPercent || 0;
 
   let cgstAmount = 0;
   let sgstAmount = 0;
@@ -786,89 +806,73 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   let discountAmount = 0;
   let itemAmountAfterDiscount = 0;
 
-  let finalCgstPercent = item.cgstPercent;
-  let finalSgstPercent = item.sgstPercent;
-  let finalIgstPercent = item.igstPercent;
-
   if (includedInPrintRate) {
-    // For tax-inclusive rates (MRP-based pricing), the rate already includes tax
-    // Apply discount to the total amount (including GST)
-    const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+    // MRP Inclusive GST Formula with Discount
+    const totalGstRate = (cgstPercent + sgstPercent + igstPercent) / 100;
     
-    if (totalTaxRate > 0) {
-      // Calculate base price by excluding GST from MRP
-      // Base Price = MRP / (1 + (GST Rate / 100))
-      const basePrice = rate / (1 + totalTaxRate);
+    if (totalGstRate > 0) {
+      // Step 1: Calculate discount amount directly on MRP
+      // Discount Amount = MRP × (Discount% / 100)
+      const discountAmountPerUnit = mrp * (discountPercent / 100);
+      discountAmount = discountAmountPerUnit * saleQty;
       
-      // Calculate total base amount for the item quantity
-      const totalBaseAmount = basePrice * item.saleQty;
+      // Step 2: Price after discount (includes GST)
+      const priceAfterDiscountPerUnit = mrp - discountAmountPerUnit;
+      // const totalPriceAfterDiscount = priceAfterDiscountPerUnit * saleQty;
       
-      // Calculate GST amounts on the base amount
-      cgstAmount = totalBaseAmount * (item.cgstPercent / 100);
-      sgstAmount = totalBaseAmount * (item.sgstPercent / 100);
-      igstAmount = totalBaseAmount * (item.igstPercent / 100);
+      // Step 3: Remove GST from discounted price to get taxable amount
+      // Taxable Amount = Price After Discount / (1 + GST% / 100)
+      const taxableAmountPerUnit = priceAfterDiscountPerUnit / (1 + totalGstRate);
+      taxableAmount = taxableAmountPerUnit * saleQty;
       
-      // Total amount including GST
-      const totalAmountWithTax = totalBaseAmount + cgstAmount + sgstAmount + igstAmount;
+      // Step 4: Calculate GST amounts on taxable amount
+      cgstAmount = taxableAmount * (cgstPercent / 100);
+      sgstAmount = taxableAmount * (sgstPercent / 100);
+      igstAmount = taxableAmount * (igstPercent / 100);
       
-      // Apply discount to the TOTAL amount (including GST)
-      discountAmount = totalAmountWithTax * (item.discountPercent / 100);
-      const discountedTotalAmount = totalAmountWithTax - discountAmount;
+      // Step 5: Final amount = Taxable Amount + GST Amounts
+      totalAmount = taxableAmount + cgstAmount + sgstAmount + igstAmount;
       
-      // Calculate the ratio to distribute discount proportionally
-      const discountRatio = totalAmountWithTax > 0 ? discountedTotalAmount / totalAmountWithTax : 0;
-      
-      // Apply discount ratio to base amount and taxes
-      const discountedBaseAmount = totalBaseAmount * discountRatio;
-      cgstAmount = cgstAmount * discountRatio;
-      sgstAmount = sgstAmount * discountRatio;
-      igstAmount = igstAmount * discountRatio;
-      
-      // Set taxable amount and item amount after discount
-      taxableAmount = discountedBaseAmount;
-      itemAmountAfterDiscount = discountedBaseAmount;
-      
-      // Total amount is the discounted total
-      totalAmount = discountedTotalAmount;
+      // Set item amount after discount (taxable amount)
+      itemAmountAfterDiscount = taxableAmount;
     } else {
       // If no tax rates, handle as normal amount
-      taxableAmount = baseAmount;
-      discountAmount = taxableAmount * (item.discountPercent / 100);
-      itemAmountAfterDiscount = taxableAmount - discountAmount;
+      const baseAmount = mrp * saleQty;
+      discountAmount = baseAmount * (discountPercent / 100);
+      itemAmountAfterDiscount = baseAmount - discountAmount;
+      taxableAmount = itemAmountAfterDiscount;
       totalAmount = itemAmountAfterDiscount;
     }
-    
-    // Keep the original percentages as they represent the tax rates
-    finalCgstPercent = item.cgstPercent;
-    finalSgstPercent = item.sgstPercent;
-    finalIgstPercent = item.igstPercent;
   } else {
     // For tax-exclusive rates, apply discount first, then calculate tax
-    discountAmount = baseAmount * (item.discountPercent / 100);
+    const baseAmount = mrp * saleQty;
+    discountAmount = baseAmount * (discountPercent / 100);
     itemAmountAfterDiscount = baseAmount - discountAmount;
     taxableAmount = itemAmountAfterDiscount;
 
     // Calculate tax on the discounted taxable amount
-    cgstAmount = taxableAmount * (item.cgstPercent / 100);
-    sgstAmount = taxableAmount * (item.sgstPercent / 100);
-    igstAmount = taxableAmount * (item.igstPercent / 100);
+    cgstAmount = taxableAmount * (cgstPercent / 100);
+    sgstAmount = taxableAmount * (sgstPercent / 100);
+    igstAmount = taxableAmount * (igstPercent / 100);
 
     // Total amount includes the calculated tax
     totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
   }
 
-  console.log('calculateItemTaxAndTotals:', {
+  console.log('calculateItemTaxAndTotals (MRP Inclusive GST):', {
     itemCode: item.itemCode,
-    rate,
-    saleQty: item.saleQty,
-    baseAmount,
+    mrp,
+    saleQty,
+    discountPercent,
+    cgstPercent,
+    sgstPercent,
+    igstPercent,
     includedInPrintRate,
-    discountPercent: item.discountPercent,
+    basePricePerUnit: includedInPrintRate && (cgstPercent + sgstPercent + igstPercent) > 0 
+      ? mrp / (1 + (cgstPercent + sgstPercent + igstPercent) / 100) 
+      : mrp,
     discountAmount,
-    taxableAmount,
-    cgstPercent: item.cgstPercent,
-    sgstPercent: item.sgstPercent,
-    igstPercent: item.igstPercent,
+    priceAfterDiscountBase: taxableAmount,
     cgstAmount,
     sgstAmount,
     igstAmount,
@@ -877,15 +881,15 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   return {
     ...item,
-    itemAmount: itemAmountAfterDiscount, // Amount after discount (taxable amount)
-    discountAmt: discountAmount, // Discount amount calculated on taxable amount
-    cgstAmt: cgstAmount,
-    sgstAmt: sgstAmount,
-    igstAmt: igstAmount,
-    totalAmt: totalAmount, // Final amount after discount and tax
-    cgstPercent: finalCgstPercent,
-    sgstPercent: finalSgstPercent,
-    igstPercent: finalIgstPercent,
+    itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
+    discountAmt: truncateToTwoDecimals(discountAmount), // Discount amount calculated on MRP
+    cgstAmt: truncateToTwoDecimals(cgstAmount),
+    sgstAmt: truncateToTwoDecimals(sgstAmount),
+    igstAmt: truncateToTwoDecimals(igstAmount),
+    totalAmt: truncateToTwoDecimals(totalAmount), // Final amount after discount and tax
+    cgstPercent: cgstPercent,
+    sgstPercent: sgstPercent,
+    igstPercent: igstPercent,
   };
 };
 
@@ -2031,9 +2035,33 @@ export default function NewBill() {
   };
 
   // Item handling
+  // Helper function to check for high-alert classifications
+  const checkHighAlertClassification = (item: Item): boolean => {
+    const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
+    const classification = item.custom_classification || "";
+    const isHighAlert = highAlertClassifications.includes(classification);
+    console.log('Checking high-alert classification:', { 
+      itemCode: item.itemCode, 
+      itemName: item.itemName, 
+      classification, 
+      isHighAlert 
+    });
+    return isHighAlert;
+  };
+
   const handleAddItemToDetails = async (item: Item) => {
     console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
+      // Check for high-alert classification (skip if flag is present)
+      if (!item._skipHighAlertCheck && checkHighAlertClassification(item)) {
+        // Store the pending item and show custom dialog
+        setPendingItem(item);
+        setPendingQtyIncrement(1);
+        setHighAlertItem(item);
+        setShowHighAlertDialog(true);
+        return; // Wait for user confirmation
+      }
+
       // Check for duplicate item with same batch
       console.log("Checking for duplicate:", {
         newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
@@ -2209,51 +2237,120 @@ export default function NewBill() {
     //    return;
     // }
 
+    // Calculate total discount amount for invoice level
+    const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
+    // const hasAnyDiscount = items.some(item => (Number(item.discountPercent) || 0) > 0);
+    
+    // console.log('Save Draft - Discount calculation debug:', {
+    //   items: items.map(item => ({
+    //     itemCode: item.itemCode,
+    //     discountPercent: item.discountPercent,
+    //     discountAmt: item.discountAmt,
+    //     rate: item.rate
+    //   })),
+    //   totalDiscountAmount,
+    //   hasAnyDiscount
+    // });
+
     const payload = {
       doctype: "POS Invoice",
-      customer: selectedCustomer || patientData.mrn || "PQR Ltd", // Using selectedCustomer
+      customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
       update_stock: 1,
       company: selectedCompany || patientData.company || "Default Company",
-      docstatus: 0, // Draft status
+      docstatus: 0, // Save as draft
       gst_category: gstCategory || "Unregistered",
       customer_address: CompanyAddress,
       remarks: remarks,
       included_in_print_rate: 1, // Always consider included_in_print_rate as true
+
+      // Add invoice-level discount fields
+      // apply_discount_on: hasAnyDiscount ? "Grand Total" : "",
+      // base_discount_amount: totalDiscountAmount,
+      // discount_amount: totalDiscountAmount,
+      // additional_discount_percentage: hasAnyDiscount ? (totalDiscountAmount / (items.reduce((sum, item) => sum + (Number(item.rate) || 0) * (Number(item.saleQty) || 0), 0))) * 100 : 0,
 
       posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       items: items.map(item => {
         // Recalculate all items before saving to ensure correct values
         const calculatedItem = calculateItemTaxAndTotals(item, true);
         
-        // Calculate the rate after discount for the backend
-        const originalMRP = Number(calculatedItem.rate) || 0;
+        // Get MRP (original rate includes GST)
+        const mrp = Number(item.rate) || 0;
+        const saleQty = Number(calculatedItem.saleQty) || 0;
         const discountPercent = Number(calculatedItem.discountPercent) || 0;
-        const rateAfterDiscount = originalMRP * (1 - discountPercent / 100);
+        const totalGstRate = (Number(calculatedItem.cgstPercent) + Number(calculatedItem.sgstPercent) + Number(calculatedItem.igstPercent)) / 100;
+        
+        // When included_in_print_rate = 1, Frappe expects:
+        // rate = MRP - discount_amount (already discounted price, includes GST)
+        // Then Frappe removes GST: taxable_amount = rate / (1 + GST%)
+        // Then Frappe adds GST back: GST = taxable_amount * GST%
+        // Final amount = taxable_amount + GST
+        
+        // Calculate discount amount on MRP
+        const discountAmountOnMrp = mrp * (discountPercent / 100);
+        // Rate after discount (includes GST)
+        const rateAfterDiscount = mrp - discountAmountOnMrp;
+        // Remove GST to get taxable amount
+        const taxableAmountPerUnit = totalGstRate > 0 ? rateAfterDiscount / (1 + totalGstRate) : rateAfterDiscount;
+        
+        // Calculate GST amounts (per unit)
+        const cgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.cgstPercent) / 100);
+        const sgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.sgstPercent) / 100);
+        const igstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.igstPercent) / 100);
+        
+        // Final amount per unit
+        const finalAmountPerUnit = taxableAmountPerUnit + cgstAmountPerUnit + sgstAmountPerUnit + igstAmountPerUnit;
+        
+        // Multiply by quantity for totals
+        const totalDiscountAmount = discountAmountOnMrp * saleQty;
+        const totalCgstAmount = cgstAmountPerUnit * saleQty;
+        const totalSgstAmount = sgstAmountPerUnit * saleQty;
+        const totalIgstAmount = igstAmountPerUnit * saleQty;
+        const totalAmount = finalAmountPerUnit * saleQty;
+        const netAmount = taxableAmountPerUnit * saleQty;
+        
+        console.log('Saving item with MRP Inclusive GST (Frappe format):', {
+          itemCode: calculatedItem.itemCode,
+          mrp,
+          saleQty,
+          discountPercent,
+          discountAmountOnMrp,
+          rateAfterDiscount,
+          taxableAmountPerUnit,
+          cgstAmountPerUnit,
+          sgstAmountPerUnit,
+          igstAmountPerUnit,
+          finalAmountPerUnit,
+          totalAmount,
+          netAmount
+        });
         
         return {
           item_code: calculatedItem.itemCode,
-          qty: isReturn ? (Number(calculatedItem.saleQty) || 0) : (Number(calculatedItem.saleQty) || 0),
+          qty: isReturn ? saleQty : saleQty,
           uom: calculatedItem.uom,
-          rate: rateAfterDiscount, // Send rate after discount
+          // Send rate as MRP minus discount (Frappe will remove GST from this when included_in_print_rate = 1)
+          rate: rateAfterDiscount,
+          // MRP (includes GST) - original price before discount
+          price_list_rate: mrp,
           batch_no: calculatedItem.batchNo || calculatedItem.batch || "",
-          custom_expiry_date: calculatedItem.expiryDate || "", // Add expiry date field
-          custom_bin_location: calculatedItem.binLocation || "", // Add bin_location from item
+          custom_expiry_date: calculatedItem.expiryDate || "",
+          custom_bin_location: calculatedItem.binLocation || "",
           warehouse: selectedWarehouse || calculatedItem.warehouse || "",
-          margin_type: (Number(calculatedItem.discountPercent) || 0) > 0 ? "Percentage" : "",
-          discount_percentage: Number(calculatedItem.discountPercent) || 0,
-          base_amount: Number(calculatedItem.itemAmount) || 0,
-          discount_amount: Number(calculatedItem.discountAmt) || 0,
+          margin_type: "",
+          discount_percentage: discountPercent,
+          discount_amount: totalDiscountAmount,
           cgst_rate: Number(calculatedItem.cgstPercent) || 0,
-          cgst_amount: Number(calculatedItem.cgstAmt) || 0,
+          cgst_amount: totalCgstAmount,
           sgst_rate: Number(calculatedItem.sgstPercent) || 0,
-          sgst_amount: Number(calculatedItem.sgstAmt) || 0,
+          sgst_amount: totalSgstAmount,
           igst_rate: Number(calculatedItem.igstPercent) || 0,
-          igst_amount: Number(calculatedItem.igstAmt) || 0,
-          amount: Number(calculatedItem.totalAmt) || 0,
+          igst_amount: totalIgstAmount,
+          amount: totalAmount,
           item_tax_template: calculatedItem.taxTemplate || "",
-          included_in_print_rate: 1, // Add to item payload
+          included_in_print_rate: 1,
           use_serial_batch_fields: 1,
         };
       }),
@@ -2322,6 +2419,7 @@ export default function NewBill() {
         base_tax_amount: totalCgstAmount,
         base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
         base_tax_amount_after_discount_amount: totalCgstAmount,
+        included_in_print_rate: 1, // Always set to 1 for MRP inclusive GST
         item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
           if (item.cgstAmt !== 0) {
             acc[item.itemCode] = [item.cgstAmt, item.cgstPercent];
@@ -2344,6 +2442,7 @@ export default function NewBill() {
         base_tax_amount: totalSgstAmount,
         base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
         base_tax_amount_after_discount_amount: totalSgstAmount,
+        included_in_print_rate: 1, // Always set to 1 for MRP inclusive GST
         item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
           if (item.sgstAmt !== 0) {
             acc[item.itemCode] = [item.sgstAmt, item.sgstPercent];
@@ -2366,6 +2465,7 @@ export default function NewBill() {
         base_tax_amount: totalIgstAmount,
         base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
         base_tax_amount_after_discount_amount: totalIgstAmount,
+        included_in_print_rate: 1, // Always set to 1 for MRP inclusive GST
         item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
           if (item.igstAmt !== 0) {
             acc[item.itemCode] = [item.igstAmt, item.igstPercent];
@@ -2391,6 +2491,8 @@ export default function NewBill() {
       if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
         // Update existing draft invoice using PUT request
         console.log("Updating existing draft invoice:", loadedInvoiceName);
+        // Add docstatus: 0 to ensure Frappe recalculates totals
+        
         const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
           method: 'PUT',
           headers: {
@@ -3246,6 +3348,12 @@ export default function NewBill() {
     content: ""
   });
 
+  // High-alert confirmation dialog state
+  const [showHighAlertDialog, setShowHighAlertDialog] = useState(false);
+  const [highAlertItem, setHighAlertItem] = useState<Item | null>(null);
+  const [pendingItem, setPendingItem] = useState<Item | null>(null);
+  const [_pendingQtyIncrement, setPendingQtyIncrement] = useState<number>(0);
+
   useEffect(() => {
     console.log('Alert state changed:', alert);
   }, [alert]);
@@ -3263,6 +3371,38 @@ export default function NewBill() {
     setTimeout(() => {
       setAlert(prev => ({ ...prev, show: false }));
     }, 5000);
+  };
+
+  // High-alert dialog handlers
+  const handleHighAlertConfirm = async () => {
+    if (pendingItem) {
+      console.log("User confirmed high-alert item, proceeding with normal addition process:", pendingItem);
+      
+      // Create a modified item that bypasses the high-alert check
+      // We'll add a flag to skip the high-alert check in the normal flow
+      const itemForNormalAddition = {
+        ...pendingItem,
+        _skipHighAlertCheck: true, // Add flag to bypass high-alert check
+      };
+      
+      // Call the normal handleAddItemToDetails function
+      // This will ensure all calculations work exactly like normal item addition
+      await handleAddItemToDetails(itemForNormalAddition);
+    }
+    
+    // Reset dialog state
+    setShowHighAlertDialog(false);
+    setHighAlertItem(null);
+    setPendingItem(null);
+    setPendingQtyIncrement(0);
+  };
+
+  const handleHighAlertCancel = () => {
+    console.log("User cancelled adding high-alert item");
+    setShowHighAlertDialog(false);
+    setHighAlertItem(null);
+    setPendingItem(null);
+    setPendingQtyIncrement(0);
   };
 
   // Apply global discount to all items
@@ -3283,10 +3423,19 @@ export default function NewBill() {
     // For tax-inclusive rates, apply discount to the total amount (which includes tax)
     // The calculateItemTaxAndTotals function will handle extracting the taxable amount and taxes
     const updatedItems = items.map(item => {
-      return calculateItemTaxAndTotals({
+      const calculated = calculateItemTaxAndTotals({
         ...item,
         discountPercent: globalDiscountPercent,
       }, true);
+      
+      console.log('Applied global discount to item:', {
+        itemCode: item.itemCode,
+        discountPercent: globalDiscountPercent,
+        newDiscountAmount: calculated.discountAmt,
+        newTotalAmount: calculated.totalAmt
+      });
+      
+      return calculated;
     });
 
     setItems(updatedItems);
@@ -3522,7 +3671,7 @@ export default function NewBill() {
             batchNo: invItem.batch_no || "",
             expiryDate: invItem.custom_expiry_date || "",
             batchStockQty: currentStockQty, // Use fetched current stock quantity for batch stock
-            rate: invItem.rate || 0,
+            rate: invItem.price_list_rate || invItem.rate || 0, // Use price_list_rate (MRP) if available, fallback to rate
             taxTemplate: taxDetails.taxTemplate,
             description: invItem.description || "",
             itemAmount: itemAmount,
@@ -3580,7 +3729,7 @@ export default function NewBill() {
           transactionNo: payment.reference_no || "",
           bankName: payment.bank || "",
           branchName: payment.branch || "",
-          paidAmount: Math.abs(payment.amount || 0).toString(),
+          paidAmount: Math.abs(payment.base_amount || payment.amount || 0).toString(), // Use base_amount if available
           paymentDate: payment.posting_date || "",
           approvalNo: payment.approval_no || "",
           custom_bank_name: payment.custom_bank_name || "",
@@ -3690,7 +3839,10 @@ export default function NewBill() {
         }
       }
 
-      const payload = {
+      // Calculate total discount amount for invoice level
+    const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
+
+    const payload = {
         doctype: "POS Invoice",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
@@ -3703,31 +3855,95 @@ export default function NewBill() {
         remarks: remarks,
         included_in_print_rate: 1, // Always consider included_in_print_rate as true
 
+        // Add invoice-level discount fields
+        // apply_discount_on: hasAnyDiscount ? "Grand Total" : "",
+        // base_discount_amount: totalDiscountAmount,
+        // discount_amount: totalDiscountAmount,
+        // additional_discount_percentage: hasAnyDiscount ? (totalDiscountAmount / (items.reduce((sum, item) => sum + (Number(item.rate) || 0) * (Number(item.saleQty) || 0), 0))) * 100 : 0,
+
         posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        items: items.map(item => ({
-          item_code: item.itemCode,
-          qty: isReturn ? (Number(item.saleQty) || 0) : (Number(item.saleQty) || 0),
-          uom: item.uom,
-          rate: Number(item.rate) || 0,
-          batch_no: item.batchNo || item.batch || "",
-          custom_expiry_date: item.expiryDate || "", // Add expiry date field
-          custom_bin_location: item.binLocation || "", // Add bin_location from item
-          warehouse: selectedWarehouse || item.warehouse || "",
-          margin_type: (Number(item.discountPercent) || 0) > 0 ? "Percentage" : "",
-          discount_percentage: Number(item.discountPercent) || 0,
-          base_amount: Number(item.itemAmount) || 0,
-          discount_amount: Number(item.discountAmt) || 0,
-          cgst_rate: Number(item.cgstPercent) || 0,
-          cgst_amount: Number(item.cgstAmt) || 0,
-          sgst_rate: Number(item.sgstPercent) || 0,
-          sgst_amount: Number(item.sgstAmt) || 0,
-          igst_rate: Number(item.igstPercent) || 0,
-          igst_amount: Number(item.igstAmt) || 0,
-          amount: Number(item.totalAmt) || 0,
-          item_tax_template: item.taxTemplate || "",
-          included_in_print_rate: 1, // Add to item payload
-          use_serial_batch_fields: 1,
-        })),
+        items: items.map(item => {
+          // Recalculate to get correct values with MRP Inclusive GST formula
+          const calculatedItem = calculateItemTaxAndTotals(item, true);
+          
+          // Get MRP (original rate includes GST)
+          const mrp = Number(item.rate) || 0;
+          const saleQty = Number(calculatedItem.saleQty) || 0;
+          const discountPercent = Number(calculatedItem.discountPercent) || 0;
+          const totalGstRate = (Number(calculatedItem.cgstPercent) + Number(calculatedItem.sgstPercent) + Number(calculatedItem.igstPercent)) / 100;
+          
+          // When included_in_print_rate = 1, Frappe expects:
+          // rate = MRP - discount_amount (already discounted price, includes GST)
+          // Then Frappe removes GST: taxable_amount = rate / (1 + GST%)
+          // Then Frappe adds GST back: GST = taxable_amount * GST%
+          // Final amount = taxable_amount + GST
+          
+          // Calculate discount amount on MRP
+          const discountAmountOnMrp = mrp * (discountPercent / 100);
+          // Rate after discount (includes GST)
+          const rateAfterDiscount = mrp - discountAmountOnMrp;
+          // Remove GST to get taxable amount
+          const taxableAmountPerUnit = totalGstRate > 0 ? rateAfterDiscount / (1 + totalGstRate) : rateAfterDiscount;
+          
+          // Calculate GST amounts (per unit)
+          const cgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.cgstPercent) / 100);
+          const sgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.sgstPercent) / 100);
+          const igstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.igstPercent) / 100);
+          
+          // Final amount per unit
+          const finalAmountPerUnit = taxableAmountPerUnit + cgstAmountPerUnit + sgstAmountPerUnit + igstAmountPerUnit;
+          
+          // Multiply by quantity for totals
+          const totalDiscountAmount = discountAmountOnMrp * saleQty;
+          const totalCgstAmount = cgstAmountPerUnit * saleQty;
+          const totalSgstAmount = sgstAmountPerUnit * saleQty;
+          const totalIgstAmount = igstAmountPerUnit * saleQty;
+          const totalAmount = finalAmountPerUnit * saleQty;
+          const netAmount = taxableAmountPerUnit * saleQty;
+          
+          console.log('Finalize item with MRP Inclusive GST (Frappe format):', {
+            itemCode: calculatedItem.itemCode,
+            mrp,
+            saleQty,
+            discountPercent,
+            discountAmountOnMrp,
+            rateAfterDiscount,
+            taxableAmountPerUnit,
+            cgstAmountPerUnit,
+            sgstAmountPerUnit,
+            igstAmountPerUnit,
+            finalAmountPerUnit,
+            totalAmount,
+            netAmount
+          });
+          
+          return {
+            item_code: item.itemCode,
+            qty: isReturn ? saleQty : saleQty,
+            uom: item.uom,
+            // Send rate as MRP minus discount (Frappe will remove GST from this when included_in_print_rate = 1)
+            rate: rateAfterDiscount,
+            // MRP (includes GST) - original price before discount
+            price_list_rate: mrp,
+            batch_no: item.batchNo || item.batch || "",
+            custom_expiry_date: item.expiryDate || "",
+            custom_bin_location: item.binLocation || "",
+            warehouse: selectedWarehouse || item.warehouse || "",
+            margin_type: "",
+            discount_percentage: discountPercent,
+            discount_amount: totalDiscountAmount,
+            cgst_rate: Number(calculatedItem.cgstPercent) || 0,
+            cgst_amount: totalCgstAmount,
+            sgst_rate: Number(calculatedItem.sgstPercent) || 0,
+            sgst_amount: totalSgstAmount,
+            igst_rate: Number(calculatedItem.igstPercent) || 0,
+            igst_amount: totalIgstAmount,
+            amount: totalAmount,
+            item_tax_template: item.taxTemplate || "",
+            included_in_print_rate: 1,
+            use_serial_batch_fields: 1,
+          };
+        }),
         payments: recordedPayments.map(p => ({
           mode_of_payment: p.paymentMode || "Cash",
           amount: parseFloat(p.paidAmount || "0") || 0,
@@ -3791,6 +4007,7 @@ export default function NewBill() {
           base_tax_amount: totalCgstAmount,
           base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           base_tax_amount_after_discount_amount: totalCgstAmount,
+          included_in_print_rate: 1, // Always set to 1 for MRP inclusive GST
           item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
             if (item.cgstAmt !== 0) {
               acc[item.itemCode] = [item.cgstAmt, item.cgstPercent];
@@ -3813,6 +4030,7 @@ export default function NewBill() {
           base_tax_amount: totalSgstAmount,
           base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           base_tax_amount_after_discount_amount: totalSgstAmount,
+          included_in_print_rate: 1, // Always set to 1 for MRP inclusive GST
           item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
             if (item.sgstAmt !== 0) {
               acc[item.itemCode] = [item.sgstAmt, item.sgstPercent];
@@ -3835,6 +4053,7 @@ export default function NewBill() {
           base_tax_amount: totalIgstAmount,
           base_total: totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount, // Grand Total
           base_tax_amount_after_discount_amount: totalIgstAmount,
+          included_in_print_rate: 1, // Always set to 1 for MRP inclusive GST
           item_wise_tax_detail: JSON.stringify(items.reduce((acc, item) => {
             if (item.igstAmt !== 0) {
               acc[item.itemCode] = [item.igstAmt, item.igstPercent];
@@ -4478,62 +4697,98 @@ export default function NewBill() {
         />
       )}
 
+      {/* High-Alert Confirmation Dialog */}
+      <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
+            <DialogDescription>
+              The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
+              <p className="text-sm text-gray-700">
+                <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              type="secondary-button"
+              size="button-medium"
+              onClick={handleHighAlertCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="primary-button"
+              size="button-medium"
+              onClick={handleHighAlertConfirm}
+            >
+              Proceed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <style jsx>{`
-         .autocomplete-dropdown {
-           position: absolute;
-           top: 100%;
-           left: 0;
-           right: 0;
-           background: white;
-           border: 1px solid #ddd;
-           border-radius: 4px;
-           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-           max-height: 300px;
-           overflow-y: auto;
-           z-index: 1000;
-         }
-         .dropdown-item {
-           padding: 8px 12px;
-           cursor: pointer;
-           border-bottom: 1px solid #f0f0f0;
-         }
-         .dropdown-item:hover {
-           background-color: #f5f5f5;
-         }
-         .dropdown-item:last-child {
-           border-bottom: none;
-         }
-         .dropdown-item.no-results {
-           color: #666;
-           font-style: italic;
-           cursor: default;
-         }
-         .dropdown-item.no-results:hover {
-           background-color: white;
-         }
-         .patient-dropdown-item {
-           display: flex;
-           flex-direction: column;
-           gap: 4px;
-         }
-         .patient-name {
-           font-weight: 600;
-           color: #333;
-         }
-         .patient-details {
-           font-size: 12px;
-           color: #666;
-           display: flex;
-           gap: 12px;
-           flex-wrap: wrap;
-         }
-         .loading-text {
-           font-size: 12px;
-           color: #666;
-           font-style: italic;
-           margin-left: 8px;
-         }
-       `}</style>
+        .autocomplete-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          max-height: 300px;
+          overflow-y: auto;
+          z-index: 1000;
+        }
+        .dropdown-item {
+          padding: 8px 12px;
+          cursor: pointer;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        .dropdown-item:hover {
+          background-color: #f5f5f5;
+        }
+        .dropdown-item:last-child {
+          border-bottom: none;
+        }
+        .dropdown-item.no-results {
+          color: #666;
+          font-style: italic;
+          cursor: default;
+        }
+        .dropdown-item.no-results:hover {
+          background-color: white;
+        }
+        .patient-dropdown-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .patient-name {
+          font-weight: 600;
+          color: #333;
+        }
+        .patient-details {
+          font-size: 12px;
+          color: #666;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .loading-text {
+          font-size: 12px;
+          color: #666;
+          font-style: italic;
+          margin-left: 8px;
+        }
+      `}</style>
     </div>
   );
 }
