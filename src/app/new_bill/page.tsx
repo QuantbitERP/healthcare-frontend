@@ -428,6 +428,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       orderedQty: item.orderedQty, // Preserve the original ordered quantity from the item
       saleQty: qtyToTake, // Set saleQty to the quantity taken from this batch
       use_serial_batch_fields: 1,
+      custom_classification: item.custom_classification, // Explicitly preserve custom_classification for high-alert check
     };
     console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
     onSelectItem(itemWithBatchAndRate);
@@ -503,6 +504,8 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
     } else {
       // Original FEFO logic if no manual batches selected
+      const allocationDetails: string[] = [];
+      
       for (const batch of sortedBatches) {
         if (remainingQty <= 0) break;
 
@@ -510,9 +513,16 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
         const qtyToTake = Math.min(remainingQty, batchAvailableQty);
 
         if (qtyToTake > 0) {
+          allocationDetails.push(`${batch.name} (${qtyToTake} units)`);
           await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
           remainingQty -= qtyToTake;
         }
+      }
+      
+      // Show detailed allocation message
+      if (allocationDetails.length > 0) {
+        const allocationText = allocationDetails.join(' + ');
+        console.log(`FEFO Allocation: ${totalRequestedQty} units = ${allocationText}`);
       }
     }
 
@@ -520,13 +530,17 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedBatchesManual.length > 0) {
         showAlert("warning", "Warning", `Only ${totalRequestedQty - remainingQty} of ${totalRequestedQty} quantity could be fulfilled from selected batches.`);
       } else {
-        showAlert("warning", "Warning", `Only ${totalRequestedQty - remainingQty} of ${totalRequestedQty} quantity could be fulfilled.`);
+        showAlert("warning", "Warning", `Only ${totalRequestedQty - remainingQty} of ${totalRequestedQty} quantity could be fulfilled using FEFO (First Expiry First Out) allocation.`);
       }
       if (onNoBatchesFound) {
         onNoBatchesFound(item);
       }
     } else {
-      showAlert("success", "Success", `Successfully added ${totalRequestedQty} quantity across batches.`);
+      if (sortedBatches.length === 1) {
+        showAlert("success", "Success", `Successfully added ${totalRequestedQty} quantity from batch ${sortedBatches[0].name}.`);
+      } else {
+        showAlert("success", "Success", `Successfully added ${totalRequestedQty} quantity using FEFO allocation across ${sortedBatches.length} batches.`);
+      }
     }
     setSearchTerm('');
     setSuggestions([]);
@@ -2052,16 +2066,6 @@ export default function NewBill() {
   const handleAddItemToDetails = async (item: Item) => {
     console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
-      // Check for high-alert classification (skip if flag is present)
-      if (!item._skipHighAlertCheck && checkHighAlertClassification(item)) {
-        // Store the pending item and show custom dialog
-        setPendingItem(item);
-        setPendingQtyIncrement(1);
-        setHighAlertItem(item);
-        setShowHighAlertDialog(true);
-        return; // Wait for user confirmation
-      }
-
       // Check for duplicate item with same batch
       console.log("Checking for duplicate:", {
         newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
@@ -2187,7 +2191,7 @@ export default function NewBill() {
 
   // Save as Draft functionality
   // Inside NewBill component
-  const handleSaveAsDraft = async () => {
+  const handleSaveAsDraft = async (skipHighAlertCheck: boolean = false) => {
     if (!patientData) {
       showAlert("danger", "Error", "Please select a patient before saving.");
       return;
@@ -2198,6 +2202,22 @@ export default function NewBill() {
       return;
     }
 
+    // Check for high-alert items and show confirmation if any exist (unless skipped)
+    if (!skipHighAlertCheck) {
+      console.log("Checking for high-alert items in save draft, items count:", items.length);
+      const highAlertItems = items.filter(item => checkHighAlertClassification(item));
+      console.log("High-alert items found:", highAlertItems.length);
+      if (highAlertItems.length > 0) {
+        console.log("Showing high-alert save dialog");
+        // const highAlertItemNames = highAlertItems.map(item => `${item.itemName} (${item.custom_classification})`).join(', ');
+        setHighAlertItems(highAlertItems);
+        setPendingSaveAction('draft');
+        setShowHighAlertSaveDialog(true);
+        return; // Wait for user confirmation
+      }
+    }
+
+    // Continue with save logic...
     // Check for items with zero or negative stock
     const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
     if (itemsWithZeroOrNegativeStock.length > 0) {
@@ -3354,6 +3374,11 @@ export default function NewBill() {
   const [pendingItem, setPendingItem] = useState<Item | null>(null);
   const [_pendingQtyIncrement, setPendingQtyIncrement] = useState<number>(0);
 
+  // High-alert save dialog state
+  const [showHighAlertSaveDialog, setShowHighAlertSaveDialog] = useState(false);
+  const [highAlertItems, setHighAlertItems] = useState<Item[]>([]);
+  const [pendingSaveAction, setPendingSaveAction] = useState<'draft' | 'finalize' | null>(null);
+
   useEffect(() => {
     console.log('Alert state changed:', alert);
   }, [alert]);
@@ -3403,6 +3428,35 @@ export default function NewBill() {
     setHighAlertItem(null);
     setPendingItem(null);
     setPendingQtyIncrement(0);
+  };
+
+  // High-alert save dialog handlers
+  const handleHighAlertSaveConfirm = async () => {
+    console.log("User confirmed high-alert items, proceeding with save/finalize");
+    
+    // Reset dialog state first
+    setShowHighAlertSaveDialog(false);
+    const actionToExecute = pendingSaveAction;
+    setHighAlertItems([]);
+    setPendingSaveAction(null);
+
+    // Execute the pending action - skip high-alert check this time
+    if (actionToExecute === 'draft') {
+      // Call the actual save draft function with flag to skip high-alert check
+      console.log("Calling handleSaveAsDraft after high-alert confirmation");
+      await handleSaveAsDraft(true); // Pass true to skip high-alert check
+    } else if (actionToExecute === 'finalize') {
+      // Call the actual finalize function with flag to skip high-alert check
+      console.log("Calling handleFinalizeAndPrint after high-alert confirmation");
+      await handleFinalizeAndPrint(true); // Pass true to skip high-alert check
+    }
+  };
+
+  const handleHighAlertSaveCancel = () => {
+    console.log("User cancelled save/finalize due to high-alert items");
+    setShowHighAlertSaveDialog(false);
+    setHighAlertItems([]);
+    setPendingSaveAction(null);
   };
 
   // Apply global discount to all items
@@ -3676,7 +3730,7 @@ export default function NewBill() {
             description: invItem.description || "",
             itemAmount: itemAmount,
             discountPercent: invItem.discount_percentage || 0,
-            discountAmt: Math.abs(invItem.discount_amount || 0),
+            discountAmt: Math.abs(invItem.discount_amount || 0), // Keep exact amount from invoice
             cgstPercent: taxDetails.cgstRate,
             cgstAmt: cgstAmount, // Use exact amount from invoice
             sgstPercent: taxDetails.sgstRate,
@@ -3691,6 +3745,12 @@ export default function NewBill() {
             includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
             req_qty: reqQty, // Add req_qty from requisition/prescription
           };
+          
+          // Recalculate discount amount based on discount percentage to ensure consistency
+          if (item.discountPercent > 0 && item.rate !== null && item.rate !== undefined && item.rate > 0) {
+            const recalculatedDiscount = (item.rate as number) * (item.discountPercent / 100) * item.saleQty;
+            item.discountAmt = truncateToTwoDecimals(recalculatedDiscount);
+          }
           loadedItems.push(item);
         }
       }
@@ -3750,7 +3810,7 @@ export default function NewBill() {
     }
   };
 
-  const handleFinalizeAndPrint = async () => {
+  const handleFinalizeAndPrint = async (skipHighAlertCheck: boolean = false) => {
     // If a draft invoice is loaded, submit it
     if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
       try {
@@ -3781,7 +3841,7 @@ export default function NewBill() {
 
         // Update requisition status if this invoice is against a requisition
         if (sourceDocumentName && sourceDocumentType === 'requisition') {
-          await updateRequisitionStatus(sourceDocumentName, isComplete);
+          await updateRequisitionStatus(sourceDocumentName);
         }
 
         // Print the invoice
@@ -3798,7 +3858,7 @@ export default function NewBill() {
         window.open(printUrl, '_blank');
 
       } catch (error) {
-        console.error("Error submitting invoice:", error);
+        console.error("Error submitting draft invoice:", error);
         showAlert("danger", "Error", "Failed to submit invoice. Please try again.");
       }
     } else {
@@ -3813,13 +3873,29 @@ export default function NewBill() {
         return;
       }
 
-      // Check for items with zero or negative stock
-      const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
-      if (itemsWithZeroOrNegativeStock.length > 0) {
-        const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
-        showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
-        return;
+      // Check for high-alert items and show confirmation if any exist (unless skipped)
+      if (!skipHighAlertCheck) {
+        console.log("Checking for high-alert items in finalize, items count:", items.length);
+        const highAlertItems = items.filter(item => checkHighAlertClassification(item));
+        console.log("High-alert items found:", highAlertItems.length);
+        if (highAlertItems.length > 0) {
+          console.log("Showing high-alert save dialog for finalize");
+          // const highAlertItemNames = highAlertItems.map(item => `${item.itemName} (${item.custom_classification})`).join(', ');
+          setHighAlertItems(highAlertItems);
+          setPendingSaveAction('finalize');
+          setShowHighAlertSaveDialog(true);
+          return; // Wait for user confirmation
+        }
       }
+
+      // Continue with finalize logic...
+    // Check for items with zero or negative stock
+    const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
+    if (itemsWithZeroOrNegativeStock.length > 0) {
+      const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
+      showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
+      return;
+    }
 
       if (!posProfile) {
         showAlert("danger", "Error", "Please select a POS profile.");
@@ -4728,6 +4804,44 @@ export default function NewBill() {
               onClick={handleHighAlertConfirm}
             >
               Proceed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* High-Alert Save/Submit Confirmation Dialog */}
+      <Dialog open={showHighAlertSaveDialog} onOpenChange={setShowHighAlertSaveDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">High Alert Items Warning</DialogTitle>
+            <DialogDescription>
+              The following items in your invoice belong to High Alert Classifications. Please handle with care.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <p className="text-sm font-medium text-yellow-800 mb-2">High Alert Items:</p>
+              {highAlertItems.map((item, index) => (
+                <p key={index} className="text-sm text-gray-700 mb-1">
+                  <strong>{item.itemName}</strong> ({item.itemCode}) - <span className="text-red-600">{item.custom_classification}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              type="secondary-button"
+              size="button-medium"
+              onClick={handleHighAlertSaveCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="primary-button"
+              size="button-medium"
+              onClick={handleHighAlertSaveConfirm}
+            >
+              Proceed with {pendingSaveAction === 'draft' ? 'Save' : 'Submit'}
             </Button>
           </DialogFooter>
         </DialogContent>

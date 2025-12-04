@@ -22,13 +22,16 @@ interface SelectedBatchQuantities {
   };
 }
 
-const AlternativeItemsPopover: React.FC<{
+interface AlternativeItemsPopover {
   isOpen: boolean;
   onClose: () => void;
   onSelectAlternative: (itemCode: string, batchNo: string, expiryDate: string, qty: number) => void;
+  onSelectAlternativeBulk?: (batches: Array<{itemCode: string; batchNo: string; expiryDate: string; qty: number}>) => void;
   alternativeItems: any[];
   originalItem: any;
-}> = ({ isOpen, onClose, onSelectAlternative, alternativeItems, originalItem }) => {
+}
+
+const AlternativeItemsPopover: React.FC<AlternativeItemsPopover> = ({ isOpen, onClose, onSelectAlternative, onSelectAlternativeBulk, alternativeItems, originalItem }) => {
   const [selectedBatchQuantities, setSelectedBatchQuantities] = useState<SelectedBatchQuantities>({});
   const [itemQuantities, setItemQuantities] = useState<ItemQuantity>({}); // Reintroduce for overall item quantity
   const [expandedBatches, setExpandedBatches] = useState<{ [key: string]: boolean }>({});
@@ -87,6 +90,14 @@ const AlternativeItemsPopover: React.FC<{
     const totalRequestedQty = itemQuantities[itemCode] || 0;
     const totalAvailable = getTotalAvailableQty(batches);
 
+    console.log('handleAddItem called:', {
+      itemCode,
+      totalRequestedQty,
+      totalAvailable,
+      batchesCount: batches.length,
+      batches: batches.map(b => ({ batch_no: b.batch_no, qty: b.qty, expiry: b.expiry_date }))
+    });
+
     let batchesToProcess: { batchNo: string; expiryDate: string; qty: number; }[] = [];
 
     if (individualRequestedQuantities && Object.values(individualRequestedQuantities).some(qty => qty > 0)) {
@@ -119,16 +130,21 @@ const AlternativeItemsPopover: React.FC<{
         new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
       );
 
+      console.log('Sorted batches for FEFO:', sortedBatches.map(b => ({ batch_no: b.batch_no, qty: b.qty, expiry: b.expiry_date })));
+
       let remainingQty = totalRequestedQty;
       for (const batch of sortedBatches) {
         if (remainingQty <= 0) break;
 
         const qtyFromThisBatch = Math.min(remainingQty, batch.qty);
         if (qtyFromThisBatch > 0) {
+          console.log(`Taking ${qtyFromThisBatch} from batch ${batch.batch_no}`);
           batchesToProcess.push({ batchNo: batch.batch_no, expiryDate: batch.expiry_date, qty: qtyFromThisBatch });
           remainingQty -= qtyFromThisBatch;
         }
       }
+
+      console.log('Batches to process after FEFO:', batchesToProcess);
 
     } else {
       alert("Please enter a quantity for the item or for individual batches.");
@@ -140,8 +156,20 @@ const AlternativeItemsPopover: React.FC<{
       return;
     }
 
-    for (const { batchNo, expiryDate, qty } of batchesToProcess) {
-      await onSelectAlternative(itemCode, batchNo, expiryDate, qty);
+    // Use bulk callback if available (for split batches), otherwise use individual callback
+    if (onSelectAlternativeBulk && batchesToProcess.length > 1) {
+      console.log('Using bulk callback for', batchesToProcess.length, 'batches');
+      onSelectAlternativeBulk(batchesToProcess.map(b => ({
+        itemCode,
+        batchNo: b.batchNo,
+        expiryDate: b.expiryDate,
+        qty: b.qty
+      })));
+    } else {
+      // Fallback to individual callbacks
+      for (const { batchNo, expiryDate, qty } of batchesToProcess) {
+        await onSelectAlternative(itemCode, batchNo, expiryDate, qty);
+      }
     }
 
     onClose();

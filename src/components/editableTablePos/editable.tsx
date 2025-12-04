@@ -812,61 +812,91 @@ const EditableTable = ({
             }
           };
 
-          const handleSelectAlternative = async (itemCode: string, batchNo: string, expiryDate: string, qty: number) => {
+          const [processedBatches, setProcessedBatches] = useState<Set<string>>(new Set());
+
+          const handleSelectAlternativeBulk = async (batches: Array<{itemCode: string; batchNo: string; expiryDate: string; qty: number}>) => {
             if (!fetchItemPrice) return;
 
             try {
-              const newRate = await fetchItemPrice(itemCode, batchNo, 'Standard Selling');
-              const selectedAlternative = alternativeItems.find(a => a.item_code === itemCode);
+              const newItems: Item[] = [];
 
-              // Fetch MRP for the selected batch
-              let batchMRP = 0;
-              try {
-                const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
-                  method: 'GET',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `token ${effectiveApiKey}:${effectiveApiSecret}`,
-                  },
-                  credentials: 'include',
-                });
+              for (let index = 0; index < batches.length; index++) {
+                const { itemCode, batchNo, expiryDate, qty } = batches[index];
+                const newRate = await fetchItemPrice(itemCode, batchNo, 'Standard Selling');
+                const selectedAlternative = alternativeItems.find(a => a.item_code === itemCode);
 
-                if (response.ok) {
-                  const data = await response.json();
-                  batchMRP = data.data?.custom_mrp || 0;
+                // Fetch MRP for the selected batch
+                let batchMRP = 0;
+                try {
+                  const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
+                    method: 'GET',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `token ${effectiveApiKey}:${effectiveApiSecret}`,
+                    },
+                    credentials: 'include',
+                  });
+
+                  if (response.ok) {
+                    const data = await response.json();
+                    batchMRP = data.data?.custom_mrp || 0;
+                  }
+                } catch (error) {
+                  console.error('Error fetching batch MRP:', error);
                 }
-              } catch (error) {
-                console.error('Error fetching batch MRP:', error);
+
+                if (index === 0) {
+                  // First batch replaces the original item
+                  const updatedItem = {
+                    ...item,
+                    itemCode: itemCode,
+                    itemName: selectedAlternative?.item_name || itemCode,
+                    batchNo: batchNo,
+                    batch: batchNo,
+                    expiryDate: expiryDate,
+                    batchStockQty: qty,
+                    stockQty: qty,
+                    rate: newRate !== null ? newRate : item.rate,
+                    mrp: batchMRP,
+                    saleQty: qty,
+                    substituteItem: item.itemCode
+                  };
+                  newItems.push(calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem, true) : updatedItem);
+                } else {
+                  // Subsequent batches are added as new rows
+                  const newItem = {
+                    ...item,
+                    id: `${item.id}-${batchNo}-${Date.now()}`,
+                    itemCode: itemCode,
+                    itemName: selectedAlternative?.item_name || itemCode,
+                    batchNo: batchNo,
+                    batch: batchNo,
+                    expiryDate: expiryDate,
+                    batchStockQty: qty,
+                    stockQty: qty,
+                    rate: newRate !== null ? newRate : item.rate,
+                    mrp: batchMRP,
+                    saleQty: qty,
+                    substituteItem: item.itemCode
+                  };
+                  newItems.push(calculateItemTaxAndTotals ? calculateItemTaxAndTotals(newItem, true) : newItem);
+                }
               }
 
+              // Update items all at once
               setItems(prev => {
-                const updatedItems = prev.map(i => {
-                  if (i.id === item.id) {
-                    const updatedItem = {
-                      ...i,
-                      itemCode: itemCode,
-                      itemName: selectedAlternative?.item_name || itemCode,
-                      batchNo: batchNo,
-                      batch: batchNo,
-                      expiryDate: expiryDate,
-                      batchStockQty: qty,
-                      stockQty: qty,
-                      rate: newRate !== null ? newRate : i.rate,
-                      mrp: batchMRP, // Set MRP from fetched batch MRP
-                      saleQty: qty,
-                      substituteItem: item.itemCode
-                    };
-                    return calculateItemTaxAndTotals ? calculateItemTaxAndTotals(updatedItem, true) : updatedItem;
-                  }
-                  return i;
-                });
+                const updatedItems = prev.map(i => i.id === item.id ? newItems[0] : i);
+                // Add remaining items
+                for (let i = 1; i < newItems.length; i++) {
+                  updatedItems.push(newItems[i]);
+                }
                 if (recalculateTotals) recalculateTotals(updatedItems);
                 return updatedItems;
               });
 
               setIsAlternativeOpen(false);
             } catch (error) {
-              console.error('Error selecting alternative item:', error);
+              console.error('Error selecting alternative items:', error);
             }
           };
 
@@ -883,7 +913,11 @@ const EditableTable = ({
               <AlternativeItemsPopover
                 isOpen={isAlternativeOpen}
                 onClose={() => setIsAlternativeOpen(false)}
-                onSelectAlternative={handleSelectAlternative}
+                onSelectAlternative={(itemCode, batchNo, expiryDate, qty) => {
+                  // Fallback for single batch selection
+                  handleSelectAlternativeBulk([{ itemCode, batchNo, expiryDate, qty }]);
+                }}
+                onSelectAlternativeBulk={handleSelectAlternativeBulk}
                 alternativeItems={alternativeItems}
                 originalItem={item}
               />
