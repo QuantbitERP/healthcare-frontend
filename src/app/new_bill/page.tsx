@@ -326,6 +326,11 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     fetchBatchesForHighlightedItem();
   }, [highlightedIndex, suggestions, posProfile, fetchItemBatches, selectedWarehouse, selectedCompany]); // Depend on highlightedIndex and suggestions
 
+  // Function to calculate total quantity across all batches
+  const getTotalBatchQuantity = (batches: any[]) => {
+    return batches.reduce((total, batch) => total + (batch.batch_qty || 0), 0);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -665,7 +670,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                         </div>
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
                           <span>Code: {highlightMatch(item.itemCode, isGeneric ? subSearchTerm : searchTerm)}</span>
-                          {/* <span>Stock: {item.stockQty}</span> */}
+                          <span>Stock: {itemBatches.length > 0 && highlightedIndex === index ? getTotalBatchQuantity(itemBatches) : item.stockQty}</span>
                           {item.batch && <span>Batch: {item.batch}</span>}
                           {currentRate !== null ? ( // Show currentRate if available
                             <span>Rate: ₹{currentRate.toFixed(2)}</span>
@@ -697,12 +702,12 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                         )}
                         {itemBatches.length > 0 && highlightedIndex === index && selectedWarehouse && selectedCompany && (
                           <div className="mt-2 p-2 border rounded-md bg-gray-50" onClick={(e) => e.stopPropagation()}> {/* Prevent li onClick when clicking inside batch dropdown */}
-                            <h4 className="text-xs font-semibold text-gray-700 mb-2">Select Batches:</h4>
+                            <h4 className="text-xs font-semibold text-gray-700 mb-2">Avl Batches:</h4>
                             <ul className="space-y-1 max-h-40 overflow-y-auto">
                               {itemBatches.map((batch) => (
                                 <li key={batch.name} className="flex items-center justify-between text-xs text-gray-600">
                                   <label htmlFor={`batch-${batch.name}`} className="flex items-center space-x-2 cursor-pointer">
-                                    <input
+                                    {/* <input
                                       type="checkbox"
                                       id={`batch-${batch.name}`}
                                       checked={!!selectedManualBatches[batch.name]}
@@ -719,10 +724,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                                         });
                                       }}
                                       className="form-checkbox h-4 w-4 text-blue-600 rounded"
-                                    />
+                                    /> */}
                                     <span>{batch.name} (Exp: {batch.expiry_date} | Qty: {batch.batch_qty})</span>
                                   </label>
-                                  {!!selectedManualBatches[batch.name] && (
+                                  {/* {!!selectedManualBatches[batch.name] && (
                                     <Input
                                       type="number"
                                       value={selectedManualBatches[batch.name] || 0}
@@ -738,7 +743,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
                                       className="w-20 text-xs py-1 px-2"
                                       onClick={(e) => e.stopPropagation()} // Prevent checkbox toggle
                                     />
-                                  )}
+                                  )} */}
                                 </li>
                               ))}
                             </ul>
