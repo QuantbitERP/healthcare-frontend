@@ -28,6 +28,7 @@ import RenderFormElement from "@/components/form/RenderFormElement";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import Image from "next/image";
 import BillBreakdown from "@/components/billbreakdown/billbreakdown";
+import { networkPrinter } from "@/utils/networkPrinter";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
 import { Search, X, Plus } from 'lucide-react';
 import OpdCard from "@/components/OpdInfo/Opdinfo";
@@ -93,6 +94,7 @@ export interface Item {
   req_qty?: number; // Add req_qty field for requisition/prescription requested quantity
   custom_classification?: string; // Add custom_classification field for high-alert items
   _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
+  custom_business_category?: string; // Add custom_business_category field for filtering by company
 }
 
 interface ItemSearchProps {
@@ -164,7 +166,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
 
-  const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean): Promise<Item[]> => {
+  const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean, selectedCompany?: string): Promise<Item[]> => {
     try {
       // const headers: HeadersInit = {
       //   'Content-Type': 'application/json',
@@ -181,7 +183,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
-      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification"]; // Add any fields you need
+      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category"]; // Add any fields you need
 
 
       const response = await fetch(
@@ -199,7 +201,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (response.ok) {
         const data = await response.json();
         console.log("generic item data", data);
-        const fetchedItems: Item[] = data.data.map((item: any) => ({
+        let fetchedItems: Item[] = data.data.map((item: any) => ({
           id: item.name || '', // Use item.name (which is itemCode) as the initial ID
           itemCode: item.name || '',
           itemName: item.name || '',
@@ -232,7 +234,20 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           genericName: item.custom_generic_name, // Map generic name from API
           custom_allow_sale_days: item.custom_allow_sale_days || 0, // Map custom_allow_sale_days from API
           custom_classification: item.custom_classification || '', // Map custom_classification from API
+          custom_business_category: item.custom_business_category || '', // Map custom_business_category from API
         }));
+        
+        // Filter items by business category if company is selected
+        if (selectedCompany) {
+          fetchedItems = fetchedItems.filter(item => {
+            if (!item.custom_business_category) return false; // Hide items with no business category
+            // Split business categories by comma and trim whitespace
+            const categories = item.custom_business_category.split(',').map(cat => cat.trim());
+            // Check if selected company matches any of the business categories
+            return categories.includes(selectedCompany);
+          });
+        }
+        
         return isGeneric ? fetchedItems : fetchedItems.slice(0, 10);
       } else {
         console.error('Item search failed:', response.status, response.statusText);
@@ -244,13 +259,16 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     }
   };
   const { posProfile, apiKey, apiSecret } = useAuth();
+  
+  // Create network printer instance with credentials
+  // const networkPrinter: (NetworkPrinter | null) = apiKey && apiSecret ? createNetworkPrinter(apiKey, apiSecret) : null;
 
   useEffect(() => {
     const delayedSearch = setTimeout(async () => {
       if (searchTerm.trim().length >= 2) {
         setLoading(true);
         try {
-          const results = await searchItems(searchTerm, selectedClassification, isGeneric);
+          const results = await searchItems(searchTerm, selectedClassification, isGeneric, selectedCompany);
           setAllSuggestions(results);
           if (isGeneric) {
             const filtered = results.filter(item =>
@@ -278,7 +296,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchTerm, selectedClassification, isGeneric]);
+  }, [searchTerm, selectedClassification, isGeneric, selectedCompany]);
 
   // useEffect for sub-search filtering
   useEffect(() => {
@@ -921,7 +939,7 @@ export default function NewBill() {
   // --- END: Added state for file upload ---
 
   const router = useRouter();
-  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret } = useAuth();
+  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
@@ -1268,6 +1286,9 @@ export default function NewBill() {
     custom_transaction_no?: string;
   }>>([]);
 
+  // Permission state for rate changes
+  const [canChangeRate, setCanChangeRate] = useState(false);
+
   // Auto-select default self-paid customer once data is available
   useEffect(() => {
     if (selectedCustomer) return;
@@ -1278,6 +1299,24 @@ export default function NewBill() {
       setSelectedCustomer(defaultSelfPaidCustomer.value);
     }
   }, [customers, selectedCustomer]);
+
+  // Check if user has permission to change sale rate
+  useEffect(() => {
+    const checkRolePermission = async () => {
+      try {
+        const hasPermission = await checkUserRole("Allow Sale Rate Change");
+        setCanChangeRate(hasPermission);
+        console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
+      } catch (error) {
+        console.error("Error checking user role:", error);
+        setCanChangeRate(false);
+      }
+    };
+
+    if (isAuthenticated && isInitialized) {
+      checkRolePermission();
+    }
+  }, [isAuthenticated, isInitialized, checkUserRole]);
 
   // Function to check if sale exists for requisition
   // const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
@@ -3838,7 +3877,7 @@ export default function NewBill() {
           return;
         }
 
-        const result = await response.json();
+        // const result = await response.json();
         showAlert("success", "Success", `Invoice ${loadedInvoiceName} submitted successfully!`);
 
         // Update the docstatus state
@@ -3849,18 +3888,24 @@ export default function NewBill() {
           await updateRequisitionStatus(sourceDocumentName);
         }
 
-        // Print the invoice
-        const company = selectedCompany || result.data?.company || '';
-        const printUrl = 'https://192.168.7.221:4422/printview?' +
-          'doctype=POS Invoice&' +
-          'name=' + encodeURIComponent(loadedInvoiceName) + '&' +
-          'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
-          'trigger_print=1&' +
-          'no_letterhead=0&' +
-          'letterhead=' + encodeURIComponent(company) + '&' +
-          'settings=' + encodeURIComponent('{}') + '&' +
-          '_lang=en';
-        window.open(printUrl, '_blank');
+        // Print the invoice using network printer
+        if (networkPrinter) {
+          try {
+            await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+            showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
+          } catch (error) {
+            console.error("Network printing failed:", error);
+            showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
+            // Fallback to browser print
+            const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            window.open(printUrl, '_blank');
+          }
+        } else {
+          // Fallback to browser print if network printer not available
+          console.warn('Network printer not available, using browser print');
+          const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          window.open(printUrl, '_blank');
+        }
 
       } catch (error) {
         console.error("Error submitting draft invoice:", error);
@@ -4211,18 +4256,24 @@ export default function NewBill() {
           await updateRequisitionStatus(sourceDocumentName, isComplete);
         }
 
-        // Print the invoice
-        const company = selectedCompany || patientData.company || '';
-        const printUrl = 'https://192.168.7.221:4422/printview?' +
-          'doctype=POS Invoice&' +
-          'name=' + encodeURIComponent(invoiceName) + '&' +
-          'format=' + encodeURIComponent('Pos Invoice print Format') + '&' +
-          'trigger_print=1&' +
-          'no_letterhead=0&' +
-          'letterhead=' + encodeURIComponent(company) + '&' +
-          'settings=' + encodeURIComponent('{}') + '&' +
-          '_lang=en';
-        window.open(printUrl, '_blank');
+        // Print the invoice using network printer
+        if (networkPrinter) {
+          try {
+            await networkPrinter.printDocument(invoiceName, 'POS Invoice', 'Pos Invoice print Format');
+            showAlert("success", "Print Success", `Invoice ${invoiceName} sent to network printer successfully!`);
+          } catch (error) {
+            console.error("Network printing failed:", error);
+            showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
+            // Fallback to browser print
+            const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            window.open(printUrl, '_blank');
+          }
+        } else {
+          // Fallback to browser print if network printer not available
+          console.warn('Network printer not available, using browser print');
+          const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          window.open(printUrl, '_blank');
+        }
 
       } catch (error) {
         console.error("Error creating invoice:", error);
@@ -4593,6 +4644,7 @@ export default function NewBill() {
                 setBarcode={setBarcode}
                 isComplete={isComplete}
                 setIsComplete={setIsComplete}
+                canChangeRate={canChangeRate}
               />
             </CardContent>
           </Card>
@@ -4644,7 +4696,27 @@ export default function NewBill() {
             // Show Print and Reset buttons for submitted invoices
             <>
               <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-              <Button type="primary-button" size="button-medium" onClick={() => window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank')}>
+              <Button 
+                type="primary-button" 
+                size="button-medium" 
+                onClick={async () => {
+                  if (networkPrinter) {
+                    try {
+                      await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+                      showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
+                    } catch (error) {
+                      console.error("Network printing failed:", error);
+                      showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
+                      // Fallback to browser print
+                      window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                    }
+                  } else {
+                    // Fallback to browser print if network printer not available
+                    console.warn('Network printer not available, using browser print');
+                    window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                  }
+                }}
+              >
                 Print Invoice
               </Button>
             </>

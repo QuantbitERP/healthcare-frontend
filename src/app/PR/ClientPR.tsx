@@ -75,6 +75,7 @@ interface Item {
   visitDateTime?: string;
   aadhaarNo?: string;
   custom_classification?: string; // Add custom_classification field for high-alert items
+  custom_business_category?: string; // Add custom_business_category field for filtering by company
 }
 
 interface ItemSearchProps {
@@ -83,6 +84,7 @@ interface ItemSearchProps {
   className?: string;
   selectedClassification?: string;
   isGeneric?: boolean;
+  selectedCompany?: string; // Add selectedCompany to filter by business category
 }
 
 interface AlertState {
@@ -99,6 +101,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   className = "",
   selectedClassification = "",
   isGeneric = false,
+  selectedCompany = "",
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<Item[]>([]);
@@ -113,7 +116,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
 
-  const searchItems = async (query: string = '', classification: string = '', generic: boolean = false): Promise<Item[]> => {
+  const searchItems = async (query: string = '', classification: string = '', generic: boolean = false, company: string = ''): Promise<Item[]> => {
     try {
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -140,7 +143,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       }
 
       const response = await fetch(
-        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["name","item_name","stock_uom","custom_classification","custom_is_generic"]`,
+        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["name","item_name","stock_uom","custom_classification","custom_is_generic","custom_business_category"]`,
         {
           method: 'GET',
           headers,
@@ -151,10 +154,12 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (response.ok) {
         const data = await response.json();
         console.log('Item API Response:', data);
+        console.log('Total items returned:', data.data.length);
 
-        const fetchedItems: Item[] = data.data.map((item: any, index: number) => {
+        let fetchedItems: Item[] = data.data.map((item: any, index: number) => {
           const unit = item.stock_uom || 'Unit';
-          console.log(`Mapping item: ${item.item_name}, Unit: ${unit}, Classification: ${item.custom_classification}`);
+          console.log(`Mapping item: ${item.item_name}, Unit: ${unit}, Classification: ${item.custom_classification}, Business Category: ${item.custom_business_category}`);
+          console.log('Full item data:', item);
           return {
             id: item.name ? String(item.name.hashCode()) : String(index + Date.now()),
             itemCode: item.name || '',
@@ -166,8 +171,29 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
             remark: '',
             expiryDate: item.end_of_life || '',
             custom_classification: item.custom_classification || '',
+            custom_business_category: item.custom_business_category || '',
           };
         });
+        
+        // Filter items by business category if company is selected
+        if (company) {
+          console.log('Filtering items by company:', company);
+          console.log('Items before filtering:', fetchedItems.length);
+          fetchedItems = fetchedItems.filter(item => {
+            if (!item.custom_business_category) {
+              console.log(`Item ${item.itemName}: No business category - HIDDEN`);
+              return false; // Hide items with no business category
+            }
+            // Split business categories by comma and trim whitespace
+            const categories = item.custom_business_category.split(',').map(cat => cat.trim());
+            // Check if selected company matches any of the business categories
+            const matches = categories.includes(company);
+            console.log(`Item ${item.itemName}: categories=[${categories.join(', ')}], matches=${matches}`);
+            return matches;
+          });
+          console.log('Items after filtering:', fetchedItems.length);
+        }
+        
         console.log('Mapped Items:', fetchedItems);
         return fetchedItems;
       } else {
@@ -185,7 +211,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification || isGeneric || searchTerm.trim().length >= 2) {
         setLoading(true);
         try {
-          const results = await searchItems(searchTerm, selectedClassification, isGeneric);
+          const results = await searchItems(searchTerm, selectedClassification, isGeneric, selectedCompany);
           setSuggestions(results);
           setShowSuggestions(results.length > 0);
           setHighlightedIndex(-1);
@@ -202,7 +228,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchTerm, selectedClassification, isGeneric]);
+  }, [searchTerm, selectedClassification, isGeneric, selectedCompany]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -2234,6 +2260,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                       className="pt-2"
                       selectedClassification={selectedClassification}
                       isGeneric={isGeneric}
+                      selectedCompany={patientData?.company}
                     />
 
                     <div className="ml-4 w-full">

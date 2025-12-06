@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import {
   useReactTable,
@@ -156,8 +156,20 @@ const Button = ({
   );
 };
 
+const STORAGE_KEY = 'table_column_order';
+const DEFAULT_COLUMN_ORDER = [
+  'select', 'alternateBatches', 'substituteItem', 'itemCode', 'itemName', 'batchNo', 
+  'expiryDate', 'stockQty', 'orderedQty', 'saleQty', 'rate', 'mrp', 'uom', 'itemAmount',
+  'discountPercent', 'discountAmt', 'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt',
+  'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'kitName', 'totalPckgAmt',
+  'packageName', 'binLocation', 'actions'
+];
+
 const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
 
   const columnLabels: { [key: string]: string } = {
     select: "Select",
@@ -191,6 +203,66 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     actions: "Actions"
   };
 
+  // Load column order from localStorage on mount
+  useEffect(() => {
+    const savedOrder = localStorage.getItem(STORAGE_KEY);
+    if (savedOrder) {
+      try {
+        setColumnOrder(JSON.parse(savedOrder));
+      } catch {
+        setColumnOrder(DEFAULT_COLUMN_ORDER);
+      }
+    } else {
+      setColumnOrder(DEFAULT_COLUMN_ORDER);
+    }
+  }, []);
+
+  // Apply column order to table
+  useEffect(() => {
+    if (columnOrder.length > 0) {
+      table.setColumnOrder(columnOrder);
+    }
+  }, [columnOrder, table]);
+
+  const saveColumnOrder = (newOrder: string[]) => {
+    setColumnOrder(newOrder);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newOrder));
+    table.setColumnOrder(newOrder);
+  };
+
+  const handleDragStart = (columnId: string) => {
+    setDraggedColumn(columnId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    dragOverIndexRef.current = index;
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (!draggedColumn) return;
+
+    const draggedIndex = columnOrder.indexOf(draggedColumn);
+    if (draggedIndex === -1 || draggedIndex === dropIndex) {
+      setDraggedColumn(null);
+      return;
+    }
+
+    const newOrder = [...columnOrder];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(dropIndex, 0, draggedColumn);
+
+    saveColumnOrder(newOrder);
+    setDraggedColumn(null);
+    dragOverIndexRef.current = null;
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+    dragOverIndexRef.current = null;
+  };
+
   const toggleAllColumns = (visible: boolean) => {
     table.getAllLeafColumns().forEach((column: any) => {
       if (column.id !== 'actions' && column.id !== 'select') {
@@ -198,6 +270,21 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
       }
     });
   };
+
+  const resetToDefault = () => {
+    saveColumnOrder(DEFAULT_COLUMN_ORDER);
+    // Reset visibility to show all except actions
+    table.getAllLeafColumns().forEach((column: any) => {
+      if (column.id !== 'actions' && column.id !== 'select') {
+        column.toggleVisibility(true);
+      }
+    });
+  };
+
+  // const visibleColumns = columnOrder.filter(colId => {
+  //   const column = table.getAllLeafColumns().find((col: any) => col.id === colId);
+  //   return column && column.getIsVisible();
+  // });
 
   return (
     <div className="relative inline-block">
@@ -211,49 +298,73 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-          <div className="p-3 border-b border-gray-200">
-            <div className="text-sm font-medium text-gray-700 mb-2">Show/Hide Columns</div>
-            <div className="flex space-x-2">
+        <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+          <div className="p-3 border-b border-gray-200 sticky top-0 bg-white">
+            <div className="text-sm font-medium text-gray-700 mb-2">Manage Columns</div>
+            <div className="flex flex-col space-y-2">
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => toggleAllColumns(true)}
+                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex-1"
+                >
+                  Show All
+                </button>
+                <button
+                  onClick={() => toggleAllColumns(false)}
+                  className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex-1"
+                >
+                  Hide All
+                </button>
+              </div>
               <button
-                onClick={() => toggleAllColumns(true)}
-                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                onClick={resetToDefault}
+                className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200 w-full"
               >
-                Show All
-              </button>
-              <button
-                onClick={() => toggleAllColumns(false)}
-                className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-              >
-                Hide All
+                Reset to Default
               </button>
             </div>
           </div>
 
-          <div className="p-2">
-            {table.getAllLeafColumns().map((column: any) => {
-              if (column.id === 'actions' || column.id === 'select') return null;
+          <div className="p-2 space-y-1">
+            {columnOrder.map((columnId, index) => {
+              const column = table.getAllLeafColumns().find((col: any) => col.id === columnId);
+              if (!column || columnId === 'actions' || columnId === 'select') return null;
+
+              const isBeingDragged = draggedColumn === columnId;
+              const isDragOver = dragOverIndexRef.current === index;
 
               return (
-                <label
-                  key={column.id}
-                  className="flex items-center space-x-2 py-1 px-2 hover:bg-gray-50 rounded cursor-pointer"
+                <div
+                  key={columnId}
+                  draggable
+                  onDragStart={() => handleDragStart(columnId)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex items-center space-x-2 py-2 px-2 rounded cursor-move transition-all ${
+                    isBeingDragged
+                      ? 'opacity-50 bg-blue-50 border-2 border-blue-300'
+                      : isDragOver
+                      ? 'bg-blue-100 border-2 border-blue-400'
+                      : 'hover:bg-gray-50 border-2 border-transparent'
+                  }`}
                 >
+                  <div className="text-gray-400 cursor-grab active:cursor-grabbing">⋮⋮</div>
                   <input
                     type="checkbox"
                     checked={column.getIsVisible()}
                     onChange={column.getToggleVisibilityHandler()}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700">
-                    {columnLabels[column.id] || column.id}
+                  <span className="text-sm text-gray-700 flex-1">
+                    {columnLabels[columnId] || columnId}
                   </span>
-                </label>
+                </div>
               );
             })}
           </div>
 
-          <div className="p-2 border-t border-gray-200">
+          <div className="p-2 border-t border-gray-200 sticky bottom-0 bg-white">
             <button
               onClick={() => setIsOpen(false)}
               className="w-full text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
@@ -293,6 +404,7 @@ interface EditableTableProps {
   setBarcode?: (value: string) => void;
   isComplete?: boolean;
   setIsComplete?: (value: boolean) => void;
+  canChangeRate?: boolean; // Add permission flag for rate changes
 }
 
 const EditableTable = ({
@@ -314,6 +426,7 @@ const EditableTable = ({
   setBarcode,
   isComplete,
   setIsComplete,
+  canChangeRate = false, // Default to false (readonly)
 }: EditableTableProps) => {
   const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
   const effectiveApiKey = apiKey || authApiKey;
@@ -994,9 +1107,18 @@ const EditableTable = ({
       {
         accessorKey: "rate",
         header: "Unit Sale Rate",
-        cell: ({ row }) => {
+        cell: ({ getValue, row, column, table }) => {
           const item = row.original as Item;
           const rate = item.rate !== null ? item.rate : 0;
+          
+          // If user has permission to change rate, make it editable
+          if (canChangeRate) {
+            return (
+              <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
+            );
+          }
+          
+          // Otherwise, show as readonly
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
               ₹{truncateToTwoDecimals(rate).toFixed(2)}

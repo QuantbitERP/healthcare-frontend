@@ -16,6 +16,7 @@ interface AuthContextType {
   getCurrentUser: () => Promise<string | null>;
   isInitialized: boolean;
   csrfToken: string | null;
+  checkUserRole: (roleName: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -190,6 +191,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const checkUserRole = async (roleName: string): Promise<boolean> => {
+    try {
+      if (!apiKey || !apiSecret || !currentUser) {
+        console.warn("Missing credentials or current user for role check");
+        return false;
+      }
+
+      const response = await fetch(
+        `https://192.168.7.221:4422/api/resource/User/${currentUser}?fields=["name","roles"]`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Error fetching user roles:", response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      const userRoles = data.data?.roles || [];
+      
+      // Check if user has the specified role
+      const hasRole = userRoles.some((role: any) => role.role === roleName);
+      console.log(`User ${currentUser} has role ${roleName}:`, hasRole);
+      
+      return hasRole;
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -209,6 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         getCurrentUser,
         isInitialized,
         csrfToken,
+        checkUserRole,
       }}
     >
       {children}
