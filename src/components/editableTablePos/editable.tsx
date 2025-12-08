@@ -57,7 +57,7 @@ interface Item {
 
 // Helper function to truncate to 2 decimal places (not round)
 const truncateToTwoDecimals = (value: number): number => {
-  return Math.floor(value * 100) / 100;
+  return Math.ceil(value * 100) / 100;
 };
 
 const EditableCell = ({
@@ -402,6 +402,10 @@ interface EditableTableProps {
   showAlert?: (variant: "success" | "warning" | "danger" | "primary" | "secondary", heading: string, content: string) => void;
   barcode?: string;
   setBarcode?: (value: string) => void;
+  reqId?: string;
+  setReqId?: (value: string) => void;
+  isReqIdReadonly?: boolean;
+  setIsReqIdReadonly?: (value: boolean) => void;
   isComplete?: boolean;
   setIsComplete?: (value: boolean) => void;
   canChangeRate?: boolean; // Add permission flag for rate changes
@@ -424,6 +428,10 @@ const EditableTable = ({
   showAlert, // Added showAlert callback
   barcode,
   setBarcode,
+  reqId,
+  setReqId,
+  isReqIdReadonly,
+  setIsReqIdReadonly,
   isComplete,
   setIsComplete,
   canChangeRate = false, // Default to false (readonly)
@@ -1434,6 +1442,19 @@ const EditableTable = ({
             value={barcode || ""}
             onChange={(e) => setBarcode?.(e.target.value)}
             className="w-full"
+          />
+        </div>
+        <div className="w-1/2 max-w-xs">
+          <Input
+            placeholder="Req ID"
+            value={reqId || ""}
+            onChange={(e) => {
+              if (!isReqIdReadonly) {
+                setReqId?.(e.target.value);
+              }
+            }}
+            className={`w-full ${isReqIdReadonly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+            readOnly={isReqIdReadonly}
           />
         </div>
       </div>

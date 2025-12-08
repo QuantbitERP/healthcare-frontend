@@ -824,7 +824,7 @@ interface CalculatedItem extends Item {
 
 // Helper function to truncate to 2 decimal places (not round)
 const truncateToTwoDecimals = (value: number): number => {
-  return Math.floor(value * 100) / 100;
+  return Math.ceil(value * 100) / 100;
 };
 
 const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = false): CalculatedItem => {
@@ -1209,6 +1209,8 @@ export default function NewBill() {
   const [requisitionTo] = useState('');
   const [_toLocation, setToLocation] = useState('');
   const [barcode, setBarcode] = useState('');
+  const [reqId, setReqId] = useState('');
+  const [isReqIdReadonly, setIsReqIdReadonly] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
@@ -1676,6 +1678,9 @@ export default function NewBill() {
     setRequisitionNo('');
     setRequisitionFrom('');
     setToLocation('');
+    setBarcode('');
+    setReqId('');
+    setIsReqIdReadonly(false);
     setSelectedKit('');
     setSelectedSaleType('');
     setIsRoutine(false);
@@ -2457,7 +2462,7 @@ export default function NewBill() {
       custom_uhid: patientData?.mrn || "",
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
-      custom_req_no: sourceDocumentName || requisitionNo || "",
+      custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
@@ -2715,6 +2720,10 @@ export default function NewBill() {
     setSourceDocumentType('requisition');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
     
+    // Set Req ID field with requisition name and make it readonly
+    setReqId(requisition.name);
+    setIsReqIdReadonly(true);
+    
     // Fetch the full requisition document to ensure child tables are available
     let fullRequisitionData = requisition;
     try {
@@ -2967,6 +2976,10 @@ export default function NewBill() {
     setSourceDocumentName(prescription.prescription_number);
     setSourceDocumentType('prescription');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
+    
+    // Set Req ID field with prescription number and make it readonly
+    setReqId(prescription.prescription_number);
+    setIsReqIdReadonly(true);
     
     // Fetch the full prescription document to ensure child tables are available
     let fullPrescriptionData = prescription;
@@ -3634,6 +3647,8 @@ export default function NewBill() {
       setSelectedCustomer(fullInvoice.customer || '');
       setSelectedCompany(fullInvoice.company || '');
       setRequisitionNo(fullInvoice.custom_req_no || '');
+      setReqId(fullInvoice.custom_req_no || '');
+      setIsReqIdReadonly(!!fullInvoice.custom_req_no);
       setRequisitionFrom(fullInvoice.custom_requisition_from || '');
       setRemarks(fullInvoice.remarks || ''); // Load remarks from invoice
       if (fullInvoice.posting_date) {
@@ -4107,7 +4122,7 @@ export default function NewBill() {
         custom_uhid: patientData?.mrn || "",
         custom_abha_id: patientData?.ABHAID || "",
         custom_age: patientData?.age || "",
-        custom_req_no: sourceDocumentName || requisitionNo || "",
+        custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
         custom_visit_code: patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
@@ -4642,6 +4657,10 @@ export default function NewBill() {
                 showAlert={showAlert}
                 barcode={barcode}
                 setBarcode={setBarcode}
+                reqId={reqId}
+                setReqId={setReqId}
+                isReqIdReadonly={isReqIdReadonly}
+                setIsReqIdReadonly={setIsReqIdReadonly}
                 isComplete={isComplete}
                 setIsComplete={setIsComplete}
                 canChangeRate={canChangeRate}

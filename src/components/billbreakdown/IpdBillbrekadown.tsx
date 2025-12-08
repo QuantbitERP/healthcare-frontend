@@ -183,7 +183,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
 
   // Helper function to truncate to 2 decimal places (not round)
   const truncateToTwoDecimals = (value: number): number => {
-    return Math.floor(value * 100) / 100;
+    return Math.ceil(value * 100) / 100;
   };
 
   const calculateOutstandingAmount = () => {
