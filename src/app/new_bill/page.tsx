@@ -4829,6 +4829,13 @@ export default function NewBill() {
               if (response.ok) {
                 showAlert('success', 'Success', 'Return invoice created successfully.');
                 setShowCreateReturnModal(false);
+                
+                // Print the return invoice
+                const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
+                if (returnInvoiceName) {
+                  const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+                  window.open(printUrl, '_blank');
+                }
               } else {
                 throw new Error(result.message || 'Failed to create return invoice');
               }

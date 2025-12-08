@@ -36,7 +36,8 @@ export default function POS() {
     setError(null);
     try {
       const offset = currentPage * 20; // 20 items per page
-      const response = await fetch(`${API_BASE_URL}/Sales Invoice?limit=20&offset=${offset}`, {
+      // Filter to show only POS invoices (invoices with pos_profile)
+      const response = await fetch(`${API_BASE_URL}/Sales Invoice?filters=[["pos_profile","!=",null]]&limit=20&offset=${offset}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

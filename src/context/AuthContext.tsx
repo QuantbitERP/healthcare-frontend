@@ -97,6 +97,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("apiSecret");
     localStorage.removeItem("posProfile");
     localStorage.removeItem("currentUser");
+    
+    // Clear all Frappe API cache from localStorage
+    const cacheKeys = [
+      "frappe_cache_warehouses",
+      "frappe_cache_branches",
+      "frappe_cache_kits",
+      "frappe_cache_classifications",
+      "frappe_cache_customers",
+      "frappe_cache_companies",
+      "frappe_cache_departments",
+      "frappe_cache_local_branches",
+      "frappe_cache_sub_departments",
+      "frappe_cache_doctors",
+      "frappe_cache_timestamp",
+    ];
+    cacheKeys.forEach((key) => localStorage.removeItem(key));
+    console.log("Cache cleared on logout");
+    
     router.push("/login");
   };
 

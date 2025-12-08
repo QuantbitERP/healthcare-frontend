@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, FileText, Loader } from 'lucide-react';
 import Button from '../buttons/Button';
 import { useAuth } from '@/context/AuthContext';
 import DataTableComponent from '../DataTable';
@@ -130,33 +130,75 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center  p-4">
-      <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-xl font-semibold">POS Invoice Returns</h2>
-          <Button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></Button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[95vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileText className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Select Invoice for Return</h2>
+              <p className="text-xs text-gray-600 mt-1">Choose a paid invoice to create a return entry</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
-        <DataTableComponent
-          columns={columns}
-          data={invoices}
-          loading={loading}
-          columnNames={columnNames}
-          onSearch={(term) => {
-            setInvoiceNumber(term);
-            fetchInvoices(term, customer, dateRange);
-          }}
-          onDataChange={(dates) => {
-            if (dates) {
-              const newDateRange: [Date | null, Date | null] = [dates.from || null, dates.to || null];
-              setDateRange(newDateRange);
-              fetchInvoices(invoiceNumber, customer, newDateRange);
-            }
-          }}
-          searchPlaceholder='Search by Invoice No...'
-          hideFilters={false} // Ensure filters are visible
-        />
-        <div className="flex items-center justify-end p-4 border-t">
-          <Button onClick={onClose} type='secondary-button'>Close</Button>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+              <p className="text-sm text-gray-600">Loading invoices...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Table Container */}
+        {!loading && (
+          <div className="flex-grow overflow-hidden flex flex-col">
+            <div className="flex-grow overflow-y-auto">
+              <DataTableComponent
+                columns={columns}
+                data={invoices}
+                loading={loading}
+                columnNames={columnNames}
+                onSearch={(term) => {
+                  setInvoiceNumber(term);
+                  fetchInvoices(term, customer, dateRange);
+                }}
+                onDataChange={(dates) => {
+                  if (dates) {
+                    const newDateRange: [Date | null, Date | null] = [dates.from || null, dates.to || null];
+                    setDateRange(newDateRange);
+                    fetchInvoices(invoiceNumber, customer, newDateRange);
+                  }
+                }}
+                searchPlaceholder='Search by Invoice No...'
+                hideFilters={false}
+              />
+            </div>
+
+            {/* Empty State */}
+            {invoices.length === 0 && !loading && (
+              <div className="flex items-center justify-center py-12 px-4">
+                <div className="text-center">
+                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">No invoices found</p>
+                  <p className="text-sm text-gray-500">Try adjusting your search filters</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-end p-6 border-t border-gray-200 gap-3 bg-white">
+          <Button onClick={onClose} type='secondary-button' className="px-6 py-2.5">Close</Button>
         </div>
       </div>
     </div>

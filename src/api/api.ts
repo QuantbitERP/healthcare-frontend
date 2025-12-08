@@ -3,6 +3,55 @@ import { useAuth } from "@/context/AuthContext"; // Adjust the import path as ne
 
 const FRAPPE_BASE_URL = "https://192.168.7.221:4422";
 
+// Cache keys for localStorage
+const CACHE_KEYS = {
+  WAREHOUSES: "frappe_cache_warehouses",
+  BRANCHES: "frappe_cache_branches",
+  KITS: "frappe_cache_kits",
+  CLASSIFICATIONS: "frappe_cache_classifications",
+  CUSTOMERS: "frappe_cache_customers",
+  COMPANIES: "frappe_cache_companies",
+  DEPARTMENTS: "frappe_cache_departments",
+  LOCAL_BRANCHES: "frappe_cache_local_branches",
+  SUB_DEPARTMENTS: "frappe_cache_sub_departments",
+  DOCTORS: "frappe_cache_doctors",
+  CACHE_TIMESTAMP: "frappe_cache_timestamp",
+};
+
+// Cache management functions
+const getFromCache = (key: string): any[] | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const cached = localStorage.getItem(key);
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.error(`Error reading cache for ${key}:`, error);
+    return null;
+  }
+};
+
+const saveToCache = (key: string, data: any[]): void => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(CACHE_KEYS.CACHE_TIMESTAMP, new Date().toISOString());
+  } catch (error) {
+    console.error(`Error saving cache for ${key}:`, error);
+  }
+};
+
+const clearAllCache = (): void => {
+  if (typeof window === "undefined") return;
+  try {
+    Object.values(CACHE_KEYS).forEach((key) => {
+      localStorage.removeItem(key);
+    });
+    console.log("All cache cleared from localStorage");
+  } catch (error) {
+    console.error("Error clearing cache:", error);
+  }
+};
+
 const buildFrappeApiUrl = (resource: string, fields: string[], filters?: any[]) => {
   const baseUrl = `${FRAPPE_BASE_URL}/api/resource/${encodeURIComponent(resource)}`;
   const params = new URLSearchParams();
@@ -75,11 +124,23 @@ export const useFrappeApi = () => {
 
   // Fetch warehouses
   const fetchWarehouses = useCallback(async () => {
-    
-
+    // Check memory cache first
     if (warehouses.length > 0) {
-      console.log("Returning cached warehouses:", warehouses);
+      console.log("Returning cached warehouses from memory:", warehouses);
       return warehouses;
+    }
+
+    // Check localStorage cache
+    const cachedWarehouses = getFromCache(CACHE_KEYS.WAREHOUSES);
+    if (cachedWarehouses && cachedWarehouses.length > 0) {
+      console.log("Returning warehouses from localStorage cache:", cachedWarehouses);
+      setWarehouses(cachedWarehouses);
+      return cachedWarehouses;
+    }
+
+    if (!isAuthenticated) {
+      console.error("Not authenticated. Cannot fetch warehouses.");
+      throw new Error("Authentication required to fetch warehouses.");
     }
 
     const WAREHOUSE_API_URL = `${FRAPPE_BASE_URL}/api/resource/Warehouse?fields=["name","warehouse_name"]&limit_page_length=10000`;
@@ -94,6 +155,7 @@ export const useFrappeApi = () => {
       }));
       console.log("Warehouses loaded successfully:", warehouseData);
       setWarehouses(warehouseData);
+      saveToCache(CACHE_KEYS.WAREHOUSES, warehouseData);
       return warehouseData;
     } catch (error) {
       let errorMessage = "Error loading warehouses";
@@ -117,14 +179,23 @@ export const useFrappeApi = () => {
 
   // Fetch branches
   const fetchBranches = useCallback(async () => {
+    // Check memory cache first
+    if (branches.length > 0) {
+      console.log("Returning cached branches from memory:", branches);
+      return branches;
+    }
+
+    // Check localStorage cache
+    const cachedBranches = getFromCache(CACHE_KEYS.BRANCHES);
+    if (cachedBranches && cachedBranches.length > 0) {
+      console.log("Returning branches from localStorage cache:", cachedBranches);
+      setBranches(cachedBranches);
+      return cachedBranches;
+    }
+
     if (!isAuthenticated) {
       console.error("Not authenticated. Cannot fetch branches.");
       throw new Error("Authentication required to fetch branches.");
-    }
-
-    if (branches.length > 0) {
-      console.log("Returning cached branches:", branches);
-      return branches;
     }
 
     const BRANCH_API_URL = `${FRAPPE_BASE_URL}/api/resource/Branch?fields=["name"]&limit_page_length=10000`;
@@ -138,6 +209,7 @@ export const useFrappeApi = () => {
       }));
       console.log("Branches loaded successfully:", branchData);
       setBranches(branchData);
+      saveToCache(CACHE_KEYS.BRANCHES, branchData);
       return branchData;
     } catch (error) {
       let errorMessage = "Error loading branches";
@@ -614,6 +686,7 @@ export const useFrappeApi = () => {
     fetchWarehouseForSubdepartment,
     fetchDoctors,
     buildFrappeApiUrl,
+    clearAllCache,
     warehouses,
     branches,
     kits,
