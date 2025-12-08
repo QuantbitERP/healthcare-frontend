@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, User, Calendar, DollarSign, Package, AlertCircle } from 'lucide-react';
+import { X, FileText, User, Calendar, DollarSign, Package, AlertCircle, Search } from 'lucide-react';
 import Button from '../buttons/Button';
 import { useAuth } from '@/context/AuthContext';
 
@@ -18,6 +18,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
   const [alreadyReturnedQty, setAlreadyReturnedQty] = useState<{ [key: string]: number }>({});
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const [_isLoadingData, setIsLoadingData] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (invoice?.items && apiKey && apiSecret) {
@@ -102,6 +103,12 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
     );
   };
 
+  // Filter items based on search term
+  const filteredItems = returnItems.filter(item => 
+    item.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.item_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const totalReturnQty = returnItems.reduce((acc, item) => acc + Number(item.return_qty || 0), 0);
   const totalReturnAmount = returnItems.reduce((acc, item) => acc + (Number(item.return_qty || 0) * item.rate), 0);
 
@@ -145,7 +152,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-6xl w-full max-h-[95vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        {/* <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <Package className="w-6 h-6 text-blue-600" />
@@ -155,7 +162,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
             <X className="w-5 h-5 text-gray-600" />
           </button>
-        </div>
+        </div> */}
 
         {/* Invoice Details */}
         <div className="p-6 bg-gray-50 border-b border-gray-200">
@@ -194,6 +201,34 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
 
         {/* Items Table */}
         <div className="overflow-y-auto">
+          {/* Search Bar */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <div className="relative max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by item code or name..."
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
+            </div>
+            {searchTerm && (
+              <p className="mt-2 text-xs text-gray-600">
+                Showing {filteredItems.length} of {returnItems.length} items
+              </p>
+            )}
+          </div>
           
           <div className="overflow-x-auto border border-gray-200 rounded-lg">
             <table className="w-full">
@@ -212,14 +247,16 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {returnItems.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
-                      <p className="text-sm">No items available</p>
+                      <p className="text-sm">
+                        {searchTerm ? 'No items found matching your search' : 'No items available'}
+                      </p>
                     </td>
                   </tr>
                 ) : (
-                  returnItems.map((item, idx) => {
+                  filteredItems.map((item, idx) => {
                     const alreadyReturned = alreadyReturnedQty[item.item_code] || 0;
                     const availableQty = item.qty - alreadyReturned;
                     const hasError = validationErrors[item.item_code];
