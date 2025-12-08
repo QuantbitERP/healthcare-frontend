@@ -4,7 +4,7 @@ import RecordPaymentModal from './RecordPaymentModal';
 import TotalBreakdownModal from './TotalBreakdownModal';
 import { useAuth } from '@/context/AuthContext';
 
-interface IpdBillBreakdownProps {
+interface BillBreakdownProps {
   totalBillAmount: number;
   totalDiscountAmount: number;
   totalCgstAmount: number;
@@ -32,7 +32,7 @@ interface RecordedPayment {
   approvalNo: string;
 }
 
-const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
+const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
   totalBillAmount,
   totalDiscountAmount,
   totalCgstAmount,
@@ -46,8 +46,7 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
   const { apiKey, apiSecret } = useAuth();
   const [showRecordPayment, setShowRecordPayment] = useState(false);
   const [showTotalBreakdown, setShowTotalBreakdown] = useState(false);
-
-  const concessionAmount = 0;
+  const [concessionAmount] = useState<number>(0);
   const [isRoundedOff] = useState<boolean>(true);
   const [recordedPayments, setRecordedPayments] = useState<RecordedPayment[]>([]);
 
@@ -64,8 +63,80 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
     balanceUtilized: '0',
     transactions: '0',
   });
-  // Fetch concession types and users (unchanged)
 
+  const FRAPPE_BASE_URL = 'https://192.168.7.221:4422';
+
+  // Fetch concession types and users (unchanged)
+  useEffect(() => {
+    const fetchConcessionTypes = async () => {
+      try {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        };
+        const response = await fetch(`${FRAPPE_BASE_URL}/api/resource/Concession Type?fields=["name"]&limit_page_length=1000`, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+        if (response.ok) {
+          // const data = await response.json();
+          // const options = data.data.map((item: any) => ({
+          //   value: item.name,
+          //   label: item.name,
+          // }));
+        }
+      } catch (error) {
+        console.error('Error fetching concession types:', error);
+      }
+    };
+
+    if (apiKey && apiSecret) {
+      fetchConcessionTypes();
+    }
+  }, [apiKey, apiSecret]);
+
+  useEffect(() => {
+    const fetchConcessionUsers = async () => {
+      try {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        };
+        const roleResponse = await fetch(`${FRAPPE_BASE_URL}/api/resource/User?fields=["name","full_name"]&filters=[["Has Role","role","=","concession"]]&limit_page_length=1000`, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+        if (roleResponse.ok) {
+          const roleData = await roleResponse.json();
+          const userNames = [...new Set(roleData.data.map((item: any) => item.name))] as string[];
+          if (userNames.length > 0) {
+            // const userPromises = userNames.map((userName: string) =>
+            //   fetch(`${FRAPPE_BASE_URL}/api/resource/User/${encodeURIComponent(userName)}?fields=["name","full_name"]`, {
+            //     method: 'GET',
+            //     headers,
+            //     credentials: 'include',
+            //   }).then(res => res.json())
+            // );
+            // const userResults = await Promise.all(userPromises);
+            // const options = userResults
+            //   .filter(result => result.data)
+            //   .map(result => ({
+            //     value: result.data.name,
+            //     label: result.data.full_name || result.data.name,
+            //   }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching concession users:', error);
+      }
+    };
+
+    if (apiKey && apiSecret) {
+      fetchConcessionUsers();
+    }
+  }, [apiKey, apiSecret]);
 
   const handleEditToggle = (field: keyof typeof editableFields) => {
     if (editableFields[field].isEditing) {
@@ -108,6 +179,11 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
 
   const calculateTotalPaidAmount = () => {
     return recordedPayments.reduce((sum, payment) => sum + (parseFloat(payment.paidAmount) || 0), 0);
+  };
+
+  // Helper function to truncate to 2 decimal places (not round)
+  const truncateToTwoDecimals = (value: number): number => {
+    return Math.floor(value * 100) / 100;
   };
 
   const calculateOutstandingAmount = () => {
@@ -216,17 +292,17 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Taxable Amount</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{calculateNetTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{truncateToTwoDecimals(calculateNetTotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Grand Total</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{totalBillAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{truncateToTwoDecimals(totalBillAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            {/* <label className="flex items-center space-x-2 cursor-pointer">
+          {/* <div className="flex items-center justify-between">
+            <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isRoundedOff}
@@ -234,15 +310,15 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
                 className="w-4 h-4 text-[#0D74CE] border-gray-300 rounded focus:ring-[#0D74CE] focus:ring-2 cursor-pointer"
               />
               <span className="text-[#1C2024] text-xs font-normal">Round Off</span>
-            </label> */}
-            {/* {isRoundedOff && (
+            </label>
+            {isRoundedOff && (
               <span className="text-[#60646C] text-xs font-normal">
                 {calculateRoundOffValues().rounding_adjustment >= 0
                   ? `+ ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
                   : `- ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
-            )} */}
-          </div>
+            )}
+          </div> */}
           {/* {isRoundedOff && (
             <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
 
@@ -254,9 +330,49 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
           )} */}
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
-
-
-
+              {/* <div className="flex justify-between items-center">
+                <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Concession Type</span>
+                <div className="flex items-center space-x-1">
+                  <Dropdown
+                    reasons={concessionOptions.map(consession => ({
+                      key: consession.value,
+                      value: consession.label,
+                    }))}
+                    value={selectedConcession}
+                    onChange={(value) => setSelectedConcession(value)}
+                    placeholder="Select"
+                    className="w-32 text-xs"
+                  />
+                </div>
+              </div> */}
+              {/* <div className="flex justify-between items-center">
+                <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Concession Given Authority</span>
+                <div className="flex items-center space-x-1">
+                  <Dropdown
+                    reasons={concessionauthOptions.map(consessionauth => ({
+                      key: consessionauth.value,
+                      value: consessionauth.label,
+                    }))}
+                    value={selectedConcessionauth}
+                    onChange={(value) => setSelectedConcessionauth(value)}
+                    placeholder="Select"
+                    className="w-32 text-xs"
+                  />
+                </div>
+              </div> */}
+              {/* <div className="flex justify-between items-center">
+                <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Concession Amount</span>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    value={concessionAmount}
+                    onChange={(e) => setConcessionAmount(parseFloat(e.target.value) || 0)}
+                    className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                    step="100"
+                    min="0"
+                  />
+                </div>
+              </div> */}
             </div>
             {/* Display Total Employee Balance Utilized */}
             {renderEditableField(
@@ -367,4 +483,4 @@ const IpdBillbreakDown: React.FC<IpdBillBreakdownProps> = ({
   );
 };
 
-export default IpdBillbreakDown;
+export default IPDBillBreakdown;
