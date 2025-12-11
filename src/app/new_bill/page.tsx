@@ -936,6 +936,9 @@ export default function NewBill() {
   // --- START: Added state for file upload ---
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+  const [loadedAttachments, setLoadedAttachments] = useState<any[]>([]);
+  const [hoveredAttachment, setHoveredAttachment] = useState<string | null>(null);
+  const [_previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   // --- END: Added state for file upload ---
 
   const router = useRouter();
@@ -1670,10 +1673,95 @@ export default function NewBill() {
   };
   // --- END: Added function to clear file ---
 
+  // --- START: File upload function ---
+  const uploadFile = async (file: File, invoiceName?: string): Promise<string | null> => {
+    if (!apiKey || !apiSecret) {
+      showAlert("danger", "Error", "API credentials are not available.");
+      return null;
+    }
+
+    try {
+      // First upload the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('is_private', '0'); // Make file public
+
+      const response = await fetch('https://192.168.7.221:4422/api/method/upload_file', {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("File upload failed:", response.status, errorData);
+        showAlert("danger", "Upload Error", `Failed to upload file: ${errorData.message || 'Unknown error'}`);
+        return null;
+      }
+
+      const result = await response.json();
+      console.log("File upload result:", result);
+      
+      if (result.message && result.message.file_url) {
+        const fileUrl = result.message.file_url;
+        const fileName = result.message.file_name || file.name;
+        
+        // If invoice name is provided, create a File document linked to the invoice
+        if (invoiceName) {
+          try {
+            const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `token ${apiKey}:${apiSecret}`,
+              },
+              credentials: 'include',
+              body: JSON.stringify({
+                doctype: 'File',
+                file_name: fileName,
+                file_url: fileUrl,
+                attached_to_doctype: 'POS Invoice',
+                attached_to_name: invoiceName,
+                is_private: 0,
+                folder: 'Home/Attachments'
+              }),
+            });
+
+            if (fileDocResponse.ok) {
+              console.log("File document created and linked to invoice:", invoiceName);
+            } else {
+              console.error("Failed to create File document:", await fileDocResponse.json());
+              // Still return the URL even if linking failed
+            }
+          } catch (error) {
+            console.error("Error creating File document:", error);
+            // Still return the URL even if linking failed
+          }
+        }
+        
+        return fileUrl;
+      } else {
+        console.error("Invalid file upload response:", result);
+        showAlert("danger", "Upload Error", "Invalid response from server");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      showAlert("danger", "Upload Error", "Error uploading file. Please try again.");
+      return null;
+    }
+  };
+  // --- END: File upload function ---
+
   const handleReset = () => {
     setRemarks('');
     setShowDocumentUpload(false);
     setSelectedDocument(null);
+    setLoadedAttachments([]); // Clear loaded attachments
+    setHoveredAttachment(null); // Clear hovered attachment
     setRequisitionDate(undefined);
     setRequisitionNo('');
     setRequisitionFrom('');
@@ -2544,12 +2632,30 @@ export default function NewBill() {
       });
     }
 
-    const finalPayload = {
+    const finalPayload: any = {
       ...payload,
       taxes_and_charges: taxTemplate, // Add taxes_and_charges field
       taxes: taxesPayload,
       total_taxes_and_charges: totalCgstAmount + totalSgstAmount + totalIgstAmount,
     }
+
+    // --- START: Handle file upload ---
+    let attachmentUrl: string | null = null;
+    let selectedFile: File | null = null;
+    if (selectedDocument) {
+      console.log("Preparing to upload document:", selectedDocument.name);
+      selectedFile = selectedDocument;
+      // Upload the file first to get the URL
+      attachmentUrl = await uploadFile(selectedFile);
+      if (attachmentUrl) {
+        console.log("Document uploaded successfully:", attachmentUrl);
+      } else {
+        console.warn("File upload failed, saving invoice without attachment");
+        showAlert("warning", "Upload Warning", "File upload failed. Invoice saved without attachment.");
+        selectedFile = null; // Clear the file if upload failed
+      }
+    }
+    // --- END: Handle file upload ---
 
     try {
       console.log("Final payload for saving draft:", finalPayload); // Log the final payload
@@ -2607,6 +2713,45 @@ export default function NewBill() {
             // When draft saved successfully
             showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
             console.log("Draft saved:", result);
+            
+            // --- START: Link file to invoice if file was uploaded ---
+            if (selectedFile && attachmentUrl && result.message?.data?.name) {
+              const invoiceName = result.message.data.name;
+              console.log("Linking file to invoice:", invoiceName);
+              
+              try {
+                const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `token ${apiKey}:${apiSecret}`,
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    doctype: 'File',
+                    file_name: selectedFile.name,
+                    file_url: attachmentUrl,
+                    attached_to_doctype: 'POS Invoice',
+                    attached_to_name: invoiceName,
+                    is_private: 0,
+                    folder: 'Home/Attachments'
+                  }),
+                });
+
+                if (fileDocResponse.ok) {
+                  console.log("File document created and linked to invoice:", invoiceName);
+                  showAlert("success", "File Attached", "Document successfully attached to the invoice.");
+                } else {
+                  console.error("Failed to create File document:", await fileDocResponse.json());
+                  showAlert("warning", "Attachment Warning", "Invoice saved but file attachment failed.");
+                }
+              } catch (error) {
+                console.error("Error creating File document:", error);
+                showAlert("warning", "Attachment Warning", "Invoice saved but file attachment failed.");
+              }
+            }
+            // --- END: Link file to invoice ---
+            
             // Reset the form after successful save
             handleReset();
             // clearPatient();
@@ -3593,6 +3738,73 @@ export default function NewBill() {
     }
   };
 
+  // --- START: Function to get full file URL ---
+  const getFullFileUrl = (fileUrl: string) => {
+    // If it's already a full URL, return as is
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      return fileUrl;
+    }
+    // Otherwise, prepend the server URL
+    return `https://192.168.7.221:4422/${fileUrl}`;
+  };
+  // --- END: Function to get full file URL ---
+
+  // --- START: Function to load attachments for an invoice ---
+  const loadInvoiceAttachments = async (invoiceName: string) => {
+    if (!apiKey || !apiSecret) {
+      console.error("API credentials not available for loading attachments");
+      return;
+    }
+
+    try {
+      const response = await fetch('https://192.168.7.221:4422/api/method/frappe.client.get_list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          doctype: 'File',
+          filters: {
+            attached_to_doctype: 'POS Invoice',
+            attached_to_name: invoiceName
+          },
+          fields: ['name', 'file_name', 'file_url', 'file_size', 'is_private']
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.message && result.message.length > 0) {
+          console.log("Found attachments for invoice:", invoiceName, result.message);
+          
+          // Store attachments in state
+          setLoadedAttachments(result.message);
+          
+          // Log the attachments
+          result.message.forEach((attachment: any) => {
+            console.log(`- ${attachment.file_name} (${attachment.file_url})`);
+          });
+          
+          // Show alert about attachments
+          showAlert("primary", "Attachments Found", `Found ${result.message.length} attachment(s) for this invoice.`);
+        } else {
+          console.log("No attachments found for invoice:", invoiceName);
+          // Clear loaded attachments
+          setLoadedAttachments([]);
+        }
+      } else {
+        console.error("Failed to fetch attachments:", await response.json());
+        setLoadedAttachments([]);
+      }
+    } catch (error) {
+      console.error("Error loading invoice attachments:", error);
+      setLoadedAttachments([]);
+    }
+  };
+  // --- END: Function to load attachments for an invoice ---
+
   const handleLoadInvoice = async (invoice: any) => {
     try {
       // Set flag to prevent recalculation
@@ -3623,6 +3835,9 @@ export default function NewBill() {
       // Store loaded invoice details
       setLoadedInvoiceName(fullInvoice.name);
       setLoadedInvoiceDocstatus(fullInvoice.docstatus || 0);
+
+      // Load attachments for this invoice
+      await loadInvoiceAttachments(fullInvoice.name);
 
       // Set patient data from invoice
       const newPatientData = {
@@ -4204,12 +4419,30 @@ export default function NewBill() {
         });
       }
 
-      const finalPayload = {
+      const finalPayload: any = {
         ...payload,
         taxes_and_charges: taxTemplate,
         taxes: taxesPayload,
         total_taxes_and_charges: totalCgstAmount + totalSgstAmount + totalIgstAmount,
       };
+
+      // --- START: Handle file upload ---
+      let attachmentUrl: string | null = null;
+      let selectedFile: File | null = null;
+      if (selectedDocument) {
+        console.log("Preparing to upload document for finalize:", selectedDocument.name);
+        selectedFile = selectedDocument;
+        // Upload the file first to get the URL
+        attachmentUrl = await uploadFile(selectedFile);
+        if (attachmentUrl) {
+          console.log("Document uploaded successfully:", attachmentUrl);
+        } else {
+          console.warn("File upload failed, saving invoice without attachment");
+          showAlert("warning", "Upload Warning", "File upload failed. Invoice saved without attachment.");
+          selectedFile = null; // Clear the file if upload failed
+        }
+      }
+      // --- END: Handle file upload ---
 
       try {
         console.log("Final payload for creating submitted invoice:", finalPayload);
@@ -4261,6 +4494,43 @@ export default function NewBill() {
 
         showAlert("success", "Success", `Invoice ${invoiceName} created and submitted successfully!`);
         console.log("Invoice created and submitted:", result);
+
+        // --- START: Link file to invoice if file was uploaded ---
+        if (selectedFile && attachmentUrl && invoiceName) {
+          console.log("Linking file to finalized invoice:", invoiceName);
+          
+          try {
+            const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `token ${apiKey}:${apiSecret}`,
+              },
+              credentials: 'include',
+              body: JSON.stringify({
+                doctype: 'File',
+                file_name: selectedFile.name,
+                file_url: attachmentUrl,
+                attached_to_doctype: 'POS Invoice',
+                attached_to_name: invoiceName,
+                is_private: 0,
+                folder: 'Home/Attachments'
+              }),
+            });
+
+            if (fileDocResponse.ok) {
+              console.log("File document created and linked to invoice:", invoiceName);
+              showAlert("success", "File Attached", "Document successfully attached to the invoice.");
+            } else {
+              console.error("Failed to create File document:", await fileDocResponse.json());
+              showAlert("warning", "Attachment Warning", "Invoice saved but file attachment failed.");
+            }
+          } catch (error) {
+            console.error("Error creating File document:", error);
+            showAlert("warning", "Attachment Warning", "Invoice saved but file attachment failed.");
+          }
+        }
+        // --- END: Link file to invoice ---
 
         // Update state to reflect the loaded invoice
         setLoadedInvoiceName(invoiceName);
@@ -4547,6 +4817,185 @@ export default function NewBill() {
                     )}
                   </Button>
                   {/* --- END: Modified Upload Button --- */}
+
+                  {/* --- START: Loaded Attachments Display --- */}
+                  {loadedAttachments.length > 0 && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded border">
+                      <div className="text-sm font-medium text-gray-700 mb-1">Attached Files:</div>
+                      <div className="space-y-1">
+                        {loadedAttachments.map((attachment, index) => (
+                          <div key={index} className="flex items-center justify-between text-xs">
+                            <a
+                              href={getFullFileUrl(attachment.file_url)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 truncate max-w-[200px]"
+                              title={attachment.file_name}
+                              onMouseEnter={(e) => {
+                                setHoveredAttachment(attachment.file_url);
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setPreviewPosition({
+                                  x: rect.right + 10,
+                                  y: rect.top
+                                });
+                              }}
+                              onMouseLeave={() => setHoveredAttachment(null)}
+                            >
+                              {attachment.file_name}
+                            </a>
+                            <span className="text-gray-500">
+                              ({Math.round(attachment.file_size / 1024)}KB)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* --- END: Loaded Attachments Display --- */}
+
+                  {/* --- START: Attachment Preview Popup --- */}
+                  {hoveredAttachment && (
+                    <div
+                      className="fixed z-50 bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4"
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '90vw',
+                        height: '90vh',
+                        maxWidth: '1200px',
+                        maxHeight: '800px'
+                      }}
+                      onMouseEnter={() => setHoveredAttachment(hoveredAttachment)}
+                      onMouseLeave={() => setHoveredAttachment(null)}
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="text-sm font-medium text-gray-700">Preview</div>
+                        <button
+                          onClick={() => setHoveredAttachment(null)}
+                          className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="w-full h-full overflow-auto bg-gray-100 rounded">
+                        {hoveredAttachment.toLowerCase().endsWith('.pdf') ? (
+                          <div className="flex items-center justify-center w-full h-full text-gray-500">
+                            <div className="text-center">
+                              <div className="text-lg font-medium mb-2">PDF Document</div>
+                              <div className="text-sm mb-4">PDF files cannot be embedded due to security restrictions.</div>
+                              <div className="text-sm">
+                                <a
+                                  href={getFullFileUrl(hoveredAttachment)}
+                                  target=""
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                >
+                                  Click here to open PDF
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ) : hoveredAttachment.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ? (
+                          <div className="flex items-center justify-center w-full h-full p-4">
+                            <img
+                              src={getFullFileUrl(hoveredAttachment)}
+                              alt="Preview"
+                              className="max-w-full max-h-full object-contain"
+                              onError={() => {
+                                console.error("Failed to load image preview");
+                              }}
+                            />
+                          </div>
+                        ) : hoveredAttachment.toLowerCase().match(/\.(xlsx|xls|csv)$/i) ? (
+                          <div className="flex items-center justify-center w-full h-full text-gray-500">
+                            <div className="text-center">
+                              <div className="text-lg font-medium mb-2">
+                                {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV File' : 'Excel Spreadsheet'}
+                              </div>
+                              <div className="text-sm mb-4">Spreadsheet files cannot be previewed in the browser.</div>
+                              <div className="text-sm">
+                                <a
+                                  href={getFullFileUrl(hoveredAttachment)}
+                                  target=""
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                >
+                                  Click here to download/open {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV file' : 'Excel file'}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ) : hoveredAttachment.toLowerCase().match(/\.(docx|doc)$/i) ? (
+                          <div className="flex items-center justify-center w-full h-full text-gray-500">
+                            <div className="text-center">
+                              <div className="text-lg font-medium mb-2">Word Document</div>
+                              <div className="text-sm mb-4">Word documents cannot be previewed in the browser.</div>
+                              <div className="text-sm">
+                                <a
+                                  href={getFullFileUrl(hoveredAttachment)}
+                                  target=""
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                >
+                                  Click here to download/open Word document
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ) : hoveredAttachment.toLowerCase().match(/\.(txt|rtf)$/i) ? (
+                          <div className="flex items-center justify-center w-full h-full p-4">
+                            <iframe
+                              src={getFullFileUrl(hoveredAttachment)}
+                              className="w-full h-full border-0 bg-white"
+                              title="Text File Preview"
+                              onError={() => {
+                                console.error("Failed to load text file preview");
+                              }}
+                            />
+                          </div>
+                        ) : hoveredAttachment.toLowerCase().match(/\.(zip|rar|7z|tar|gz)$/i) ? (
+                          <div className="flex items-center justify-center w-full h-full text-gray-500">
+                            <div className="text-center">
+                              <div className="text-lg font-medium mb-2">Archive File</div>
+                              <div className="text-sm mb-4">Compressed files cannot be previewed.</div>
+                              <div className="text-sm">
+                                <a
+                                  href={getFullFileUrl(hoveredAttachment)}
+                                  target=""
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                >
+                                  Click here to download archive file
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full text-gray-500">
+                            <div className="text-center">
+                              <div className="text-lg font-medium mb-2">File Preview</div>
+                              <div className="text-sm mb-2">Preview not available for this file type.</div>
+                              <div className="text-xs text-gray-400 mb-4">
+                                Extension: {hoveredAttachment.split('.').pop()?.toUpperCase() || 'Unknown'}
+                              </div>
+                              <div className="text-sm">
+                                <a
+                                  href={getFullFileUrl(hoveredAttachment)}
+                                  target=""
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                >
+                                  Click here to download/open file
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* --- END: Attachment Preview Popup --- */}
 
 
                   {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}

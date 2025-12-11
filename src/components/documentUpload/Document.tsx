@@ -20,15 +20,8 @@ const Document: React.FC<DocumentProps> = ({ setOpen, onFileSelect }) => {
   const handleFileSelect = (file: File | undefined) => {
     if (!file) return;
 
-    // 1. Validate Type
-    const allowedTypes = [
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      showAlert("warning", "Invalid File Type", "Please upload a PDF or DOCX file.");
-      return;
-    }
+    // 1. Validate Type - Accept all file types
+    // No file type restrictions - accept all files
 
     // 2. Validate Size (10 MB)
     if (file.size > 10 * 1024 * 1024) {
@@ -108,7 +101,7 @@ const Document: React.FC<DocumentProps> = ({ setOpen, onFileSelect }) => {
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept=".pdf,.docx"
+          accept="*/*"
           className="hidden"
         />
 
@@ -129,7 +122,7 @@ const Document: React.FC<DocumentProps> = ({ setOpen, onFileSelect }) => {
                 <span className="text-[#0D74CE] font-semibold">Choose File</span>
                 <span>to Upload</span>
               </div>
-              <span className="text-[#60646C] text-[10px] font-normal">PDF, DOCX</span>
+              <span className="text-[#60646C] text-[10px] font-normal">All file types supported</span>
               <span className="text-[#60646C] text-[10px] font-normal">Maximum file size 10 MB</span>
             </div>
           </div>
