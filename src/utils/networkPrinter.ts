@@ -96,10 +96,10 @@ export class NetworkPrinter {
       }
 
       const blob = await response.blob();
-      
+
       // Send PDF directly to CUPS printer
       const cupsUrl = `http://${this.settings.server_ip}:${this.settings.port}/print`;
-      
+
       const formData = new FormData();
       formData.append('file', blob, `${documentName}.pdf`);
       formData.append('printer', this.settings.printer_name);
@@ -129,7 +129,7 @@ export class NetworkPrinter {
     try {
       // Send directly to network printer
       await this.sendToPrinter(documentName, doctype, format);
-      
+
       console.log(`Document ${documentName} sent to network printer successfully`);
     } catch (error) {
       console.error('Network printing failed:', error);
@@ -148,7 +148,7 @@ export class NetworkPrinter {
       `trigger_print=1&` +
       `no_letterhead=0&` +
       `_lang=en`;
-    
+
     window.open(printUrl, '_blank');
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Loader } from 'lucide-react';
+import { X, FileText, Loader, AlertTriangle } from 'lucide-react';
 import Button from '../buttons/Button';
 import { useAuth } from '@/context/AuthContext';
 import DataTableComponent from '../DataTable';
@@ -18,10 +18,13 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [customer, _setCustomer] = useState('');
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [saleReturnAllowDays, setSaleReturnAllowDays] = useState<number>(30); // Default 30 days
+  const [restrictedInvoice, setRestrictedInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchInvoices();
+      fetchSaleReturnAllowDays();
     }
   }, [isOpen]);
 
@@ -64,34 +67,74 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }: any) => <span className='bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs'>{row.original.status}</span>,
+      cell: ({ row }: any) => {
+        const postingDate = new Date(row.original.posting_date);
+        const today = new Date();
+        const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
+        const isAllowed = daysDifference <= saleReturnAllowDays;
+        
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs ${isAllowed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {row.original.status}
+          </span>
+        );
+      },
     },
     {
       id: 'action',
       header: 'Action',
-      cell: ({ row }: any) => (
-        <Button
-          type='primary-button'
-          onClick={async () => {
-            setLoading(true);
-            try {
-              const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${row.original.name}`, {
-                headers: {
-                  'Authorization': `token ${apiKey}:${apiSecret}`,
-                }
-              });
-              const data = await res.json();
-              onSelect(data.data);
-            } catch (e) {
-              console.error('Failed to fetch full invoice', e);
-            }
-            setLoading(false);
-          }}>
-          Select
-        </Button>
-      ),
+      cell: ({ row }: any) => {
+        const postingDate = new Date(row.original.posting_date);
+        const today = new Date();
+        const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
+        const isAllowed = daysDifference <= saleReturnAllowDays;
+        
+        return (
+          <Button
+            type={isAllowed ? 'primary-button' : 'secondary-button'}
+            onClick={async () => {
+              if (!isAllowed) {
+                setRestrictedInvoice(row.original.name);
+                return;
+              }
+              
+              setLoading(true);
+              try {
+                const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${row.original.name}`, {
+                  headers: {
+                    'Authorization': `token ${apiKey}:${apiSecret}`,
+                  }
+                });
+                const data = await res.json();
+                onSelect(data.data);
+              } catch (e) {
+                console.error('Failed to fetch full invoice', e);
+              }
+              setLoading(false);
+            }}>
+            Select
+          </Button>
+        );
+      },
     },
   ];
+
+  const fetchSaleReturnAllowDays = async () => {
+    try {
+      const response = await fetch(`https://192.168.7.221:4422/api/resource/HIS%20Settings/HIS%20Settings`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        }
+      });
+      const data = await response.json();
+      if (data.data && data.data.sale_return_allow_days) {
+        setSaleReturnAllowDays(Number(data.data.sale_return_allow_days));
+      }
+    } catch (error) {
+      console.error('Failed to fetch sale return allow days:', error);
+      // Keep default value of 30 days if fetch fails
+    }
+  };
 
   const fetchInvoices = async (invNum = invoiceNumber, cust = customer, dRange = dateRange) => {
     setLoading(true);
@@ -200,6 +243,41 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         <div className="flex items-center justify-end p-6 border-t border-gray-200 gap-3 bg-white">
           <Button onClick={onClose} type='secondary-button' className="px-6 py-2.5">Close</Button>
         </div>
+
+        {/* Restriction Alert Modal */}
+        {restrictedInvoice && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-red-100 rounded-full">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Return Period Expired</h3>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-gray-600 mb-3">
+                    Invoice <span className="font-semibold">{restrictedInvoice}</span> is older than {saleReturnAllowDays} days and cannot be returned.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Returns are only allowed within {saleReturnAllowDays} days from the invoice date.
+                  </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setRestrictedInvoice(null)}
+                    type='primary-button'
+                    className="px-6 py-2.5"
+                  >
+                    OK
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

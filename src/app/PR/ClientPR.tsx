@@ -174,7 +174,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
             custom_business_category: item.custom_business_category || '',
           };
         });
-        
+
         // Filter items by business category if company is selected
         if (company) {
           console.log('Filtering items by company:', company);
@@ -193,7 +193,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           });
           console.log('Items after filtering:', fetchedItems.length);
         }
-        
+
         console.log('Mapped Items:', fetchedItems);
         return fetchedItems;
       } else {
@@ -701,18 +701,18 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
     const classification = item.custom_classification || "";
     const isHighAlert = highAlertClassifications.includes(classification);
-    console.log('Checking high-alert classification:', { 
-      itemCode: item.itemCode, 
-      itemName: item.itemName, 
-      classification, 
-      isHighAlert 
+    console.log('Checking high-alert classification:', {
+      itemCode: item.itemCode,
+      itemName: item.itemName,
+      classification,
+      isHighAlert
     });
     return isHighAlert;
   };
 
   const upsertItemWithStock = async (baseItem: Item, qtyIncrement: number = 1) => {
     console.log('upsertItemWithStock called:', { baseItem, qtyIncrement, isLoadingRequisition });
-    
+
     // Check for high-alert classification
     if (checkHighAlertClassification(baseItem)) {
       // Store the pending item and show custom dialog
@@ -722,7 +722,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setShowHighAlertDialog(true);
       return; // Wait for user confirmation
     }
-    
+
     // 1. If we already have the item, just bump the requested qty
     const existingIdx = items.findIndex((i) => i.itemCode === baseItem.itemCode);
     if (existingIdx > -1) {
@@ -789,17 +789,17 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const handleHighAlertConfirm = async () => {
     if (pendingItem && pendingQtyIncrement !== undefined) {
       console.log("User confirmed high-alert item, proceeding with:", pendingItem);
-      
+
       // Proceed with adding the item (bypass the high-alert check this time)
       const existingIdx = items.findIndex((i) => i.itemCode === pendingItem.itemCode);
       if (existingIdx > -1) {
         const updated = [...items];
         const newReq = Number(updated[existingIdx].reqQty) + pendingQtyIncrement;
         updated[existingIdx].reqQty = String(newReq);
-        
+
         const newStock = await fetchStockQty(updated[existingIdx].itemCode, requisitionFrom);
         updated[existingIdx].stockQty = newStock;
-        
+
         setItems(updated);
         showAlert("success", "Success", `${pendingItem.itemName} quantity updated (stock: ${newStock})`);
       } else {
@@ -812,12 +812,12 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           kit: pendingItem.kit || "",
           remark: pendingItem.remark || "",
         };
-        
+
         setItems((prev) => [...prev, newItem]);
         showAlert("success", "Success", `${pendingItem.itemName} added (stock: ${stock})`);
       }
     }
-    
+
     // Reset dialog state
     setShowHighAlertDialog(false);
     setHighAlertItem(null);
@@ -992,7 +992,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       console.log('Final items data to set:', itemsData);
       console.log('Setting items with quantities:', itemsData.map(item => ({ itemCode: item.itemCode, reqQty: item.reqQty })));
       setItems(itemsData);
-      
+
       // Log immediately after setting to verify
       setTimeout(() => {
         console.log('Items immediately after setItems:', items.map(item => ({ itemCode: item.itemCode, reqQty: item.reqQty })));
@@ -1290,7 +1290,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       console.log("Search field cleared");
       return;
     }
-    
+
     if (selectOptions.some((option) => option.value === value)) {
       setSelectedValue(value);
       setSearchResults([]);
@@ -1793,7 +1793,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       if (checkAmendResponse.ok) {
         const existingAmendments = await checkAmendResponse.json();
-        
+
         // If an amendment already exists, load it
         if (existingAmendments.data && existingAmendments.data.length > 0) {
           const amendedDocName = existingAmendments.data[0].name;
@@ -1801,7 +1801,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           setDocstatus(0);
           setRequisitionNo(amendedDocName);
           showAlert("success", "Success", `Loading existing amendment: ${amendedDocName}`);
-          
+
           setTimeout(() => {
             fetchRequisitionData(amendedDocName);
           }, 500);
@@ -1875,12 +1875,12 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           if (createResponse.ok) {
             const amendedData = await createResponse.json();
             const amendedDocName = amendedData.data?.name;
-            
+
             setIsAmendMode(true);
             setDocstatus(0);
             setRequisitionNo(amendedDocName);
             showAlert("success", "Success", `Requisition amended successfully. New document: ${amendedDocName}`);
-            
+
             setTimeout(() => {
               fetchRequisitionData(amendedDocName);
             }, 500);
@@ -1917,7 +1917,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         'no_letterhead=0&' +
         'settings=%7B%7D&' +
         '_lang=en';
-      
+
       window.open(printUrl, '_blank');
     } catch (error) {
       console.error("Error printing requisition:", error);
@@ -1975,12 +1975,12 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   return (
     <div className="bg-gray-50 min-h-screen px-3 relative">
       {/* Debug: Show current user info */}
-   
+
 
       {/* Profile Circle - Top Right Corner - Always visible for testing */}
       <div className="fixed top-4 right-4 z-[9999] group">
         <div className="relative">
-          
+
         </div>
       </div>
 

@@ -17,24 +17,24 @@ import { DateRange } from "react-day-picker";
 import { useAuth } from "@/context/AuthContext";
 
 // Tooltip component
-const PrescriptionStatusTooltip: React.FC<{ 
-  status: string; 
-  prescriptions: Prescription[]; 
+const PrescriptionStatusTooltip: React.FC<{
+  status: string;
+  prescriptions: Prescription[];
   children: React.ReactNode;
 }> = ({ status, prescriptions, children }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   const statusPrescriptions = prescriptions.filter(pres => pres.prescription_status === status);
-  
+
   // Filter prescriptions based on search term
-  const filteredPrescriptions = statusPrescriptions.filter(pres => 
+  const filteredPrescriptions = statusPrescriptions.filter(pres =>
     pres.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pres.prescription_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   return (
-    <div 
+    <div
       className="relative inline-block"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
@@ -45,7 +45,7 @@ const PrescriptionStatusTooltip: React.FC<{
           <div className="text-xs font-semibold text-gray-700 mb-2 pb-1 border-b">
             {status} ({filteredPrescriptions.length} of {statusPrescriptions.length})
           </div>
-          
+
           {/* Search Input */}
           <div className="mb-2">
             <input
@@ -57,7 +57,7 @@ const PrescriptionStatusTooltip: React.FC<{
               onClick={(e) => e.stopPropagation()} // Prevent tooltip from closing
             />
           </div>
-          
+
           {/* Prescriptions List */}
           <div className="max-h-64 overflow-y-auto">
             {filteredPrescriptions.length > 0 ? (
@@ -78,7 +78,7 @@ const PrescriptionStatusTooltip: React.FC<{
               </div>
             )}
           </div>
-          
+
           {filteredPrescriptions.length > 0 && (
             <div className="text-xs text-gray-500 pt-2 border-t mt-2">
               Showing {filteredPrescriptions.length} of {statusPrescriptions.length} prescriptions
@@ -134,7 +134,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const summaryCounts = useMemo(() => {
     const completed = allPrescriptions.filter(pres => pres.prescription_status === "Completed").length;
     const pending = allPrescriptions.filter(pres => pres.prescription_status === "Pending").length;
-    
+
     return {
       total: allPrescriptions.length,
       completed,
@@ -195,7 +195,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       });
 
       const data: any[] = response.data.data || [];
-      
+
       // Store all prescriptions for summary
       const allTransformedData = data.map((item: any, index: number) => ({
         id: index + 1,
@@ -209,7 +209,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         start_date: item.start_date || "",
         end_date: item.end_date || "",
       }));
-      
+
       // Filter out completed prescriptions if showCompleted is false
       let filteredData = data;
       if (!showCompleted) {
@@ -217,7 +217,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
           (prescription: Prescription) => prescription.prescription_status !== "Completed"
         );
       }
-      
+
       const transformedData = filteredData.map((item: any, index: number) => ({
         id: index + 1,
         prescription_number: item.name || "",
@@ -344,11 +344,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         const status = getValue();
         return (
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              status === "Completed" 
-                ? "bg-green-100 text-green-800" 
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status === "Completed"
+                ? "bg-green-100 text-green-800"
                 : "bg-yellow-100 text-yellow-800"
-            }`}>
+              }`}>
               {status || "Pending"}
             </span>
           </div>
@@ -417,7 +416,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
                 )}
               </div>
             </div>
-            
+
             {!isSummaryCollapsed && (
               <div className="px-4 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -432,7 +431,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <PrescriptionStatusTooltip status="Completed" prescriptions={allPrescriptions}>
                       <div className="flex items-center justify-between cursor-pointer hover:bg-green-100 rounded-lg transition-colors">
@@ -446,7 +445,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
                       </div>
                     </PrescriptionStatusTooltip>
                   </div>
-                  
+
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <PrescriptionStatusTooltip status="Pending" prescriptions={allPrescriptions}>
                       <div className="flex items-center justify-between cursor-pointer hover:bg-yellow-100 rounded-lg transition-colors">
@@ -480,7 +479,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
                 )}
               </div>
             </div>
-            
+
             {!isFiltersCollapsed && (
               <div className="px-4 pb-4">
                 <div className="bg-gray-50 p-3 rounded">

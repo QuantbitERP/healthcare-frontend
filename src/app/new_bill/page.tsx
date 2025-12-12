@@ -95,6 +95,7 @@ export interface Item {
   custom_classification?: string; // Add custom_classification field for high-alert items
   _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
   custom_business_category?: string; // Add custom_business_category field for filtering by company
+  max_discount?: number; // Add max_discount field for discount validation
 }
 
 interface ItemSearchProps {
@@ -183,7 +184,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
-      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category"]; // Add any fields you need
+      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category", "max_discount"]; // Add any fields you need
 
 
       const response = await fetch(
@@ -235,8 +236,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           custom_allow_sale_days: item.custom_allow_sale_days || 0, // Map custom_allow_sale_days from API
           custom_classification: item.custom_classification || '', // Map custom_classification from API
           custom_business_category: item.custom_business_category || '', // Map custom_business_category from API
+          max_discount: item.max_discount || 0, // Map max_discount from API
         }));
-        
+
         // Filter items by business category if company is selected
         if (selectedCompany) {
           fetchedItems = fetchedItems.filter(item => {
@@ -247,7 +249,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
             return categories.includes(selectedCompany);
           });
         }
-        
+
         return isGeneric ? fetchedItems : fetchedItems.slice(0, 10);
       } else {
         console.error('Item search failed:', response.status, response.statusText);
@@ -259,7 +261,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     }
   };
   const { posProfile, apiKey, apiSecret } = useAuth();
-  
+
   // Create network printer instance with credentials
   // const networkPrinter: (NetworkPrinter | null) = apiKey && apiSecret ? createNetworkPrinter(apiKey, apiSecret) : null;
 
@@ -528,7 +530,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     } else {
       // Original FEFO logic if no manual batches selected
       const allocationDetails: string[] = [];
-      
+
       for (const batch of sortedBatches) {
         if (remainingQty <= 0) break;
 
@@ -541,7 +543,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           remainingQty -= qtyToTake;
         }
       }
-      
+
       // Show detailed allocation message
       if (allocationDetails.length > 0) {
         const allocationText = allocationDetails.join(' + ');
@@ -621,11 +623,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           }}
           placeholder={isDisabled ? "Items loaded from requisition/prescription" : (isGeneric ? "Search Generic Name" : placeholder)}
           disabled={isDisabled}
-          className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
-            isDisabled 
-              ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed" 
+          className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDisabled
+              ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
               : "border-gray-300 focus:border-blue-500"
-          }`}
+            }`}
           autoComplete="off"
         />
         {searchTerm && (
@@ -846,30 +847,30 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   if (includedInPrintRate) {
     // MRP Inclusive GST Formula with Discount
     const totalGstRate = (cgstPercent + sgstPercent + igstPercent) / 100;
-    
+
     if (totalGstRate > 0) {
       // Step 1: Calculate discount amount directly on MRP
       // Discount Amount = MRP × (Discount% / 100)
       const discountAmountPerUnit = mrp * (discountPercent / 100);
       discountAmount = discountAmountPerUnit * saleQty;
-      
+
       // Step 2: Price after discount (includes GST)
       const priceAfterDiscountPerUnit = mrp - discountAmountPerUnit;
       // const totalPriceAfterDiscount = priceAfterDiscountPerUnit * saleQty;
-      
+
       // Step 3: Remove GST from discounted price to get taxable amount
       // Taxable Amount = Price After Discount / (1 + GST% / 100)
       const taxableAmountPerUnit = priceAfterDiscountPerUnit / (1 + totalGstRate);
       taxableAmount = taxableAmountPerUnit * saleQty;
-      
+
       // Step 4: Calculate GST amounts on taxable amount
       cgstAmount = taxableAmount * (cgstPercent / 100);
       sgstAmount = taxableAmount * (sgstPercent / 100);
       igstAmount = taxableAmount * (igstPercent / 100);
-      
+
       // Step 5: Final amount = Taxable Amount + GST Amounts
       totalAmount = taxableAmount + cgstAmount + sgstAmount + igstAmount;
-      
+
       // Set item amount after discount (taxable amount)
       itemAmountAfterDiscount = taxableAmount;
     } else {
@@ -905,8 +906,8 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     sgstPercent,
     igstPercent,
     includedInPrintRate,
-    basePricePerUnit: includedInPrintRate && (cgstPercent + sgstPercent + igstPercent) > 0 
-      ? mrp / (1 + (cgstPercent + sgstPercent + igstPercent) / 100) 
+    basePricePerUnit: includedInPrintRate && (cgstPercent + sgstPercent + igstPercent) > 0
+      ? mrp / (1 + (cgstPercent + sgstPercent + igstPercent) / 100)
       : mrp,
     discountAmount,
     priceAfterDiscountBase: taxableAmount,
@@ -1149,32 +1150,32 @@ export default function NewBill() {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
-      
+
       console.log(`[BinLocation] Fetching item: ${itemCode}`);
-      
+
       // Fetch the entire Item document
       const response = await fetch(`${API_BASE_URL}/Item/${itemCode}`, {
         method: 'GET',
         headers,
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         console.log(`[BinLocation] Failed to fetch item ${itemCode}, status: ${response.status}`);
         return "";
       }
-      
+
       const data = await response.json();
       console.log(`[BinLocation] Item data received:`, data.data);
-      
+
       // Log all keys in the data object
       if (data.data) {
         console.log(`[BinLocation] Available fields:`, Object.keys(data.data));
       }
-      
+
       // Try different possible field names for the child table
       const childTableNames = ['custom_item_consumption_details', 'item_consumption_details', 'consumption_details'];
-      
+
       for (const fieldName of childTableNames) {
         console.log(`[BinLocation] Checking field: ${fieldName}`);
         if (data.data?.[fieldName]) {
@@ -1188,13 +1189,13 @@ export default function NewBill() {
           }
         }
       }
-      
+
       // If no child table found, try direct bin_location field
       if (data.data?.bin_location) {
         console.log('[BinLocation] Found direct bin_location field:', data.data.bin_location);
         return data.data.bin_location;
       }
-      
+
       console.log(`[BinLocation] No bin_location found for item ${itemCode}`);
       return "";
     } catch (error) {
@@ -1377,7 +1378,7 @@ export default function NewBill() {
       const reqData = await reqResponse.json();
       const requisitionItems = reqData.data?.patient_requisition_item_details || [];
       console.log("Requisition items for", reqNo, ":", requisitionItems);
-      
+
       // Try different field names for quantity
       const totalQty = requisitionItems.reduce((sum: number, item: any) => {
         // Debug: Show all available fields
@@ -1412,7 +1413,7 @@ export default function NewBill() {
       // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
         console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
-        
+
         try {
           const fullInvoiceResponse = await fetch(
             `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
@@ -1422,11 +1423,11 @@ export default function NewBill() {
               credentials: 'include',
             }
           );
-          
+
           if (fullInvoiceResponse.ok) {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
-            
+
             if (fullInvoice?.items) {
               console.log("Invoice items:", fullInvoice.items);
               const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
@@ -1456,7 +1457,7 @@ export default function NewBill() {
       };
 
       console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
-      
+
       // Get all invoices for this requisition
       const invoiceResponse = await fetch(
         `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
@@ -1475,7 +1476,7 @@ export default function NewBill() {
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
       console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
-      
+
       let totalInvoicedQty = 0;
 
       // Fetch full invoice details for each invoice to get items
@@ -1489,21 +1490,21 @@ export default function NewBill() {
               credentials: 'include',
             }
           );
-          
+
           if (fullInvoiceResponse.ok) {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
-            
+
             console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
-            
+
             if (fullInvoice?.items) {
               console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
-              
+
               // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
                 .filter((item: any) => item.item_code === itemCode)
                 .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
-              
+
               console.log(`Item ${itemCode} quantity in invoice ${invoice.name}: ${itemInvoiceQty}`);
               totalInvoicedQty += itemInvoiceQty;
             }
@@ -1561,11 +1562,11 @@ export default function NewBill() {
               credentials: 'include',
             }
           );
-          
+
           if (fullInvoiceResponse.ok) {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
-            
+
             if (fullInvoice?.items) {
               // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
@@ -1602,7 +1603,7 @@ export default function NewBill() {
       };
 
       let status = "Pending";
-      
+
       if (forceComplete) {
         status = "Completed";
         console.log("Force completing requisition:", reqNo);
@@ -1610,7 +1611,7 @@ export default function NewBill() {
         // Check current status based on quantities
         const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
         console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
-        
+
         if (total_qty > 0 && invoiced_qty >= total_qty) {
           status = "Completed";
           console.log("Requisition marked as Completed");
@@ -1641,7 +1642,7 @@ export default function NewBill() {
       } else {
         const result = await response.json();
         console.log(`Requisition ${reqNo} status updated to: ${status}`, result);
-        
+
         // Verify the update by fetching the requisition again
         try {
           const verifyResponse = await fetch(
@@ -1652,7 +1653,7 @@ export default function NewBill() {
               credentials: 'include',
             }
           );
-          
+
           if (verifyResponse.ok) {
             const verifyData = await verifyResponse.json();
             console.log("Verification - Current status in database:", verifyData.data?.custom_requisition_status);
@@ -1704,11 +1705,11 @@ export default function NewBill() {
 
       const result = await response.json();
       console.log("File upload result:", result);
-      
+
       if (result.message && result.message.file_url) {
         const fileUrl = result.message.file_url;
         const fileName = result.message.file_name || file.name;
-        
+
         // If invoice name is provided, create a File document linked to the invoice
         if (invoiceName) {
           try {
@@ -1741,7 +1742,7 @@ export default function NewBill() {
             // Still return the URL even if linking failed
           }
         }
-        
+
         return fileUrl;
       } else {
         console.error("Invalid file upload response:", result);
@@ -2191,11 +2192,11 @@ export default function NewBill() {
     const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
     const classification = item.custom_classification || "";
     const isHighAlert = highAlertClassifications.includes(classification);
-    console.log('Checking high-alert classification:', { 
-      itemCode: item.itemCode, 
-      itemName: item.itemName, 
-      classification, 
-      isHighAlert 
+    console.log('Checking high-alert classification:', {
+      itemCode: item.itemCode,
+      itemName: item.itemName,
+      classification,
+      isHighAlert
     });
     return isHighAlert;
   };
@@ -2208,15 +2209,15 @@ export default function NewBill() {
         newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
         existingItems: items.map(i => ({ itemCode: i.itemCode, batchNo: i.batchNo, itemName: i.itemName, id: i.id }))
       });
-      
-      const existingItemIndex = items.findIndex(existingItem => 
-        existingItem.itemCode === item.itemCode && 
+
+      const existingItemIndex = items.findIndex(existingItem =>
+        existingItem.itemCode === item.itemCode &&
         existingItem.batchNo === item.batchNo &&
         existingItem.batchNo !== '' // Only check if batchNo is not empty
       );
-      
+
       console.log("Duplicate check result:", { existingItemIndex, itemCode: item.itemCode, batchNo: item.batchNo });
-      
+
       if (existingItemIndex !== -1) {
         const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
         showAlert("danger", "Duplicate Item", `Item ${item.itemName} with batch ${item.batchNo} already exists in grid at row number ${rowNum}.`);
@@ -2279,20 +2280,20 @@ export default function NewBill() {
           const updatedItems = [...prevItems, newItemWithCalculations];
           // Recalculate totals for all items
           const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
-          
+
           // Update bill totals
           const newTotalBillAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.totalAmt, 0);
           const newTotalDiscountAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.discountAmt, 0);
           const newTotalCgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.cgstAmt, 0);
           const newTotalSgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.sgstAmt, 0);
           const newTotalIgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.igstAmt, 0);
-          
+
           setTotalBillAmount(newTotalBillAmount);
           setTotalDiscountAmount(newTotalDiscountAmount);
           setTotalCgstAmount(newTotalCgstAmount);
           setTotalSgstAmount(newTotalSgstAmount);
           setTotalIgstAmount(newTotalIgstAmount);
-          
+
           return allCalculatedItems;
         } else {
           console.error("Error adding item to details: newItemWithCalculations is null or undefined");
@@ -2374,7 +2375,7 @@ export default function NewBill() {
       console.log("Checking requisition completion for:", sourceDocumentName);
       const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
       console.log("Is requisition fully completed?", isFullyCompleted);
-      
+
       if (isFullyCompleted) {
         showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
         return;
@@ -2397,7 +2398,7 @@ export default function NewBill() {
     // Calculate total discount amount for invoice level
     const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
     // const hasAnyDiscount = items.some(item => (Number(item.discountPercent) || 0) > 0);
-    
+
     // console.log('Save Draft - Discount calculation debug:', {
     //   items: items.map(item => ({
     //     itemCode: item.itemCode,
@@ -2432,34 +2433,34 @@ export default function NewBill() {
       items: items.map(item => {
         // Recalculate all items before saving to ensure correct values
         const calculatedItem = calculateItemTaxAndTotals(item, true);
-        
+
         // Get MRP (original rate includes GST)
         const mrp = Number(item.rate) || 0;
         const saleQty = Number(calculatedItem.saleQty) || 0;
         const discountPercent = Number(calculatedItem.discountPercent) || 0;
         const totalGstRate = (Number(calculatedItem.cgstPercent) + Number(calculatedItem.sgstPercent) + Number(calculatedItem.igstPercent)) / 100;
-        
+
         // When included_in_print_rate = 1, Frappe expects:
         // rate = MRP - discount_amount (already discounted price, includes GST)
         // Then Frappe removes GST: taxable_amount = rate / (1 + GST%)
         // Then Frappe adds GST back: GST = taxable_amount * GST%
         // Final amount = taxable_amount + GST
-        
+
         // Calculate discount amount on MRP
         const discountAmountOnMrp = mrp * (discountPercent / 100);
         // Rate after discount (includes GST)
         const rateAfterDiscount = mrp - discountAmountOnMrp;
         // Remove GST to get taxable amount
         const taxableAmountPerUnit = totalGstRate > 0 ? rateAfterDiscount / (1 + totalGstRate) : rateAfterDiscount;
-        
+
         // Calculate GST amounts (per unit)
         const cgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.cgstPercent) / 100);
         const sgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.sgstPercent) / 100);
         const igstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.igstPercent) / 100);
-        
+
         // Final amount per unit
         const finalAmountPerUnit = taxableAmountPerUnit + cgstAmountPerUnit + sgstAmountPerUnit + igstAmountPerUnit;
-        
+
         // Multiply by quantity for totals
         const totalDiscountAmount = discountAmountOnMrp * saleQty;
         const totalCgstAmount = cgstAmountPerUnit * saleQty;
@@ -2467,7 +2468,7 @@ export default function NewBill() {
         const totalIgstAmount = igstAmountPerUnit * saleQty;
         const totalAmount = finalAmountPerUnit * saleQty;
         const netAmount = taxableAmountPerUnit * saleQty;
-        
+
         console.log('Saving item with MRP Inclusive GST (Frappe format):', {
           itemCode: calculatedItem.itemCode,
           mrp,
@@ -2483,7 +2484,7 @@ export default function NewBill() {
           totalAmount,
           netAmount
         });
-        
+
         return {
           item_code: calculatedItem.itemCode,
           qty: isReturn ? saleQty : saleQty,
@@ -2661,13 +2662,13 @@ export default function NewBill() {
       console.log("Final payload for saving draft:", finalPayload); // Log the final payload
       console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
       console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-      
+
       // Check if a draft invoice is already loaded
       if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
         // Update existing draft invoice using PUT request
         console.log("Updating existing draft invoice:", loadedInvoiceName);
         // Add docstatus: 0 to ensure Frappe recalculates totals
-        
+
         const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
           method: 'PUT',
           headers: {
@@ -2713,12 +2714,12 @@ export default function NewBill() {
             // When draft saved successfully
             showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
             console.log("Draft saved:", result);
-            
+
             // --- START: Link file to invoice if file was uploaded ---
             if (selectedFile && attachmentUrl && result.message?.data?.name) {
               const invoiceName = result.message.data.name;
               console.log("Linking file to invoice:", invoiceName);
-              
+
               try {
                 const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
                   method: 'POST',
@@ -2751,7 +2752,7 @@ export default function NewBill() {
               }
             }
             // --- END: Link file to invoice ---
-            
+
             // Reset the form after successful save
             handleReset();
             // clearPatient();
@@ -2864,11 +2865,11 @@ export default function NewBill() {
     setSourceDocumentName(requisition.name);
     setSourceDocumentType('requisition');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
-    
+
     // Set Req ID field with requisition name and make it readonly
     setReqId(requisition.name);
     setIsReqIdReadonly(true);
-    
+
     // Fetch the full requisition document to ensure child tables are available
     let fullRequisitionData = requisition;
     try {
@@ -2962,9 +2963,9 @@ export default function NewBill() {
         // Get the invoiced quantity for this specific item
         const invoicedQty = await getItemInvoicedQuantity(requisition.name, itemCode);
         let remainingQtyToAllocate = requestedQty - invoicedQty;
-        
+
         console.log(`Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
-        
+
         // Skip items that are already fully invoiced
         if (remainingQtyToAllocate <= 0) {
           console.log(`Skipping item ${itemCode} - already fully invoiced`);
@@ -3121,11 +3122,11 @@ export default function NewBill() {
     setSourceDocumentName(prescription.prescription_number);
     setSourceDocumentType('prescription');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
-    
+
     // Set Req ID field with prescription number and make it readonly
     setReqId(prescription.prescription_number);
     setIsReqIdReadonly(true);
-    
+
     // Fetch the full prescription document to ensure child tables are available
     let fullPrescriptionData = prescription;
     try {
@@ -3219,9 +3220,9 @@ export default function NewBill() {
         // Get the invoiced quantity for this specific item from prescription
         const invoicedQty = await getItemInvoicedQuantityFromPrescription(prescription.prescription_number, itemCode);
         let remainingQtyToAllocate = requestedQty - invoicedQty;
-        
+
         console.log(`Prescription Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
-        
+
         // Skip items that are already fully invoiced
         if (remainingQtyToAllocate <= 0) {
           console.log(`Skipping prescription item ${itemCode} - already fully invoiced`);
@@ -3604,19 +3605,19 @@ export default function NewBill() {
   const handleHighAlertConfirm = async () => {
     if (pendingItem) {
       console.log("User confirmed high-alert item, proceeding with normal addition process:", pendingItem);
-      
+
       // Create a modified item that bypasses the high-alert check
       // We'll add a flag to skip the high-alert check in the normal flow
       const itemForNormalAddition = {
         ...pendingItem,
         _skipHighAlertCheck: true, // Add flag to bypass high-alert check
       };
-      
+
       // Call the normal handleAddItemToDetails function
       // This will ensure all calculations work exactly like normal item addition
       await handleAddItemToDetails(itemForNormalAddition);
     }
-    
+
     // Reset dialog state
     setShowHighAlertDialog(false);
     setHighAlertItem(null);
@@ -3635,7 +3636,7 @@ export default function NewBill() {
   // High-alert save dialog handlers
   const handleHighAlertSaveConfirm = async () => {
     console.log("User confirmed high-alert items, proceeding with save/finalize");
-    
+
     // Reset dialog state first
     setShowHighAlertSaveDialog(false);
     const actionToExecute = pendingSaveAction;
@@ -3675,6 +3676,17 @@ export default function NewBill() {
       return;
     }
 
+    // Check if any items have max_discount restriction
+    const restrictedItems = items.filter(item => 
+      item.max_discount && globalDiscountPercent > item.max_discount
+    );
+
+    if (restrictedItems.length > 0) {
+      const itemNames = restrictedItems.map(item => `${item.itemName} (${item.itemCode})`).join(', ');
+      showAlert("danger", "Error", `Cannot apply ${globalDiscountPercent}% discount. The following items have maximum discount limits: ${itemNames}`);
+      return;
+    }
+
     // Update all items with the global discount percentage
     // For tax-inclusive rates, apply discount to the total amount (which includes tax)
     // The calculateItemTaxAndTotals function will handle extracting the taxable amount and taxes
@@ -3683,14 +3695,14 @@ export default function NewBill() {
         ...item,
         discountPercent: globalDiscountPercent,
       }, true);
-      
+
       console.log('Applied global discount to item:', {
         itemCode: item.itemCode,
         discountPercent: globalDiscountPercent,
         newDiscountAmount: calculated.discountAmt,
         newTotalAmount: calculated.totalAmt
       });
-      
+
       return calculated;
     });
 
@@ -3778,15 +3790,15 @@ export default function NewBill() {
         const result = await response.json();
         if (result.message && result.message.length > 0) {
           console.log("Found attachments for invoice:", invoiceName, result.message);
-          
+
           // Store attachments in state
           setLoadedAttachments(result.message);
-          
+
           // Log the attachments
           result.message.forEach((attachment: any) => {
             console.log(`- ${attachment.file_name} (${attachment.file_url})`);
           });
-          
+
           // Show alert about attachments
           showAlert("primary", "Attachments Found", `Found ${result.message.length} attachment(s) for this invoice.`);
         } else {
@@ -3960,7 +3972,7 @@ export default function NewBill() {
             warehouse: fullInvoice.warehouse,
             set_warehouse: fullInvoice.set_warehouse
           });
-          
+
           if (invItem.batch_no && invItem.item_code && (fullInvoice.warehouse || fullInvoice.set_warehouse)) {
             const warehouse = fullInvoice.warehouse || fullInvoice.set_warehouse;
             try {
@@ -4019,7 +4031,7 @@ export default function NewBill() {
             includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
             req_qty: reqQty, // Add req_qty from requisition/prescription
           };
-          
+
           // Recalculate discount amount based on discount percentage to ensure consistency
           if (item.discountPercent > 0 && item.rate !== null && item.rate !== undefined && item.rate > 0) {
             const recalculatedDiscount = (item.rate as number) * (item.discountPercent / 100) * item.saleQty;
@@ -4169,13 +4181,13 @@ export default function NewBill() {
       }
 
       // Continue with finalize logic...
-    // Check for items with zero or negative stock
-    const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
-    if (itemsWithZeroOrNegativeStock.length > 0) {
-      const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
-      showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
-      return;
-    }
+      // Check for items with zero or negative stock
+      const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
+      if (itemsWithZeroOrNegativeStock.length > 0) {
+        const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
+        showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
+        return;
+      }
 
       if (!posProfile) {
         showAlert("danger", "Error", "Please select a POS profile.");
@@ -4188,7 +4200,7 @@ export default function NewBill() {
         console.log("Checking requisition completion for:", sourceDocumentName);
         const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
         console.log("Is requisition fully completed?", isFullyCompleted);
-        
+
         if (isFullyCompleted) {
           showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
           return;
@@ -4196,9 +4208,9 @@ export default function NewBill() {
       }
 
       // Calculate total discount amount for invoice level
-    const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
+      const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
 
-    const payload = {
+      const payload = {
         doctype: "POS Invoice",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
@@ -4221,34 +4233,34 @@ export default function NewBill() {
         items: items.map(item => {
           // Recalculate to get correct values with MRP Inclusive GST formula
           const calculatedItem = calculateItemTaxAndTotals(item, true);
-          
+
           // Get MRP (original rate includes GST)
           const mrp = Number(item.rate) || 0;
           const saleQty = Number(calculatedItem.saleQty) || 0;
           const discountPercent = Number(calculatedItem.discountPercent) || 0;
           const totalGstRate = (Number(calculatedItem.cgstPercent) + Number(calculatedItem.sgstPercent) + Number(calculatedItem.igstPercent)) / 100;
-          
+
           // When included_in_print_rate = 1, Frappe expects:
           // rate = MRP - discount_amount (already discounted price, includes GST)
           // Then Frappe removes GST: taxable_amount = rate / (1 + GST%)
           // Then Frappe adds GST back: GST = taxable_amount * GST%
           // Final amount = taxable_amount + GST
-          
+
           // Calculate discount amount on MRP
           const discountAmountOnMrp = mrp * (discountPercent / 100);
           // Rate after discount (includes GST)
           const rateAfterDiscount = mrp - discountAmountOnMrp;
           // Remove GST to get taxable amount
           const taxableAmountPerUnit = totalGstRate > 0 ? rateAfterDiscount / (1 + totalGstRate) : rateAfterDiscount;
-          
+
           // Calculate GST amounts (per unit)
           const cgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.cgstPercent) / 100);
           const sgstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.sgstPercent) / 100);
           const igstAmountPerUnit = taxableAmountPerUnit * (Number(calculatedItem.igstPercent) / 100);
-          
+
           // Final amount per unit
           const finalAmountPerUnit = taxableAmountPerUnit + cgstAmountPerUnit + sgstAmountPerUnit + igstAmountPerUnit;
-          
+
           // Multiply by quantity for totals
           const totalDiscountAmount = discountAmountOnMrp * saleQty;
           const totalCgstAmount = cgstAmountPerUnit * saleQty;
@@ -4256,7 +4268,7 @@ export default function NewBill() {
           const totalIgstAmount = igstAmountPerUnit * saleQty;
           const totalAmount = finalAmountPerUnit * saleQty;
           const netAmount = taxableAmountPerUnit * saleQty;
-          
+
           console.log('Finalize item with MRP Inclusive GST (Frappe format):', {
             itemCode: calculatedItem.itemCode,
             mrp,
@@ -4272,7 +4284,7 @@ export default function NewBill() {
             totalAmount,
             netAmount
           });
-          
+
           return {
             item_code: item.itemCode,
             qty: isReturn ? saleQty : saleQty,
@@ -4498,7 +4510,7 @@ export default function NewBill() {
         // --- START: Link file to invoice if file was uploaded ---
         if (selectedFile && attachmentUrl && invoiceName) {
           console.log("Linking file to finalized invoice:", invoiceName);
-          
+
           try {
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
               method: 'POST',
@@ -5041,7 +5053,7 @@ export default function NewBill() {
                   >
                     Apply Discount
                   </Button>
-                  
+
 
                   {/* Transaction Type Toggle*/}
                   <div className="flex items-center gap-2 ml-2">
@@ -5067,7 +5079,7 @@ export default function NewBill() {
                       </button>
                     </div>
                   </div>
-                  
+
 
                   {/* OPD Effect Checkbox */}
                   <div className="flex items-center gap-2 pl-2">
@@ -5089,7 +5101,7 @@ export default function NewBill() {
                 </div>
 
               </div>
-              
+
 
               <HorizontallyScrollableTable
                 items={items}
@@ -5164,9 +5176,9 @@ export default function NewBill() {
             // Show Print and Reset buttons for submitted invoices
             <>
               <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-              <Button 
-                type="primary-button" 
-                size="button-medium" 
+              <Button
+                type="primary-button"
+                size="button-medium"
                 onClick={async () => {
                   if (networkPrinter) {
                     try {
@@ -5297,7 +5309,7 @@ export default function NewBill() {
               if (response.ok) {
                 showAlert('success', 'Success', 'Return invoice created successfully.');
                 setShowCreateReturnModal(false);
-                
+
                 // Print the return invoice
                 const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
                 if (returnInvoiceName) {

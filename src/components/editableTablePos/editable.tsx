@@ -53,6 +53,7 @@ interface Item {
   mrp?: number; // Add MRP field for batch custom_mrp
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
   hasStock?: boolean; // Add hasStock field to track if item has stock
+  max_discount?: number; // Add max_discount field for discount validation
 }
 
 // Helper function to truncate to 2 decimal places (not round)
@@ -158,7 +159,7 @@ const Button = ({
 
 const STORAGE_KEY = 'table_column_order';
 const DEFAULT_COLUMN_ORDER = [
-  'select', 'alternateBatches', 'substituteItem', 'itemCode', 'itemName', 'batchNo', 
+  'select', 'alternateBatches', 'substituteItem', 'itemCode', 'itemName', 'batchNo',
   'expiryDate', 'stockQty', 'orderedQty', 'saleQty', 'rate', 'mrp', 'uom', 'itemAmount',
   'discountPercent', 'discountAmt', 'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt',
   'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'kitName', 'totalPckgAmt',
@@ -341,13 +342,12 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
-                  className={`flex items-center space-x-2 py-2 px-2 rounded cursor-move transition-all ${
-                    isBeingDragged
+                  className={`flex items-center space-x-2 py-2 px-2 rounded cursor-move transition-all ${isBeingDragged
                       ? 'opacity-50 bg-blue-50 border-2 border-blue-300'
                       : isDragOver
-                      ? 'bg-blue-100 border-2 border-blue-400'
-                      : 'hover:bg-gray-50 border-2 border-transparent'
-                  }`}
+                        ? 'bg-blue-100 border-2 border-blue-400'
+                        : 'hover:bg-gray-50 border-2 border-transparent'
+                    }`}
                 >
                   <div className="text-gray-400 cursor-grab active:cursor-grabbing">⋮⋮</div>
                   <input
@@ -490,15 +490,15 @@ const EditableTable = ({
           if (columnId === 'itemCode' || columnId === 'batchNo') {
             const newItemCode = columnId === 'itemCode' ? parsedValue : row.itemCode;
             const newBatchNo = columnId === 'batchNo' ? parsedValue : row.batchNo;
-            
+
             // Check for duplicate (excluding current row)
-            const duplicateIndex = old.findIndex((existingItem, existingIndex) => 
+            const duplicateIndex = old.findIndex((existingItem, existingIndex) =>
               existingIndex !== rowIndex && // Exclude current row
-              existingItem.itemCode === newItemCode && 
+              existingItem.itemCode === newItemCode &&
               existingItem.batchNo === newBatchNo &&
               newBatchNo !== '' // Only check if batchNo is not empty
             );
-            
+
             if (duplicateIndex !== -1) {
               const duplicateRow = duplicateIndex + 1; // Convert to 1-based row number
               const currentRow = rowIndex + 1;
@@ -515,7 +515,7 @@ const EditableTable = ({
           if (columnId === 'expiryDate' && parsedValue) {
             const daysUntilExpiry = Math.round((new Date(parsedValue).getTime() - Date.now()) / (1000 * 3600 * 24));
             const customAllowSaleDays = row.custom_allow_sale_days || 0; // Default to 0 if undefined
-            
+
             if (customAllowSaleDays > 0) {
               if (daysUntilExpiry > 0 && daysUntilExpiry <= customAllowSaleDays) {
                 if (showAlert) {
@@ -553,10 +553,29 @@ const EditableTable = ({
             const baseAmount = updatedRow.saleQty * rate;
             if (baseAmount > 0) {
               const discountPercent = (parsedValue / baseAmount) * 100;
+              
+              // Validate against max discount
+              if (updatedRow.max_discount && discountPercent > updatedRow.max_discount) {
+                if (showAlert) {
+                  showAlert("danger", "Discount Limit Exceeded", `Maximum discount allowed for ${updatedRow.itemName} is ${updatedRow.max_discount}%. You cannot give more than ${updatedRow.max_discount}% discount.`);
+                }
+                return row; // Return original row without changes
+              }
+              
               updatedRow = {
                 ...updatedRow,
                 discountPercent: discountPercent,
               };
+            }
+          }
+
+          // Validate discount percentage against max discount
+          if (columnId === 'discountPercent') {
+            if (updatedRow.max_discount && parsedValue > updatedRow.max_discount) {
+              if (showAlert) {
+                showAlert("danger", "Discount Limit Exceeded", `Maximum discount allowed for ${updatedRow.itemName} is ${updatedRow.max_discount}%. You cannot give more than ${updatedRow.max_discount}% discount.`);
+              }
+              return row; // Return original row without changes
             }
           }
 
@@ -935,7 +954,7 @@ const EditableTable = ({
 
           const [processedBatches, setProcessedBatches] = useState<Set<string>>(new Set());
 
-          const handleSelectAlternativeBulk = async (batches: Array<{itemCode: string; batchNo: string; expiryDate: string; qty: number}>) => {
+          const handleSelectAlternativeBulk = async (batches: Array<{ itemCode: string; batchNo: string; expiryDate: string; qty: number }>) => {
             if (!fetchItemPrice) return;
 
             try {
@@ -1118,14 +1137,14 @@ const EditableTable = ({
         cell: ({ getValue, row, column, table }) => {
           const item = row.original as Item;
           const rate = item.rate !== null ? item.rate : 0;
-          
+
           // If user has permission to change rate, make it editable
           if (canChangeRate) {
             return (
               <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
             );
           }
-          
+
           // Otherwise, show as readonly
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
@@ -1497,24 +1516,22 @@ const EditableTable = ({
               const item = row.original as Item;
               const isNoStock = item.hasStock === false;
               return (
-                <tr 
-                  key={row.id} 
-                  className={`${
-                    isNoStock 
-                      ? 'bg-red-50 text-red-900' 
+                <tr
+                  key={row.id}
+                  className={`${isNoStock
+                      ? 'bg-red-50 text-red-900'
                       : index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } ${row.getIsSelected() ? 'bg-blue-50' : ''}`} 
+                    } ${row.getIsSelected() ? 'bg-blue-50' : ''}`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className={`px-2 py-1 whitespace-nowrap text-sm ${
-                        isNoStock 
-                          ? 'text-red-900 font-semibold' 
+                      className={`px-2 py-1 whitespace-nowrap text-sm ${isNoStock
+                          ? 'text-red-900 font-semibold'
                           : 'text-gray-900'
-                      } ${cell.column.id === 'select'
-                        ? 'w-12'
-                        : 'min-w-[120px]'
+                        } ${cell.column.id === 'select'
+                          ? 'w-12'
+                          : 'min-w-[120px]'
                         }`}
 
                     >

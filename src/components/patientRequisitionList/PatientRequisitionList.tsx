@@ -18,24 +18,24 @@ import { DateRange } from "react-day-picker";
 import { useAuth } from "@/context/AuthContext";
 
 // Tooltip component
-const StatusTooltip: React.FC<{ 
-  status: string; 
-  requisitions: PatientRequisition[]; 
+const StatusTooltip: React.FC<{
+  status: string;
+  requisitions: PatientRequisition[];
   children: React.ReactNode;
 }> = ({ status, requisitions, children }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   const statusRequisitions = requisitions.filter(req => req.requisition_status === status);
-  
+
   // Filter requisitions based on search term
-  const filteredRequisitions = statusRequisitions.filter(req => 
+  const filteredRequisitions = statusRequisitions.filter(req =>
     req.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     req.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   return (
-    <div 
+    <div
       className="relative inline-block"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
@@ -46,7 +46,7 @@ const StatusTooltip: React.FC<{
           <div className="text-xs font-semibold text-gray-700 mb-2 pb-1 border-b">
             {status} ({filteredRequisitions.length} of {statusRequisitions.length})
           </div>
-          
+
           {/* Search Input */}
           <div className="mb-2">
             <input
@@ -58,7 +58,7 @@ const StatusTooltip: React.FC<{
               onClick={(e) => e.stopPropagation()} // Prevent tooltip from closing
             />
           </div>
-          
+
           {/* Requisitions List */}
           <div className="max-h-64 overflow-y-auto">
             {filteredRequisitions.length > 0 ? (
@@ -79,7 +79,7 @@ const StatusTooltip: React.FC<{
               </div>
             )}
           </div>
-          
+
           {filteredRequisitions.length > 0 && (
             <div className="text-xs text-gray-500 pt-2 border-t mt-2">
               Showing {filteredRequisitions.length} of {statusRequisitions.length} requisitions
@@ -142,7 +142,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
     const completed = allRequisitions.filter(req => req.requisition_status === "Completed").length;
     const partiallyCompleted = allRequisitions.filter(req => req.requisition_status === "Partially Pending").length;
     const pending = allRequisitions.filter(req => req.requisition_status === "Pending").length;
-    
+
     return {
       total: allRequisitions.length,
       completed,
@@ -152,7 +152,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   }, [allRequisitions]);
 
   // Function to update requisition completion status
- 
+
 
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {
     setLoading(true);
@@ -229,17 +229,17 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                 `${API_BASE_URL}/Patient Requisition/${req.name}?fields=["name","patient_requisition_item_details"]`,
                 { headers, withCredentials: true }
               );
-              
+
               if (fullReqResponse.data?.data) {
                 fullRequisitionData = fullReqResponse.data.data;
               }
             } catch (error) {
               console.error("Failed to fetch full requisition details for", req.name, ":", error);
             }
-            
+
             // Debug: Show the actual requisition items structure
             console.log("Requisition items structure for", req.name, ":", fullRequisitionData.patient_requisition_item_details);
-            
+
             // Get total quantity from requisition items
             const totalQty = (fullRequisitionData.patient_requisition_item_details || [])
               .reduce((sum: number, item: any) => {
@@ -261,19 +261,19 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               console.log("Invoice query response:", invoiceResponse.data);
               const invoices = invoiceResponse.data?.data || [];
               console.log("Found invoices:", invoices.length, invoices);
-              
+
               let invoicedQty = 0;
 
               // Fetch full invoice details for each invoice to get items
               for (const invoice of invoices) {
                 console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
-                
+
                 try {
                   const fullInvoiceResponse = await axios.get(
                     `${API_BASE_URL}/POS Invoice/${invoice.name}?fields=["name","items"]`,
                     { headers, withCredentials: true }
                   );
-                  
+
                   const fullInvoice = fullInvoiceResponse.data?.data;
                   if (fullInvoice?.items) {
                     console.log("Invoice items:", fullInvoice.items);
@@ -327,7 +327,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
         // Debug: Show all processed requisitions and filtered results
         console.log("All processed requisitions:", processedRequisitions.map(r => ({ name: r.name, status: r.requisition_status })));
         console.log("Filtered requisitions (showCompleted=" + showCompleted + "):", filteredRequisitions.map(r => ({ name: r.name, status: r.requisition_status })));
-        
+
         // Check for duplicates
         const duplicateNames = processedRequisitions
           .map(r => r.name)
@@ -375,7 +375,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
           total_qty: item.total_qty,
           invoiced_qty: item.invoiced_qty,
         })));
-        
+
         setRequisitions(transformedData);
       }
     } catch (error) {
@@ -491,13 +491,12 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
         const status = getValue();
         return (
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              status === "Completed" 
-                ? "bg-green-100 text-green-800" 
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status === "Completed"
+                ? "bg-green-100 text-green-800"
                 : status === "Partially Pending"
-                ? "bg-orange-100 text-orange-800"
-                : "bg-yellow-100 text-yellow-800"
-            }`}>
+                  ? "bg-orange-100 text-orange-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}>
               {status || "Pending"}
             </span>
           </div>
@@ -518,8 +517,8 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       ),
     },
 
-    
-    
+
+
   ];
 
   const columnNames = {
@@ -574,7 +573,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                 )}
               </div>
             </div>
-            
+
             {!isSummaryCollapsed && (
               <div className="px-4 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -589,7 +588,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <StatusTooltip status="Completed" requisitions={allRequisitions}>
                       <div className="flex items-center justify-between cursor-pointer hover:bg-green-100 rounded-lg transition-colors">
@@ -603,7 +602,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                       </div>
                     </StatusTooltip>
                   </div>
-                  
+
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <StatusTooltip status="Partially Pending" requisitions={allRequisitions}>
                       <div className="flex items-center justify-between cursor-pointer hover:bg-orange-100 rounded-lg transition-colors">
@@ -617,7 +616,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                       </div>
                     </StatusTooltip>
                   </div>
-                  
+
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <StatusTooltip status="Pending" requisitions={allRequisitions}>
                       <div className="flex items-center justify-between cursor-pointer hover:bg-yellow-100 rounded-lg transition-colors">
@@ -651,75 +650,75 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                 )}
               </div>
             </div>
-            
+
             {!isFiltersCollapsed && (
               <div className="px-4 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 bg-gray-50">
-              <div>
-                <Label htmlFor="ipNo" className="text-xs font-medium">IP No:</Label>
-                <Input
-                  id="ipNo"
-                  placeholder="Enter IP No"
-                  value={ipNo}
-                  onChange={(e) => setIpNo(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="ipNo" className="text-xs font-medium">IP No:</Label>
+                    <Input
+                      id="ipNo"
+                      placeholder="Enter IP No"
+                      value={ipNo}
+                      onChange={(e) => setIpNo(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
 
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="expired"
-                  checked={isExpired}
-                  onCheckedChange={(checked) => setIsExpired(checked === true)}
-                />
-                <Label htmlFor="expired" className="text-xs">Expired</Label>
-              </div>
+                  <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                      id="expired"
+                      checked={isExpired}
+                      onCheckedChange={(checked) => setIsExpired(checked === true)}
+                    />
+                    <Label htmlFor="expired" className="text-xs">Expired</Label>
+                  </div>
 
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="stat"
-                  checked={isStat}
-                  onCheckedChange={(checked) => setIsStat(checked === true)}
-                />
-                <Label htmlFor="stat" className="text-xs">Stat</Label>
-              </div>
+                  <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                      id="stat"
+                      checked={isStat}
+                      onCheckedChange={(checked) => setIsStat(checked === true)}
+                    />
+                    <Label htmlFor="stat" className="text-xs">Stat</Label>
+                  </div>
 
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="discharge"
-                  checked={isDischarge}
-                  onCheckedChange={(checked) => setIsDischarge(checked === true)}
-                />
-                <Label htmlFor="discharge" className="text-xs">Discharge</Label>
-              </div>
+                  <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                      id="discharge"
+                      checked={isDischarge}
+                      onCheckedChange={(checked) => setIsDischarge(checked === true)}
+                    />
+                    <Label htmlFor="discharge" className="text-xs">Discharge</Label>
+                  </div>
 
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="routine"
-                  checked={isRoutine}
-                  onCheckedChange={(checked) => setIsRoutine(checked === true)}
-                />
-                <Label htmlFor="routine" className="text-xs">Routine</Label>
-              </div>
+                  <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                      id="routine"
+                      checked={isRoutine}
+                      onCheckedChange={(checked) => setIsRoutine(checked === true)}
+                    />
+                    <Label htmlFor="routine" className="text-xs">Routine</Label>
+                  </div>
 
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="asap"
-                  checked={isASAP}
-                  onCheckedChange={(checked) => setIsASAP(checked === true)}
-                />
-                <Label htmlFor="asap" className="text-xs">ASAP</Label>
-                
-              </div>
+                  <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                      id="asap"
+                      checked={isASAP}
+                      onCheckedChange={(checked) => setIsASAP(checked === true)}
+                    />
+                    <Label htmlFor="asap" className="text-xs">ASAP</Label>
 
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="showCompleted"
-                  checked={showCompleted}
-                  onCheckedChange={(checked) => setShowCompleted(checked === true)}
-                />
-                <Label htmlFor="showCompleted" className="text-xs font-medium">Show Completed Requisitions</Label>
-              </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                      id="showCompleted"
+                      checked={showCompleted}
+                      onCheckedChange={(checked) => setShowCompleted(checked === true)}
+                    />
+                    <Label htmlFor="showCompleted" className="text-xs font-medium">Show Completed Requisitions</Label>
+                  </div>
                 </div>
               </div>
             )}

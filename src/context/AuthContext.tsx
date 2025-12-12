@@ -97,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("apiSecret");
     localStorage.removeItem("posProfile");
     localStorage.removeItem("currentUser");
-    
+
     // Clear all Frappe API cache from localStorage
     const cacheKeys = [
       "frappe_cache_warehouses",
@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     ];
     cacheKeys.forEach((key) => localStorage.removeItem(key));
     console.log("Cache cleared on logout");
-    
+
     router.push("/login");
   };
 
@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const authKey = key || apiKey;
       const authSecret = secret || apiSecret;
-      
+
       if (!authKey || !authSecret) {
         console.error("No API credentials available for getCurrentUser");
         return null;
@@ -235,11 +235,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const data = await response.json();
       const userRoles = data.data?.roles || [];
-      
+
       // Check if user has the specified role
       const hasRole = userRoles.some((role: any) => role.role === roleName);
       console.log(`User ${currentUser} has role ${roleName}:`, hasRole);
-      
+
       return hasRole;
     } catch (error) {
       console.error("Error checking user role:", error);

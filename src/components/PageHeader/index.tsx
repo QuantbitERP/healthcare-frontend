@@ -85,7 +85,7 @@ function PageHeader(props: PageHeaderProps) {
 
       // Search for documents across common doctypes
       const doctypes = ['Customer', 'Supplier', 'Item', 'Sales Invoice', 'Purchase Order', 'Patient', 'GRN'];
-      
+
       for (const doctype of doctypes) {
         try {
           const response = await fetch(
@@ -150,10 +150,10 @@ function PageHeader(props: PageHeaderProps) {
       setIsSearching(true);
       searchTimeoutRef.current = setTimeout(async () => {
         const frappeResults = await searchFrappe(query);
-        
+
         // Combine local and Frappe results, prioritizing local pages
         const combined = [...localFiltered, ...frappeResults];
-        
+
         setSuggestions(combined);
         setShowSuggestions(combined.length > 0);
         setIsSearching(false);
@@ -234,7 +234,7 @@ function PageHeader(props: PageHeaderProps) {
       }
     };
   }, []);
-  
+
   return (
     <div style={{ zIndex: 100 }} className="flex justify-between items-center p-md border-b border-[#D9D9E0] fixed top-0 right-0 bg-white w-full z-50 " >
       <div className="flex space-x-2">
@@ -252,7 +252,7 @@ function PageHeader(props: PageHeaderProps) {
         ) : null}
         <span className="font-bold cappitalize  text-lg">{title}</span>
       </div>
-      
+
       <div className="flex items-center gap-4">
         {/* Search Input */}
         <div className="relative">
@@ -299,11 +299,10 @@ function PageHeader(props: PageHeaderProps) {
                 <button
                   key={`${suggestion.route}-${index}`}
                   onClick={() => handleSuggestionClick(suggestion.route)}
-                  className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors ${
-                    index === selectedIndex
+                  className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors ${index === selectedIndex
                       ? 'bg-blue-50 text-blue-600'
                       : 'hover:bg-gray-50 text-gray-700'
-                  } ${index !== suggestions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    } ${index !== suggestions.length - 1 ? 'border-b border-gray-100' : ''}`}
                 >
                   <span className="text-lg">{suggestion.icon}</span>
                   <div className="flex-1">
@@ -311,11 +310,10 @@ function PageHeader(props: PageHeaderProps) {
                     <div className="text-xs text-gray-500 flex items-center gap-2">
                       <span>{suggestion.route.substring(0, 50)}...</span>
                       {suggestion.type && (
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          suggestion.type === 'page' ? 'bg-blue-100 text-blue-700' :
-                          suggestion.type === 'document' ? 'bg-green-100 text-green-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${suggestion.type === 'page' ? 'bg-blue-100 text-blue-700' :
+                            suggestion.type === 'document' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                          }`}>
                           {suggestion.type}
                         </span>
                       )}
@@ -348,10 +346,10 @@ function PageHeader(props: PageHeaderProps) {
             </div>
           )}
         </div>
-        
+
         {/* Right Buttons */}
         {rightButtons}
-        
+
         {/* User Profile */}
         <UserProfile />
       </div>

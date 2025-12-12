@@ -31,7 +31,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
     try {
       setIsLoadingData(true);
       if (!invoice?.name) return;
-      
+
       // Fetch all return invoices for this original invoice
       const response = await fetch(
         `https://192.168.7.221:4422/api/resource/POS Invoice?filters=[["return_against","=","${invoice.name}"]]&fields=["name"]`,
@@ -41,10 +41,10 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
           }
         }
       );
-      
+
       const data = await response.json();
       const returnedQtyMap: { [key: string]: number } = {};
-      
+
       if (data.data && Array.isArray(data.data)) {
         // For each return invoice, fetch its full details to get items
         for (const returnInvoice of data.data) {
@@ -57,7 +57,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
                 }
               }
             );
-            
+
             const detailData = await detailResponse.json();
             if (detailData.data && detailData.data.items) {
               detailData.data.items.forEach((item: any) => {
@@ -71,7 +71,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
           }
         }
       }
-      
+
       setAlreadyReturnedQty(returnedQtyMap);
       console.log('Already Returned Quantities:', returnedQtyMap);
     } catch (error) {
@@ -85,15 +85,15 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
     const originalItem = invoice.items.find((i: any) => i.item_code === itemCode);
     const alreadyReturned = alreadyReturnedQty[itemCode] || 0;
     const availableQty = originalItem.qty - alreadyReturned;
-    
+
     const newErrors = { ...validationErrors };
-    
+
     if (qty > availableQty) {
       newErrors[itemCode] = `Cannot return more than ${availableQty} units (${originalItem.qty} original - ${alreadyReturned} already returned)`;
     } else {
       delete newErrors[itemCode];
     }
-    
+
     setValidationErrors(newErrors);
 
     setReturnItems(currentItems =>
@@ -104,7 +104,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
   };
 
   // Filter items based on search term
-  const filteredItems = returnItems.filter(item => 
+  const filteredItems = returnItems.filter(item =>
     item.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.item_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -126,7 +126,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
         return_qty: item.return_qty
       }));
 
-    if(itemsToReturn.length === 0) {
+    if (itemsToReturn.length === 0) {
       alert('Please select at least one item to return');
       return;
     }
@@ -229,7 +229,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
               </p>
             )}
           </div>
-          
+
           <div className="overflow-x-auto border border-gray-200 rounded-lg">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
@@ -260,7 +260,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
                     const alreadyReturned = alreadyReturnedQty[item.item_code] || 0;
                     const availableQty = item.qty - alreadyReturned;
                     const hasError = validationErrors[item.item_code];
-                    
+
                     return (
                       <React.Fragment key={item.name}>
                         <tr className={`hover:bg-blue-50 transition-colors ${hasError ? 'bg-red-50' : ''}`}>
@@ -279,17 +279,16 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
                             </span>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            <input 
-                              type="number" 
-                              value={item.return_qty} 
-                              onChange={e => handleQtyChange(item.item_code, Number(e.target.value))} 
-                              max={availableQty} 
-                              min={0} 
-                              className={`w-20 border-2 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 transition-all ${
-                                hasError 
-                                  ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                            <input
+                              type="number"
+                              value={item.return_qty}
+                              onChange={e => handleQtyChange(item.item_code, Number(e.target.value))}
+                              max={availableQty}
+                              min={0}
+                              className={`w-20 border-2 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 transition-all ${hasError
+                                  ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                                   : 'border-blue-300 focus:ring-blue-500 focus:border-blue-500'
-                              }`}
+                                }`}
                             />
                           </td>
                           <td className="px-4 py-4 text-sm text-center text-gray-600 font-medium">{item.uom}</td>
@@ -323,10 +322,10 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Total Return Qty</label>
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-600" />
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={totalReturnQty} 
+                <input
+                  type="text"
+                  readOnly
+                  value={totalReturnQty}
                   className="flex-1 bg-transparent text-2xl font-bold text-gray-900 border-none outline-none"
                 />
               </div>
@@ -335,10 +334,10 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Total Return Amount</label>
               <div className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-green-600" />
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`₹${totalReturnAmount.toFixed(2)}`} 
+                <input
+                  type="text"
+                  readOnly
+                  value={`₹${totalReturnAmount.toFixed(2)}`}
                   className="flex-1 bg-transparent text-2xl font-bold text-gray-900 border-none outline-none"
                 />
               </div>
@@ -349,9 +348,9 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Refund Mode</label>
-              <select 
-                value={refundMode} 
-                onChange={e => setRefundMode(e.target.value)} 
+              <select
+                value={refundMode}
+                onChange={e => setRefundMode(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               >
                 <option>Cash</option>
@@ -361,11 +360,11 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Return Remarks</label>
-              <input 
-                type="text" 
-                value={returnRemarks} 
-                onChange={e => setReturnRemarks(e.target.value)} 
-                placeholder="Enter return remarks..." 
+              <input
+                type="text"
+                value={returnRemarks}
+                onChange={e => setReturnRemarks(e.target.value)}
+                placeholder="Enter return remarks..."
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
