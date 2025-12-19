@@ -943,7 +943,7 @@ export default function NewBill() {
   // --- END: Added state for file upload ---
 
   const router = useRouter();
-  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole } = useAuth();
+  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole, currentUser } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
@@ -2889,12 +2889,64 @@ export default function NewBill() {
     fetchPosProfileWarehouse();
   }, [posProfile, apiKey, apiSecret]);
 
+  const checkForOpeningEntries = async () => {
+    if (!posProfile || !currentUser || !apiKey || !apiSecret) {
+      return false;
+    }
+
+    try {
+      console.log("Checking for opening entries for POS profile:", posProfile, "and user:", currentUser);
+      const response = await fetch(
+        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `token ${apiKey}:${apiSecret}`,
+          },
+          body: JSON.stringify({
+            pos_profile: posProfile,
+            current_user: currentUser
+          }),
+        }
+      );
+
+      const result = await response.json();
+      console.log("Opening entries check result:", result);
+
+      if (response.ok && result.message) {
+        const conflictData = result.message;
+        
+        if (conflictData.has_conflict) {
+          if (conflictData.conflict_type === "own_entry") {
+            showAlert("warning", "Opening Entry Found", `Opening entry ${conflictData.entry_name} is present against this profile and against you. Please close this entry first.`);
+            return true;
+          } else if (conflictData.conflict_type === "other_user_entry") {
+            showAlert("warning", "Opening Entry Found", `Opening entry ${conflictData.entry_name} is present against this profile and created by ${conflictData.user_name}. Please ask them to close this entry first.`);
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking for opening entries:", error);
+      return false;
+    }
+  };
+
   const handlePOSProfileSelect = (profile: string) => {
     setPosProfile(profile);
     localStorage.setItem('posProfile', profile);
     setShowPosProfileSelector(false);
     // Reset form when POS Profile changes
     handleReset();
+  };
+
+  const handleChangePOSProfile = async () => {
+    const hasOpeningEntries = await checkForOpeningEntries();
+    if (!hasOpeningEntries) {
+      setShowPosProfileSelector(true);
+    }
   };
 
   // Hide patient search dropdown when clicking outside
@@ -4819,7 +4871,7 @@ export default function NewBill() {
               <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
                 View POS Invoices
               </Button>
-              <Button type="secondary-button" size="button-medium" onClick={() => setShowPosProfileSelector(true)}>
+              <Button type="secondary-button" size="button-medium" onClick={handleChangePOSProfile}>
                 Change POS Profile
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={logout}>
