@@ -1841,7 +1841,6 @@ export default function Return() {
     setTotalIgstAmount(0);
     setShowClosingEntryModal(false);
     setCompanyAddress(null);
-    setIsReturn(false);
     setIsReturnInvoice(false);
     setIsDirectReturn(false);
     setRecordedPayments([]);
@@ -5346,16 +5345,22 @@ export default function Return() {
         </div>
         <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
           {isReturn ? (
-            // Show Cancel Return button when in return mode
+            // Show Cancel Return and Return Bill buttons when in return mode
             <>
               <Button type="danger-button" size="button-medium" onClick={() => {
-                setIsReturn(false);
                 setIsReturnInvoice(false);
                 setIsDirectReturn(false);
                 setReturnAgainstInvoice('');
                 handleReset();
               }}>
                 Cancel Return
+              </Button>
+              <Button 
+                type="primary-outlined-button" 
+                size="button-medium" 
+                onClick={() => setShowSelectInvoiceModal(true)}
+              >
+                Return Bill
               </Button>
               <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
                 Submit Return
