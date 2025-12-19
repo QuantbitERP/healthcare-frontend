@@ -4826,6 +4826,10 @@ export default function NewBill() {
         <CreateReturnEntryModal
           isOpen={showCreateReturnModal}
           onClose={() => setShowCreateReturnModal(false)}
+          onBack={() => {
+            setShowCreateReturnModal(false);
+            setShowSelectInvoiceModal(true);
+          }}
           invoice={selectedInvoiceForReturn}
           onSubmit={async (returnData) => {
             try {

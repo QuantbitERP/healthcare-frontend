@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Loader, AlertTriangle } from 'lucide-react';
+import { X, FileText, Loader, AlertTriangle, Eye } from 'lucide-react';
 import Button from '../buttons/Button';
 import { useAuth } from '@/context/AuthContext';
 import DataTableComponent from '../DataTable';
@@ -15,11 +15,30 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   const { apiKey, apiSecret } = useAuth();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [customer, _setCustomer] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [saleReturnAllowDays, setSaleReturnAllowDays] = useState<number>(30); // Default 30 days
   const [restrictedInvoice, setRestrictedInvoice] = useState<string | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [itemsPopup, setItemsPopup] = useState<{ visible: boolean; items: any[]; invoiceName: string }>({ visible: false, items: [], invoiceName: '' });
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Live search with debouncing
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      fetchInvoices(term, dateRange);
+    }, 300); // 300ms debounce
+    
+    setSearchTimeout(timeout);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -28,9 +47,20 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     }
   }, [isOpen]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
   const columnNames = {
     name: 'Invoice No',
     customer: 'Customer',
+    custom_patient_name: 'Patient Name',
+    custom_doctor_name: 'Doctor Name',
     posting_date: 'Date',
     posting_time: 'Time',
     grand_total: 'Amount',
@@ -51,6 +81,14 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       ),
     },
     {
+      accessorKey: 'custom_patient_name',
+      header: 'Patient Name',
+    },
+    {
+      accessorKey: 'custom_doctor_name',
+      header: 'Doctor Name',
+    },
+    {
       accessorKey: 'posting_date',
       header: 'Date',
       cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString(),
@@ -58,11 +96,42 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     {
       id: 'posting_time',
       header: 'Time',
-      cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleTimeString(),
+      cell: ({ row }: any) => {
+        // First try to use the posting_time field from API
+        if (row.original.posting_time) {
+          // Extract only HH:mm:ss from time like "18:20:35.704928"
+          const timeMatch = row.original.posting_time.match(/(\d{2}:\d{2}:\d{2})/);
+          return timeMatch ? timeMatch[1] : row.original.posting_time;
+        }
+        
+        // Fallback: check if posting_date contains time information
+        const dateStr = row.original.posting_date;
+        const timeMatch = dateStr.match(/(\d{2}:\d{2}:\d{2})/);
+        if (timeMatch) {
+          return timeMatch[1];
+        }
+        
+        // If no time data available, show N/A
+        return 'N/A';
+      },
     },
     {
       accessorKey: 'grand_total',
       header: 'Amount',
+    },
+    {
+      id: 'items',
+      header: 'Items',
+      cell: ({ row }: any) => (
+        <Button
+          type="secondary-button"
+          size="button-small"
+          onClick={() => fetchInvoiceItems(row.original.name)}
+          disabled={loadingItems}
+        >
+          <Eye className="w-4 h-4" />
+        </Button>
+      ),
     },
     {
       accessorKey: 'status',
@@ -119,6 +188,66 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     },
   ];
 
+const fetchInvoiceItems = async (invoiceName: string) => {
+    setLoadingItems(true);
+    try {
+      // Fetch invoice details with items
+      const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${invoiceName}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        }
+      });
+      const data = await response.json();
+      
+      if (data.data && data.data.items) {
+        const items = data.data.items;
+        
+        // Fetch return invoices against this invoice to calculate already returned qty
+        const returnResponse = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoiceName}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`, {
+          headers: {
+            'Authorization': `token ${apiKey}:${apiSecret}`,
+          }
+        });
+        const returnData = await returnResponse.json();
+        
+        // Calculate already returned quantities for each item
+        const itemsWithReturnQty = await Promise.all(items.map(async (item: any) => {
+          let alreadyReturnedQty = 0;
+          
+          if (returnData.data && returnData.data.length > 0) {
+            // Fetch items from all return invoices
+            for (const returnInv of returnData.data) {
+              const returnInvResponse = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`, {
+                headers: {
+                  'Authorization': `token ${apiKey}:${apiSecret}`,
+                }
+              });
+              const returnInvData = await returnInvResponse.json();
+              
+              if (returnInvData.data && returnInvData.data.items) {
+                const returnedItem = returnInvData.data.items.find((ri: any) => ri.item_code === item.item_code);
+                if (returnedItem) {
+                  alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                }
+              }
+            }
+          }
+          
+          return {
+            ...item,
+            already_returned_qty: alreadyReturnedQty
+          };
+        }));
+        
+        setItemsPopup({ visible: true, items: itemsWithReturnQty, invoiceName });
+      }
+    } catch (error) {
+      console.error('Failed to fetch invoice items:', error);
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
   const fetchSaleReturnAllowDays = async () => {
     try {
       const response = await fetch(`https://192.168.7.221:4422/api/resource/HIS%20Settings/HIS%20Settings`, {
@@ -136,17 +265,26 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     }
   };
 
-  const fetchInvoices = async (invNum = invoiceNumber, cust = customer, dRange = dateRange) => {
+  const fetchInvoices = async (search = searchTerm, dRange = dateRange) => {
     setLoading(true);
     try {
       const apiFilters: any[] = [['docstatus', '=', 1]];
-      if (invNum) apiFilters.push(['name', 'like', `%${invNum}%`]);
-      if (cust) apiFilters.push(['customer', 'like', `%${cust}%`]);
+      
+      // Multi-field search: Invoice No, Patient Name, Doctor Name
+      if (search) {
+        const searchFilters = [
+          ['name', 'like', `%${search}%`],
+          ['custom_patient_name', 'like', `%${search}%`],
+          ['custom_doctor_name', 'like', `%${search}%`]
+        ];
+        apiFilters.push(searchFilters);
+      }
+      
       if (dRange[0]) apiFilters.push(['posting_date', '>=', dRange[0].toISOString()]);
       if (dRange[1]) apiFilters.push(['posting_date', '<=', dRange[1].toISOString()]);
 
       const queryParams = new URLSearchParams({
-        fields: JSON.stringify(['name', 'customer', 'posting_date', 'grand_total', 'status']),
+        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status']),
         filters: JSON.stringify(apiFilters),
         limit_page_length: '100'
       });
@@ -157,6 +295,8 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         }
       });
       const data = await response.json();
+      // console.log('API Response:', data);
+      // console.log('Invoices data:', data.data);
       setInvoices(data.data || []);
     } catch (error) {
       console.error('Failed to fetch invoices', error);
@@ -211,17 +351,16 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
                 loading={loading}
                 columnNames={columnNames}
                 onSearch={(term) => {
-                  setInvoiceNumber(term);
-                  fetchInvoices(term, customer, dateRange);
+                  handleSearchChange(term);
                 }}
                 onDataChange={(dates) => {
                   if (dates) {
                     const newDateRange: [Date | null, Date | null] = [dates.from || null, dates.to || null];
                     setDateRange(newDateRange);
-                    fetchInvoices(invoiceNumber, customer, newDateRange);
+                    fetchInvoices(searchTerm, newDateRange);
                   }
                 }}
-                searchPlaceholder='Search by Invoice No...'
+                searchPlaceholder='Search by Invoice No, Patient Name, or Doctor Name...'
                 hideFilters={false}
               />
             </div>
@@ -274,6 +413,79 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
                     OK
                   </Button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Items Popup Modal */}
+        {itemsPopup.visible && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] shadow-2xl flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Invoice Items</h3>
+                  <p className="text-sm text-gray-600 mt-1">Invoice: {itemsPopup.invoiceName}</p>
+                </div>
+                <button 
+                  onClick={() => setItemsPopup({ visible: false, items: [], invoiceName: '' })}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-y-auto p-6">
+                {loadingItems ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Item Code</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Item Name</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Batch No</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Expiry Date</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Sale Qty</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Already Returned Qty</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Rate</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemsPopup.items.map((item: any, index: number) => (
+                          <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.item_code}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.item_name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.batch_no || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.custom_expiry_date || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-900">{item.qty}</td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <span className={`px-2 py-1 rounded-full text-xs ${item.already_returned_qty > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                {item.already_returned_qty || 0}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-900">₹{item.rate?.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">₹{item.amount?.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end p-6 border-t border-gray-200 gap-3 bg-white">
+                <Button 
+                  onClick={() => setItemsPopup({ visible: false, items: [], invoiceName: '' })}
+                  type='secondary-button'
+                  className="px-6 py-2.5"
+                >
+                  Close
+                </Button>
               </div>
             </div>
           </div>

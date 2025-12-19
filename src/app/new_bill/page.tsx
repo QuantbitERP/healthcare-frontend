@@ -41,7 +41,6 @@ import { useFrappeApi } from "@/api/api";
 import ClosingEntryModal from '@/components/pos/ClosingEntryModal';
 import ViewPosInvoicesModal from '@/components/pos/ViewPosInvoicesModal'; // New Import
 import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
-import CreateReturnEntryModal from '@/components/return/CreateReturnEntryModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
 interface AlertState {
@@ -62,6 +61,7 @@ export interface Item {
   stockQty: number;
   orderedQty: number;
   saleQty: number;
+  returnQty?: number; // Add returnQty field for return invoices
   batch: string;
   batchNo: string; // Add batchNo to Item interface
   expiryDate: string; // Add expiryDate to Item interface
@@ -1249,8 +1249,8 @@ export default function NewBill() {
   const [sourceDocumentType, setSourceDocumentType] = useState<'requisition' | 'prescription' | ''>(''); // Track the source document type
 
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
-  const [showCreateReturnModal, setShowCreateReturnModal] = useState(false);
-  const [selectedInvoiceForReturn, setSelectedInvoiceForReturn] = useState<any>(null);
+  const [_showCreateReturnModal, setShowCreateReturnModal] = useState(false);
+  const [_selectedInvoiceForReturn, setSelectedInvoiceForReturn] = useState<any>(null);
   const [loadedInvoiceName, setLoadedInvoiceName] = useState<string | null>(null);
   const [loadedInvoiceDocstatus, setLoadedInvoiceDocstatus] = useState<number>(0);
   const [isLoadingFromPosInvoice, setIsLoadingFromPosInvoice] = useState<boolean>(false);
@@ -1276,10 +1276,14 @@ export default function NewBill() {
   const [showClosingEntryModal, setShowClosingEntryModal] = useState(false); // New state
   const [CompanyAddress, setCompanyAddress] = useState<string | null>(null);
   const [isReturn, setIsReturn] = useState(false);
+  const [isReturnInvoice, setIsReturnInvoice] = useState(false);
+  const [isDirectReturn, setIsDirectReturn] = useState(false);
+  const [returnAgainstInvoice, setReturnAgainstInvoice] = useState<string>('');
   const [roundedGrandTotal, setRoundedGrandTotal] = useState<number>(0);
   // Payments captured from RecordPaymentModal
   const [recordedPayments, setRecordedPayments] = useState<Array<{
     id: number;
+    name?: string; // Frappe child table row identifier
     paymentMode: string;
     transactionNo: string;
     bankName: string;
@@ -1323,6 +1327,26 @@ export default function NewBill() {
       checkRolePermission();
     }
   }, [isAuthenticated, isInitialized, checkUserRole]);
+
+  // Handle direct return checkbox changes
+  useEffect(() => {
+    console.log('Direct return useEffect triggered:', { isReturn, isReturnInvoice, isDirectReturn, itemsLength: items.length });
+    
+    if (isReturn && !isReturnInvoice) {
+      // Direct return mode enabled (checkbox checked without loading invoice)
+      console.log('Setting direct return mode - Sale Qty column will be hidden');
+      // Set isReturnInvoice to true and isDirectReturn to true
+      setIsReturnInvoice(true);
+      setIsDirectReturn(true);
+      
+      // No need to set saleQty to 0 since the column will be hidden
+    } else if (!isReturn && isReturnInvoice) {
+      // Return mode disabled, reset all return states
+      console.log('Disabling return mode');
+      setIsReturnInvoice(false);
+      setIsDirectReturn(false);
+    }
+  }, [isReturn]);
 
   // Function to check if sale exists for requisition
   // const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
@@ -1818,6 +1842,8 @@ export default function NewBill() {
     setShowClosingEntryModal(false);
     setCompanyAddress(null);
     setIsReturn(false);
+    setIsReturnInvoice(false);
+    setIsDirectReturn(false);
     setRecordedPayments([]);
     setAlert({
       show: false,
@@ -1839,17 +1865,53 @@ export default function NewBill() {
     // Update items in state with recalculated values
     setItems(calculatedItems);
 
-    const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
-    const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmt, 0);
-    const newTotalCgstAmount = calculatedItems.reduce((sum, item) => sum + item.cgstAmt, 0);
-    const newTotalSgstAmount = calculatedItems.reduce((sum, item) => sum + item.sgstAmt, 0);
-    const newTotalIgstAmount = calculatedItems.reduce((sum, item) => sum + item.igstAmt, 0);
+    // For return mode, calculate totals based on returnQty
+    if (isReturn) {
+      const newTotalBillAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + (item.totalAmt * returnQty / saleQty);
+      }, 0);
+      const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + (item.discountAmt * returnQty / saleQty);
+      }, 0);
+      const newTotalCgstAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + (item.cgstAmt * returnQty / saleQty);
+      }, 0);
+      const newTotalSgstAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + (item.sgstAmt * returnQty / saleQty);
+      }, 0);
+      const newTotalIgstAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + (item.igstAmt * returnQty / saleQty);
+      }, 0);
 
-    setTotalBillAmount(newTotalBillAmount);
-    setTotalDiscountAmount(newTotalDiscountAmount);
-    setTotalCgstAmount(newTotalCgstAmount);
-    setTotalSgstAmount(newTotalSgstAmount);
-    setTotalIgstAmount(newTotalIgstAmount);
+      setTotalBillAmount(newTotalBillAmount);
+      setTotalDiscountAmount(newTotalDiscountAmount);
+      setTotalCgstAmount(newTotalCgstAmount);
+      setTotalSgstAmount(newTotalSgstAmount);
+      setTotalIgstAmount(newTotalIgstAmount);
+    } else {
+      // Normal mode calculations
+      const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
+      const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmt, 0);
+      const newTotalCgstAmount = calculatedItems.reduce((sum, item) => sum + item.cgstAmt, 0);
+      const newTotalSgstAmount = calculatedItems.reduce((sum, item) => sum + item.sgstAmt, 0);
+      const newTotalIgstAmount = calculatedItems.reduce((sum, item) => sum + item.igstAmt, 0);
+
+      setTotalBillAmount(newTotalBillAmount);
+      setTotalDiscountAmount(newTotalDiscountAmount);
+      setTotalCgstAmount(newTotalCgstAmount);
+      setTotalSgstAmount(newTotalSgstAmount);
+      setTotalIgstAmount(newTotalIgstAmount);
+    }
   };
 
   const clearPatient = () => {
@@ -2513,6 +2575,7 @@ export default function NewBill() {
         };
       }),
       payments: recordedPayments.map(p => ({
+        ...(p.name ? { name: p.name } : {}), // Include name if exists (for updating existing rows)
         mode_of_payment: p.paymentMode || "Cash",
         amount: parseFloat(p.paidAmount || "0") || 0,
         reference_no: p.custom_transaction_no || p.transactionNo || "",
@@ -4071,6 +4134,7 @@ export default function NewBill() {
       if (fullInvoice.payments && Array.isArray(fullInvoice.payments)) {
         const loadedPayments = fullInvoice.payments.map((payment: any, index: number) => ({
           id: index + 1,
+          name: payment.name, // Preserve Frappe child table row identifier
           paymentMode: payment.mode_of_payment || "Cash",
           transactionNo: payment.reference_no || "",
           bankName: payment.bank || "",
@@ -4154,6 +4218,111 @@ export default function NewBill() {
         showAlert("danger", "Error", "Failed to submit invoice. Please try again.");
       }
     } else {
+      // Handle return invoice submission
+      if (isReturn) {
+        // Filter items with return quantity > 0
+        const itemsToReturn = items.filter(item => (item.returnQty || 0) > 0);
+        
+        if (itemsToReturn.length === 0) {
+          showAlert("danger", "Error", "Please enter return quantities for at least one item.");
+          return;
+        }
+
+        // Prepare return data with proper GST-inclusive calculations
+        const returnData = {
+          original_invoice: returnAgainstInvoice || null, // null for direct returns
+          included_in_print_rate: 1, // GST included in MRP - set at invoice level
+          customer: selectedCustomer || '',
+          company: selectedCompany || '',
+          pos_profile: posProfile || '',
+          // Custom fields
+          custom_patient_name: patientData?.name || '',
+          custom_uhid: patientData?.ABHAID || '',
+          custom_bed_no: patientData?.bed || '',
+          custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
+          custom_visit_code: patientData?.visitID || '',
+          custom_phone: patientData?.phone || '',
+          custom_doctor_name: patientData?.doctor || '',
+          custom_age: patientData?.age || '',
+          return_items: itemsToReturn.map(item => {
+          const returnQty = item.returnQty || 0;
+          // const saleQty = item.saleQty || 1;
+          const discountPercent = item.discountPercent || 0;
+            
+            // Rate per unit (MRP with GST included)
+            const ratePerUnit = item.rate || 0;
+            
+            // For GST-inclusive calculations with discount:
+            // If discount is applied, we need to send the rate AFTER discount
+            // Backend will handle the GST extraction
+            const discountAmount = ratePerUnit * (discountPercent / 100);
+            const rateAfterDiscount = ratePerUnit - discountAmount;
+            
+            return {
+              item_code: item.itemCode,
+              item_name: item.itemName,
+              return_qty: returnQty,
+              margin_type: discountPercent > 0 ? "Percentage" : "", // Use Percentage only if discount applied
+              margin_rate_or_amount: 0,
+              discount_percentage: discountPercent, // Original discount percentage
+              discount_amount: discountAmount * returnQty, // Total discount amount for return qty
+              rate: rateAfterDiscount, // Rate after discount (GST still included)
+              price_list_rate: ratePerUnit, // Original MRP before discount
+              cgst_rate: item.cgstPercent || 0,
+              sgst_rate: item.sgstPercent || 0,
+              igst_rate: item.igstPercent || 0,
+              batch_no: item.batchNo || '',
+              custom_expiry_date: item.expiryDate || '',
+              warehouse: item.warehouse || selectedWarehouse,
+              item_tax_template: item.taxTemplate || '',
+            };
+          }),
+          refund_mode: 'Cash',
+          return_remarks: remarks || (returnAgainstInvoice ? 'Return invoice' : 'Direct return invoice'),
+          taxes: []
+        };
+
+        try {
+          const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `token ${apiKey}:${apiSecret}`,
+            },
+            body: JSON.stringify(returnData),
+          });
+
+          const result = await response.json();
+          
+          if (response.ok) {
+            const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
+            const returnMessage = returnAgainstInvoice 
+              ? `Return invoice ${returnInvoiceName} created successfully against ${returnAgainstInvoice}.`
+              : `Direct return invoice ${returnInvoiceName} created successfully.`;
+            showAlert('success', 'Success', returnMessage);
+            
+            // Print the return invoice
+            if (returnInvoiceName) {
+              const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+              window.open(printUrl, '_blank');
+            }
+            
+            // Reset form
+            handleReset();
+            setIsReturn(false);
+            setIsReturnInvoice(false);
+            setIsDirectReturn(false);
+            setReturnAgainstInvoice('');
+          } else {
+            throw new Error(result.message || 'Failed to create return invoice');
+          }
+        } catch (error: any) {
+          showAlert('danger', 'Error', error.message || 'Failed to create return invoice');
+        }
+        
+        return;
+      }
+
       // Create new invoice and submit it directly
       if (!patientData) {
         showAlert("danger", "Error", "Please select a patient before finalizing.");
@@ -4641,7 +4810,7 @@ export default function NewBill() {
         <PageHeader
           parentTitle="POS"
           parentLink="/pos"
-          title="New OPD Bill"
+          title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New OPD Bill"}
           icon="../assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           warehouse={selectedWarehouse || undefined}
@@ -5116,6 +5285,10 @@ export default function NewBill() {
                 recalculateTotals={recalculateTotals}
                 fetchTaxDetails={fetchTaxDetails}
                 showAlert={showAlert}
+                isReturnMode={isReturn}
+                isReturnInvoice={isReturnInvoice}
+                isDirectReturn={isDirectReturn}
+                canChangeRate={canChangeRate}
                 barcode={barcode}
                 setBarcode={setBarcode}
                 reqId={reqId}
@@ -5124,7 +5297,6 @@ export default function NewBill() {
                 setIsReqIdReadonly={setIsReqIdReadonly}
                 isComplete={isComplete}
                 setIsComplete={setIsComplete}
-                canChangeRate={canChangeRate}
               />
             </CardContent>
           </Card>
@@ -5147,6 +5319,7 @@ export default function NewBill() {
             totalBillAmount={totalBillAmount}
             transactionType={transactionType}
             roundedGrandTotal={roundedGrandTotal}
+            isLoadedInvoice={!!loadedInvoiceName}
           />
         </div>
       </div>
@@ -5172,7 +5345,23 @@ export default function NewBill() {
           <Button type="secondary-button" size="button-medium">Preview & Print</Button>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
-          {loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
+          {isReturn ? (
+            // Show Cancel Return button when in return mode
+            <>
+              <Button type="danger-button" size="button-medium" onClick={() => {
+                setIsReturn(false);
+                setIsReturnInvoice(false);
+                setIsDirectReturn(false);
+                setReturnAgainstInvoice('');
+                handleReset();
+              }}>
+                Cancel Return
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+                Submit Return
+              </Button>
+            </>
+          ) : loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
             // Show Print and Reset buttons for submitted invoices
             <>
               <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
@@ -5207,14 +5396,19 @@ export default function NewBill() {
               <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
                 Save as Draft
               </Button>
-              <Button type="primary-outlined-button" size="button-medium" onClick={() => setShowSelectInvoiceModal(true)}>
+              <Button 
+                type="primary-outlined-button" 
+                size="button-medium" 
+                onClick={() => setShowSelectInvoiceModal(true)}
+                disabled={isReturn}
+              >
                 Return Bill
               </Button>
               <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
                 Closing Entry
               </Button>
               <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
-                {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print'}
+                {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
               </Button>
             </>
           )}
@@ -5260,6 +5454,15 @@ export default function NewBill() {
       )}
       {/* --- END: Modified Modal Call --- */}
 
+      {showViewPosInvoicesModal && (
+        <ViewPosInvoicesModal
+          isOpen={showViewPosInvoicesModal}
+          onClose={() => setShowViewPosInvoicesModal(false)}
+          posProfile={posProfile}
+          showAlert={showAlert}
+          onLoadInvoice={handleLoadInvoice}
+        />
+      )}
 
       {showAlternativeItemsPopover && itemSeekingAlternatives && (
         <AlternativeItemsPopover
@@ -5277,65 +5480,142 @@ export default function NewBill() {
         posProfile={posProfile}
         showAlert={showAlert}
       />
+{showSelectInvoiceModal && (
+  <SelectInvoiceModal
+    isOpen={showSelectInvoiceModal}
+    onClose={() => setShowSelectInvoiceModal(false)}
+    onSelect={async (invoice) => {  // Make the handler async
+      try {
+        // Load invoice data into the new_bill page for return processing
+        setIsReturn(true);
+        setIsReturnInvoice(true);
+        setIsDirectReturn(false); // This is not a direct return
+        setReturnAgainstInvoice(invoice.name);
 
-      {showSelectInvoiceModal && (
-        <SelectInvoiceModal
-          isOpen={showSelectInvoiceModal}
-          onClose={() => setShowSelectInvoiceModal(false)}
-          onSelect={(invoice) => {
-            setSelectedInvoiceForReturn(invoice);
-            setShowSelectInvoiceModal(false);
-            setShowCreateReturnModal(true);
-          }}
-        />
-      )}
+        // Load customer and patient data
+        setSelectedCustomer(invoice.customer || '');
+        if (invoice.custom_patient_name) {
+          setPatientData({
+            name: invoice.custom_patient_name || '',
+            age: invoice.custom_age || '',
+            sex: invoice.custom_sex || '',
+            phone: invoice.custom_phone || '',
+            ABHAID: invoice.custom_abha_id || '',
+            category: invoice.custom_category || '',
+            doctor: invoice.custom_doctor_name || '',
+            mrn: invoice.custom_mrn || '',
+            displayNo: invoice.custom_display_no || '',
+            dept: invoice.custom_department || '',
+            visitType: invoice.custom_visit_type || '',
+            company: invoice.custom_company || '',
+            visitID: invoice.custom_visit_id || '',
+            bed: invoice.custom_bed || '',
+          });
+        }
 
-      {showCreateReturnModal && selectedInvoiceForReturn && (
-        <CreateReturnEntryModal
-          isOpen={showCreateReturnModal}
-          onClose={() => setShowCreateReturnModal(false)}
-          invoice={selectedInvoiceForReturn}
-          onSubmit={async (returnData) => {
+        // Load company, warehouse, and other settings
+        setSelectedCompany(invoice.company || '');
+        setSelectedWarehouse(invoice.set_warehouse || '');
+
+        // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
+        const loadedItems: Item[] = await Promise.all(
+          invoice.items.map(async (item: any, index: number) => {
+            let alreadyReturnedQty = 0;
+
             try {
-              const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `token ${apiKey}:${apiSecret}`,
-                },
-                body: JSON.stringify(returnData),
-              });
-              const result = await response.json();
-              if (response.ok) {
-                showAlert('success', 'Success', 'Return invoice created successfully.');
-                setShowCreateReturnModal(false);
-
-                // Print the return invoice
-                const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
-                if (returnInvoiceName) {
-                  const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
-                  window.open(printUrl, '_blank');
+              // Fetch return invoices against this invoice
+              const returnResponse = await fetch(
+                `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                {
+                  headers: {
+                    Authorization: `token ${apiKey}:${apiSecret}`,
+                  },
                 }
-              } else {
-                throw new Error(result.message || 'Failed to create return invoice');
-              }
-            } catch (error: any) {
-              showAlert('danger', 'Error', error.message);
-            }
-          }}
-        />
-      )}
+              );
+              const returnData = await returnResponse.json();
 
-      {/* New View POS Invoices Modal */}
-      {showViewPosInvoicesModal && (
-        <ViewPosInvoicesModal
-          isOpen={showViewPosInvoicesModal}
-          onClose={() => setShowViewPosInvoicesModal(false)}
-          posProfile={posProfile}
-          showAlert={showAlert}
-          onLoadInvoice={handleLoadInvoice}
-        />
-      )}
+              if (returnData.data && returnData.data.length > 0) {
+                for (const returnInv of returnData.data) {
+                  const returnInvResponse = await fetch(
+                    `https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`,
+                    {
+                      headers: {
+                        Authorization: `token ${apiKey}:${apiSecret}`,
+                      },
+                    }
+                  );
+                  const returnInvData = await returnInvResponse.json();
+
+                  if (returnInvData.data?.items) {
+                    const returnedItem = returnInvData.data.items.find(
+                      (ri: any) => ri.item_code === item.item_code
+                    );
+                    if (returnedItem) {
+                      alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Failed to fetch already returned quantities:', error);
+              alreadyReturnedQty = 0;
+            }
+
+            return {
+              id: `${item.item_code}-${item.batch_no || ''}-${index}`,
+              alternateBatches: '',
+              substituteItem: '',
+              itemCode: item.item_code,
+              itemName: item.item_name,
+              uom: item.uom,
+              stockQty: item.actual_qty || 0,
+              orderedQty: 0,
+              saleQty: item.qty,
+              returnQty: 0,
+              alreadyReturnedQty,
+              batch: item.batch_no || '',
+              batchNo: item.batch_no || '',
+              expiryDate: item.custom_expiry_date || '',
+              batchStockQty: item.actual_batch_qty || 0,
+              rate: item.rate,
+              taxTemplate: item.item_tax_template || '',
+              description: item.description || '',
+              itemAmount: item.base_amount || 0,
+              discountPercent: item.discount_percentage || 0,
+              discountAmt: item.discount_amount || 0,
+              cgstPercent: item.cgst_rate || 0,
+              cgstAmt: item.cgst_amount || 0,
+              sgstPercent: item.sgst_rate || 0,
+              sgstAmt: item.sgst_amount || 0,
+              igstPercent: item.igst_rate || 0,
+              igstAmt: item.igst_amount || 0,
+              totalAmt: item.amount || 0,
+              kitName: '',
+              totalPckgAmt: 0,
+              packageName: '',
+              binLocation: item.custom_bin_location || '',
+              warehouse: item.warehouse || '',
+              marginType: item.margin_type || '',
+              includedInPrintRate: true,
+              mrp: item.custom_mrp || 0,
+            };
+          })
+        );
+
+        setItems(loadedItems);
+
+        // Close modal
+        setShowSelectInvoiceModal(false);
+
+        // Show success message
+        showAlert('success', 'Invoice Loaded', `Invoice ${invoice.name} loaded for return. Enter return quantities and submit.`);
+      } catch (err) {
+        console.error('Error loading invoice for return:', err);
+        showAlert('danger', 'Error', 'Failed to load invoice data.');
+      }
+    }}
+  />
+)}
 
       {/* High-Alert Confirmation Dialog */}
       <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>

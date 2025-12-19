@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Search } from "lucide-react";
+import { X, Search, Eye } from "lucide-react";
 import Button from "@/components/buttons/Button";
 import { useAuth } from '@/context/AuthContext';
 import DataTableComponent, { TableCellComponents } from '../DataTable';
@@ -45,6 +45,8 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const [dateRange, setDateRange] = useState<{ from: Date | null, to: Date | null }>({ from: null, to: null });
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showItemsModal, setShowItemsModal] = useState(false);
+  const [itemsForModal, setItemsForModal] = useState<any[]>([]);
 
   const { apiKey, apiSecret } = useAuth();
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
@@ -77,7 +79,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       };
 
       const filterStr = JSON.stringify(filters);
-      const url = `${API_BASE_URL}/POS%20Invoice?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","items","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
+      const url = `${API_BASE_URL}/POS%20Invoice?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -87,6 +89,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched invoices:', data.data); // Debug log
         setInvoices(data.data || []);
       } else {
         console.error('Failed to fetch invoices:', response.status, response.statusText);
@@ -128,8 +131,36 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     };
   }, [invoiceSearchTerm, dateRange, isOpen]);
 
-  const handleViewDetails = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
+  const handleViewDetails = async (invoice: Invoice) => {
+    console.log('Selected invoice details:', invoice); // Debug log
+    
+    // Fetch the full invoice document to get items
+    try {
+      const invoiceUrl = `${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}`;
+      const invoiceResponse = await fetch(invoiceUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+        },
+        credentials: 'include',
+      });
+      
+      if (invoiceResponse.ok) {
+        const invoiceData = await invoiceResponse.json();
+        console.log('Fetched full invoice:', invoiceData.data); // Debug log
+        const fullInvoice = { ...invoice, ...invoiceData.data };
+        setSelectedInvoice(fullInvoice);
+      } else {
+        console.error('Failed to fetch full invoice:', invoiceResponse.status);
+        setSelectedInvoice(invoice);
+      }
+    } catch (error) {
+      console.error('Error fetching full invoice:', error);
+      setSelectedInvoice(invoice);
+    }
+    
     setShowDetailsModal(true);
   };
 
@@ -288,15 +319,20 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
               {selectedInvoice.items && selectedInvoice.items.length > 0 && (
                 <div className="pt-4 border-t border-gray-200 mt-4">
-                  <h4 className="font-semibold mb-2">Items:</h4>
-                  <ul className="space-y-1">
-                    {selectedInvoice.items.map((item, index) => (
-                      <li key={index} className="flex justify-between text-xs">
-                        <span>{item.item_name || item.item_code} (x{item.qty})</span>
-                        <span>₹{(item.amount || 0).toFixed(2)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">Items ({selectedInvoice.items.length}):</h4>
+                    <button
+                      onClick={() => {
+                        setItemsForModal(selectedInvoice.items);
+                        setShowItemsModal(true);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition-colors"
+                      title="View items"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="text-xs font-medium">View Items</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -310,7 +346,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                   Submit Invoice
                 </Button>
               )}
-              {onLoadInvoice && (
+              {onLoadInvoice && selectedInvoice.status !== 'Return' && (
                 <Button
                   type="primary-button"
                   size="button-medium"
@@ -327,6 +363,70 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 Print Invoice
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={() => setShowDetailsModal(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Items List Mini-Popup */}
+      {showItemsModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[1002] p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[70vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-white-600 to-white-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-white" />
+                <h3 className="text-lg font-bold text-black">Invoice Items</h3>
+              </div>
+              <button
+                className="w-8 h-8 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 flex items-center justify-center text-white transition-all"
+                onClick={() => setShowItemsModal(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Items Table */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <table className="w-full">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Item Code</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Item Name</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Qty</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Rate</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {itemsForModal.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-600">{index + 1}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.item_code}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{item.item_name || item.item_code}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.qty}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right">₹{(item.rate || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">₹{(item.amount || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50 sticky bottom-0">
+                  <tr>
+                    <td colSpan={5} className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Total:</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                      ₹{itemsForModal.reduce((sum, item) => sum + (item.amount || 0), 0).toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end">
+              <Button type="secondary-button" size="button-medium" onClick={() => setShowItemsModal(false)}>
                 Close
               </Button>
             </div>

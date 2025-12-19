@@ -27,6 +27,8 @@ interface Item {
   stockQty: number;
   orderedQty: number;
   saleQty: number;
+  returnQty?: number; // Add returnQty field for return invoices
+  alreadyReturnedQty?: number; // Add alreadyReturnedQty field for tracking already returned quantity
   batch: string;
   batchNo: string;
   expiryDate: string;
@@ -99,7 +101,7 @@ const EditableCell = ({
   if (isEditing) {
     return (
       <input
-        value={value}
+        value={value || ''}
         onChange={e => setValue(e.target.value)}
         onBlur={onBlur}
         onKeyDown={onKeyDown}
@@ -160,7 +162,7 @@ const Button = ({
 const STORAGE_KEY = 'table_column_order';
 const DEFAULT_COLUMN_ORDER = [
   'select', 'alternateBatches', 'substituteItem', 'itemCode', 'itemName', 'batchNo',
-  'expiryDate', 'stockQty', 'orderedQty', 'saleQty', 'rate', 'mrp', 'uom', 'itemAmount',
+  'expiryDate', 'stockQty', 'orderedQty', 'saleQty', 'returnQty', 'alreadyGivenQty', 'rate', 'mrp', 'uom', 'itemAmount',
   'discountPercent', 'discountAmt', 'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt',
   'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'kitName', 'totalPckgAmt',
   'packageName', 'binLocation', 'actions'
@@ -183,6 +185,8 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     stockQty: "Stock Qty",
     orderedQty: "Ordered Qty",
     saleQty: "Sale Qty",
+    returnQty: "Return Qty",
+    alreadyGivenQty: "Already Given Qty",
     rate: "Unit Sale Rate",
     mrp: "MRP",
     uom: "UOM",
@@ -409,6 +413,9 @@ interface EditableTableProps {
   isComplete?: boolean;
   setIsComplete?: (value: boolean) => void;
   canChangeRate?: boolean; // Add permission flag for rate changes
+  isReturnMode?: boolean; // Add prop to enable return mode
+  isReturnInvoice?: boolean; // Add prop to track when invoice is loaded from return bill
+  isDirectReturn?: boolean; // Add prop to distinguish direct returns (hide Sale Qty column)
 }
 
 const EditableTable = ({
@@ -435,6 +442,9 @@ const EditableTable = ({
   isComplete,
   setIsComplete,
   canChangeRate = false, // Default to false (readonly)
+  isReturnMode = false, // Default to false (normal mode)
+  isReturnInvoice = false, // Default to false (not loaded from return bill)
+  isDirectReturn = false, // Default to false (not direct return)
 }: EditableTableProps) => {
   const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
   const effectiveApiKey = apiKey || authApiKey;
@@ -451,6 +461,38 @@ const EditableTable = ({
     itemAmount: false, // Show Item Amount column by default
     totalAmt: true, // Hide Total Amount column by default
   });
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
+
+  // Initialize column order from localStorage or default
+  useEffect(() => {
+    const savedOrder = localStorage.getItem(STORAGE_KEY);
+    if (savedOrder) {
+      try {
+        const parsedOrder = JSON.parse(savedOrder);
+        // Ensure returnQty and alreadyGivenQty are in the right position
+        const updatedOrder = [...parsedOrder];
+        const saleQtyIndex = updatedOrder.indexOf('saleQty');
+        
+        // Remove returnQty and alreadyGivenQty from wherever they are
+        const returnQtyIndex = updatedOrder.indexOf('returnQty');
+        const alreadyGivenQtyIndex = updatedOrder.indexOf('alreadyGivenQty');
+        if (returnQtyIndex !== -1) updatedOrder.splice(returnQtyIndex, 1);
+        if (alreadyGivenQtyIndex !== -1) updatedOrder.splice(alreadyGivenQtyIndex, 1);
+        
+        // Insert them right after saleQty
+        if (saleQtyIndex !== -1) {
+          updatedOrder.splice(saleQtyIndex + 1, 0, 'returnQty', 'alreadyGivenQty');
+        }
+        
+        setColumnOrder(updatedOrder);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrder));
+      } catch {
+        setColumnOrder(DEFAULT_COLUMN_ORDER);
+      }
+    } else {
+      setColumnOrder(DEFAULT_COLUMN_ORDER);
+    }
+  }, []);
 
   const handleRemoveItemFromDetails = (itemId: string) => {
     setItems(prev => {
@@ -468,7 +510,7 @@ const EditableTable = ({
         if (index === rowIndex) {
           let parsedValue = value;
 
-          if (['stockQty', 'orderedQty', 'saleQty', 'rate', 'mrp', 'itemAmount', 'discountPercent', 'discountAmt',
+          if (['stockQty', 'orderedQty', 'saleQty', 'returnQty', 'rate', 'mrp', 'itemAmount', 'discountPercent', 'discountAmt',
             'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt'].includes(columnId)) {
             parsedValue = parseFloat(value) || 0;
           }
@@ -481,6 +523,21 @@ const EditableTable = ({
                 showAlert("warning", "Stock Warning", "You Dont have enough stock for this batch, Please Select alternate batch");
               } else {
                 alert('You Dont have enough stock for this batch, Please Select alternate batch');
+              }
+              return row; // Return original row without changes
+            }
+          }
+
+          // Return quantity validation - only apply when data is populated from invoice return
+          if (columnId === 'returnQty' && row.alreadyReturnedQty !== undefined) {
+            const alreadyReturned = row.alreadyReturnedQty || 0;
+            const maxReturnQty = row.saleQty - alreadyReturned;
+            
+            if (parsedValue > maxReturnQty) {
+              if (showAlert) {
+                showAlert("danger", "Return Quantity Error", `You can add max ${maxReturnQty} qty as return qty. (Sale Qty: ${row.saleQty}, Already Returned: ${alreadyReturned})`);
+              } else {
+                alert(`You can add max ${maxReturnQty} qty as return qty. (Sale Qty: ${row.saleQty}, Already Returned: ${alreadyReturned})`);
               }
               return row; // Return original row without changes
             }
@@ -550,7 +607,9 @@ const EditableTable = ({
 
           if (columnId === 'discountAmt') {
             const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
-            const baseAmount = updatedRow.saleQty * rate;
+            // Use returnQty for return invoices, saleQty for regular invoices
+            const quantity = updatedRow.returnQty && updatedRow.returnQty > 0 ? updatedRow.returnQty : updatedRow.saleQty;
+            const baseAmount = quantity * rate;
             if (baseAmount > 0) {
               const discountPercent = (parsedValue / baseAmount) * 100;
               
@@ -580,7 +639,9 @@ const EditableTable = ({
           }
 
           const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
-          const baseAmount = updatedRow.saleQty * rate;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = updatedRow.returnQty && updatedRow.returnQty > 0 ? updatedRow.returnQty : updatedRow.saleQty;
+          const baseAmount = quantity * rate;
           const discountAmount = baseAmount * (updatedRow.discountPercent / 100);
           const itemAmountAfterDiscount = baseAmount - discountAmount;
 
@@ -601,7 +662,7 @@ const EditableTable = ({
             }
           }
 
-          if (['rate', 'orderedQty', 'saleQty', 'discountPercent', 'discountAmt',
+          if (['rate', 'orderedQty', 'saleQty', 'returnQty', 'discountPercent', 'discountAmt',
             'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow, true);
@@ -621,9 +682,8 @@ const EditableTable = ({
     });
   };
 
-  const table = useReactTable<Item>({
-    data: items,
-    columns: [
+  // Create dynamic columns array based on return mode
+  const dynamicColumns = [
       {
         id: "select",
         header: ({ table }) => (
@@ -1124,13 +1184,39 @@ const EditableTable = ({
           );
         },
       },
-      {
+      // Conditionally show Sale Qty column based on return type
+      ...(isDirectReturn ? [] : [{
         accessorKey: "saleQty",
         header: "Sale Qty",
         cell: ({ getValue, row, column, table }) => (
+          isReturnInvoice ? (
+            <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600">
+              {getValue()}
+            </div>
+          ) : (
+            <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
+          )
+        ),
+      }]),
+    // Conditionally add Return Qty and Already Given Qty columns only in return mode
+      ...(isReturnMode ? [{
+        accessorKey: "returnQty",
+        header: "Return Qty",
+        cell: ({ getValue, row, column, table }) => (
           <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
         ),
-      },
+      }, {
+        accessorKey: "alreadyGivenQty",
+        header: "Already Given Qty",
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600">
+              {item.alreadyReturnedQty || 0}
+            </div>
+          );
+        },
+      }] : []),
       {
         accessorKey: "rate",
         header: "Unit Sale Rate",
@@ -1178,7 +1264,9 @@ const EditableTable = ({
         cell: ({ row }) => {
           const item = row.original as Item;
           const rate = item.rate !== null ? item.rate : 0;
-          const baseAmount = item.saleQty * rate;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
           const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
 
           let taxableAmount = totalTaxRate > 0 ? baseAmount / (1 + totalTaxRate) : baseAmount;
@@ -1202,9 +1290,18 @@ const EditableTable = ({
       {
         accessorKey: "discountAmt",
         header: "Discount Amt.",
-        cell: ({ getValue, row, column, table }) => (
-          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-        ),
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          
+          return (
+            <EditableCell value={discountAmount} row={row} column={{id: 'discountAmt'} as any} table={{} as any} type="number" />
+          );
+        },
       },
       {
         accessorKey: "cgstPercent",
@@ -1223,9 +1320,21 @@ const EditableTable = ({
         header: "CGST Amt.",
         cell: ({ row }) => {
           const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+          
+          // Calculate CGST amount based on taxable amount
+          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+          const taxableAmount = totalTaxRate > 0 ? itemAmountAfterDiscount / (1 + totalTaxRate) : itemAmountAfterDiscount;
+          const cgstAmount = taxableAmount * (item.cgstPercent / 100);
+          
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{truncateToTwoDecimals(item.cgstAmt).toFixed(2)}
+              ₹{truncateToTwoDecimals(cgstAmount).toFixed(2)}
             </div>
           );
         },
@@ -1247,9 +1356,21 @@ const EditableTable = ({
         header: "SGST Amt.",
         cell: ({ row }) => {
           const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+          
+          // Calculate SGST amount based on taxable amount
+          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+          const taxableAmount = totalTaxRate > 0 ? itemAmountAfterDiscount / (1 + totalTaxRate) : itemAmountAfterDiscount;
+          const sgstAmount = taxableAmount * (item.sgstPercent / 100);
+          
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{truncateToTwoDecimals(item.sgstAmt).toFixed(2)}
+              ₹{truncateToTwoDecimals(sgstAmount).toFixed(2)}
             </div>
           );
         },
@@ -1271,9 +1392,21 @@ const EditableTable = ({
         header: "IGST Amt.",
         cell: ({ row }) => {
           const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+          
+          // Calculate IGST amount based on taxable amount
+          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+          const taxableAmount = totalTaxRate > 0 ? itemAmountAfterDiscount / (1 + totalTaxRate) : itemAmountAfterDiscount;
+          const igstAmount = taxableAmount * (item.igstPercent / 100);
+          
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{truncateToTwoDecimals(item.igstAmt).toFixed(2)}
+              ₹{truncateToTwoDecimals(igstAmount).toFixed(2)}
             </div>
           );
         },
@@ -1295,9 +1428,22 @@ const EditableTable = ({
         header: "Total Amt.",
         cell: ({ row }) => {
           const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          // Use returnQty for return invoices, saleQty for regular invoices
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+          
+          // Calculate total amount (including tax)
+          const totalTaxRate = (item.cgstPercent + item.sgstPercent + item.igstPercent) / 100;
+          const taxableAmount = totalTaxRate > 0 ? itemAmountAfterDiscount / (1 + totalTaxRate) : itemAmountAfterDiscount;
+          const totalTaxAmount = taxableAmount * totalTaxRate;
+          const totalAmount = itemAmountAfterDiscount; // This is already tax-inclusive if included_in_print_rate is true
+          
           return (
             <div className="px-2 py-1 min-h-[32px] flex items-center">
-              ₹{truncateToTwoDecimals(item.totalAmt).toFixed(2)}
+              ₹{truncateToTwoDecimals(totalAmount).toFixed(2)}
             </div>
           );
         },
@@ -1364,16 +1510,22 @@ const EditableTable = ({
           );
         },
       },
-    ],
+    ];
+
+  const table = useReactTable<Item>({
+    data: items,
+    columns: dynamicColumns,
     state: {
       rowSelection,
       pagination,
       columnVisibility,
+      columnOrder,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
     onColumnVisibilityChange: setColumnVisibility,
+    onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     meta: {

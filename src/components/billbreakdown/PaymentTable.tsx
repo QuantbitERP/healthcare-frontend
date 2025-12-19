@@ -29,11 +29,13 @@ interface PaymentTableProps {
   totalBillAmount: number;
   transactionType?: 'cash' | 'credit';
   roundedGrandTotal?: number;
+  isLoadedInvoice?: boolean; // Flag to indicate if invoice is loaded from draft
 }
 
-const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posProfile, apiKey, apiSecret, totalBillAmount, transactionType, roundedGrandTotal }) => {
+const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posProfile, apiKey, apiSecret, totalBillAmount, transactionType, roundedGrandTotal, isLoadedInvoice }) => {
   const [expandedCells, setExpandedCells] = useState<{ [key: string]: boolean }>({});
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [manuallyEdited, setManuallyEdited] = useState<boolean>(false);
 
   // Auto-set paid amount based on transaction type
   useEffect(() => {
@@ -139,6 +141,13 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
   }, [posProfile, apiKey, apiSecret]);
 
   useEffect(() => {
+    // Only auto-update payment amount if:
+    // 1. Invoice is NOT loaded from draft (isLoadedInvoice is false/undefined)
+    // 2. User has NOT manually edited the payment amount
+    if (isLoadedInvoice || manuallyEdited) {
+      return; // Skip auto-update for loaded invoices or manually edited payments
+    }
+
     // Update the paidAmount of the last payment entry when totalBillAmount changes
     if (payments.length > 0) {
       setPayments(prevPayments => {
@@ -166,7 +175,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
         custom_transaction_no: ''
       }]);
     }
-  }, [totalBillAmount, payments.length, paymentMethods]);
+  }, [totalBillAmount, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited]);
 
   const handleAddPayment = () => {
     const defaultPaymentMode = paymentMethods.length > 0 ? paymentMethods[0].mode_of_payment : '';
@@ -194,6 +203,11 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
   };
 
   const handlePaymentChange = (paymentId: number, field: string, value: string) => {
+    // Mark as manually edited if user changes the paid amount
+    if (field === 'paidAmount') {
+      setManuallyEdited(true);
+    }
+    
     setPayments(prevPayments =>
       prevPayments.map(p =>
         p.id === paymentId ? { ...p, [field]: value } : p
