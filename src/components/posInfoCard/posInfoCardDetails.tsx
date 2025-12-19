@@ -86,13 +86,13 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
   approvedDate,
   approvedBy,
   size = "large",
-  onReturnStatusChange,
+  
 }) => {
   const [activeToggle, setActiveToggle] = useState<string>("General Information");
   const [selfPaying, setSelfPaying] = useState<boolean>(isSelfPaying);
   const [pos, setPos] = useState<boolean>(isPos);
   const [stockUpdate, setStockUpdate] = useState<boolean>(updateStock);
-  const [returnStatus, setReturnStatus] = useState<boolean>(isReturn);
+  const [returnStatus] = useState<boolean>(isReturn);
   const [isClosing, setIsClosing] = useState<boolean>(false);
   const generalRef = useRef<HTMLDivElement>(null);
   const lastVisitRef = useRef<HTMLDivElement>(null);
@@ -258,10 +258,7 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
                 </div>
                 <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">Is Return</div>
-                  <Checkbox checked={returnStatus} onCheckedChange={(checked) => {
-                    setReturnStatus(!!checked);
-                    onReturnStatusChange(!!checked);
-                  }} />
+                  <Checkbox checked={returnStatus} disabled={true} />
                 </div>
               </div>
             </div>
