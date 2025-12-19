@@ -39,6 +39,7 @@ function PageHeader(props: PageHeaderProps) {
     { label: 'IPD', route: '/ipd_bill', icon: '🛏️', type: 'page' },
     { label: 'Patient Requisition', route: '/PR', icon: '📋', type: 'page' },
     { label: 'Patient Requisition List', route: '/PatientRequistionList', icon: '📑', type: 'page' },
+    { label: 'Return', route: '/return', icon: '↩️', type: 'page' },
     { label: 'Home', route: 'https://192.168.7.196/Home', icon: '🏠', type: 'page' },
     { label: 'ERP', route: 'https://192.168.7.196/Home', icon: '🏢', type: 'page' },
   ];
@@ -167,7 +168,12 @@ function PageHeader(props: PageHeaderProps) {
     if (route.startsWith('http')) {
       window.location.href = route;
     } else {
-      router.push(route);
+      // Check if this is a return-related search and redirect to return page
+      if (route.toLowerCase().includes('return') || route.toLowerCase().includes('invoice')) {
+        router.push('/return');
+      } else {
+        router.push(route);
+      }
     }
     setSearchQuery('');
     setSuggestions([]);
