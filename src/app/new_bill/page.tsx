@@ -96,6 +96,7 @@ export interface Item {
   _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
   custom_business_category?: string; // Add custom_business_category field for filtering by company
   max_discount?: number; // Add max_discount field for discount validation
+  appliedPricingRule?: string; // Add field to track which pricing rule was applied
 }
 
 interface ItemSearchProps {
@@ -108,6 +109,8 @@ interface ItemSearchProps {
   onNoBatchesFound?: (item: Item) => void;
   selectedWarehouse?: string; // Add selectedWarehouse to the interface
   selectedCompany?: string; // Add selectedCompany to the interface
+  selectedCustomer?: string; // Add selectedCustomer to pass pricing rule context
+  applyPricingRules?: (items: Item[], customer: string) => Promise<Item[]>; // Pricing rule handler
   // showAlert: (variant: AlertState['variant'], heading: string, content: string) => void;
   selectedClassification?: string;
   isGeneric?: boolean;
@@ -141,7 +144,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   getBatchQty,
   onNoBatchesFound,
   selectedWarehouse,
-  selectedCompany, // Destructure selectedCompany
+  selectedCompany,
+  selectedCustomer,
+  applyPricingRules: applyPricingRulesFn,
   // showAlert, // Destructure selectedWarehouse
   selectedClassification,
   isGeneric,
@@ -167,7 +172,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
 
-  const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean, selectedCompany?: string): Promise<Item[]> => {
+  const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean, selectedCompany?: string, selectedCustomer?: string): Promise<Item[]> => {
     try {
       // const headers: HeadersInit = {
       //   'Content-Type': 'application/json',
@@ -239,6 +244,11 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           max_discount: item.max_discount || 0, // Map max_discount from API
         }));
 
+        // Apply pricing rules if customer is selected
+        if (selectedCustomer && applyPricingRulesFn) {
+          fetchedItems = await applyPricingRulesFn(fetchedItems, selectedCustomer);
+        }
+
         // Filter items by business category if company is selected
         if (selectedCompany) {
           fetchedItems = fetchedItems.filter(item => {
@@ -270,7 +280,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (searchTerm.trim().length >= 2) {
         setLoading(true);
         try {
-          const results = await searchItems(searchTerm, selectedClassification, isGeneric, selectedCompany);
+          const results = await searchItems(searchTerm, selectedClassification, isGeneric, selectedCompany, selectedCustomer);
           setAllSuggestions(results);
           if (isGeneric) {
             const filtered = results.filter(item =>
@@ -298,7 +308,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchTerm, selectedClassification, isGeneric, selectedCompany]);
+  }, [searchTerm, selectedClassification, isGeneric, selectedCompany, selectedCustomer, applyPricingRulesFn]);
 
   // useEffect for sub-search filtering
   useEffect(() => {
@@ -950,6 +960,238 @@ export default function NewBill() {
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
   const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
+  // Function to fetch pricing rules for a specific customer
+  const fetchPricingRules = async (customer: string): Promise<any[]> => {
+    try {
+      if (!customer || !apiKey || !apiSecret) {
+        console.log('Missing required parameters for pricing rules:', { customer, apiKey, apiSecret });
+        return [];
+      }
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+
+      // Get visit type from patient data, default to "IP" for OPD billing
+      const visitType = patientData?.visitType || "IP";
+      console.log('Fetching pricing rules for visit type:', visitType, 'customer:', customer, 'transaction type:', transactionType);
+
+      // Fetch pricing rules for the customer with visit type and transaction type filters
+      const encodedCustomer = encodeURIComponent(customer);
+      const baseFilters = [
+        `["customer","=","${encodedCustomer}"]`,
+        '["selling","=",1]',
+        `["custom_visit_type","=","${visitType}"]`
+      ];
+
+      let allPricingRules: any[] = [];
+
+      if (transactionType === 'cash') {
+        // Fetch cash-specific rules
+        const cashFilters = [...baseFilters, '["custom_cash","=",1]'];
+        const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+
+        if (cashResponse.ok) {
+          const cashData = await cashResponse.json();
+          if (cashData.data && Array.isArray(cashData.data)) {
+            allPricingRules = allPricingRules.concat(cashData.data);
+          }
+        }
+
+        // Fetch rules that apply to all transaction types
+        const allFilters = [...baseFilters, '["custom_all","=",1]'];
+        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+
+        if (allResponse.ok) {
+          const allData = await allResponse.json();
+          if (allData.data && Array.isArray(allData.data)) {
+            allPricingRules = allPricingRules.concat(allData.data);
+          }
+        }
+      } else if (transactionType === 'credit') {
+        // Fetch credit-specific rules
+        const creditFilters = [...baseFilters, '["custom_credit","=",1]'];
+        const creditResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${creditFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+
+        if (creditResponse.ok) {
+          const creditData = await creditResponse.json();
+          if (creditData.data && Array.isArray(creditData.data)) {
+            allPricingRules = allPricingRules.concat(creditData.data);
+          }
+        }
+
+        // Fetch rules that apply to all transaction types
+        const allFilters = [...baseFilters, '["custom_all","=",1]'];
+        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+
+        if (allResponse.ok) {
+          const allData = await allResponse.json();
+          if (allData.data && Array.isArray(allData.data)) {
+            allPricingRules = allPricingRules.concat(allData.data);
+          }
+        }
+      }
+
+      // Remove duplicates based on rule name
+      const uniqueRules = allPricingRules.filter((rule, index, self) =>
+        index === self.findIndex((r) => r.name === rule.name)
+      );
+
+      console.log('Fetched pricing rules:', uniqueRules.length, 'rules for transaction type:', transactionType);
+      
+      if (uniqueRules && Array.isArray(uniqueRules)) {
+        // Fetch complete pricing rule documents with their items
+        const pricingRulesWithItems = await Promise.all(
+          uniqueRules.map(async (rule: any) => {
+            try {
+              // Fetch the complete pricing rule document to get items
+              const ruleResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule/${rule.name}`, {
+                method: 'GET',
+                headers,
+                credentials: 'include',
+              });
+              
+              if (ruleResponse.ok) {
+                const ruleData = await ruleResponse.json();
+                const fullRule = ruleData.data;
+                rule.items = fullRule.items || [];
+                console.log(`Fetched ${rule.items.length} items for pricing rule ${rule.name}:`, rule.items);
+              } else {
+                console.log(`Failed to fetch complete pricing rule ${rule.name}`);
+                rule.items = [];
+              }
+            } catch (error) {
+              console.error(`Error fetching pricing rule ${rule.name}:`, error);
+              rule.items = [];
+            }
+            return rule;
+          })
+        );
+        
+        // Filter only valid pricing rules (within valid date range)
+        const currentDate = new Date();
+        return pricingRulesWithItems.filter((rule: any) => {
+          if (!rule.disable) {
+            // Check if rule is within valid date range
+            const validFrom = rule.valid_from ? new Date(rule.valid_from) : null;
+            const validTo = rule.valid_upto ? new Date(rule.valid_upto) : null;
+            
+            const isValidDate = (!validFrom || currentDate >= validFrom) && 
+                               (!validTo || currentDate <= validTo);
+            
+            if (isValidDate) {
+              console.log('Valid pricing rule found:', rule.name, 'Discount:', rule.discount_percentage + '%');
+            }
+            
+            return isValidDate;
+          }
+          return false;
+        });
+      }
+      
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching pricing rules:', error);
+      return [];
+    }
+  };
+
+  // Function to apply pricing rules to item rates
+  const applyPricingRules = async (items: Item[], customer: string): Promise<Item[]> => {
+    try {
+      if (!customer || !items.length) {
+        return items;
+      }
+
+      const pricingRules = await fetchPricingRules(customer);
+      
+      if (!pricingRules.length) {
+        console.log('No pricing rules found for customer:', customer);
+        return items;
+      }
+
+      console.log('Applying pricing rules to', items.length, 'items');
+
+      return items.map(item => {
+        const updatedItem = { ...item };
+        
+        for (const rule of pricingRules) {
+          // Check if this rule applies to the item
+          let ruleApplies = false;
+          
+          if (rule.apply_on === 'Item Code') {
+            // Check if item is in the rule's items list
+            if (rule.items && rule.items.length > 0) {
+              ruleApplies = rule.items.some((ruleItem: any) => ruleItem.item_code === item.itemCode);
+              if (ruleApplies) {
+                console.log(`Pricing rule ${rule.name} applies to item ${item.itemCode} (found in items list)`);
+              }
+            } else {
+              console.log(`Pricing rule ${rule.name} has no items defined, skipping`);
+              ruleApplies = false;
+            }
+          } else if (rule.apply_on === 'Item Group' && rule.item_groups && rule.item_groups.length > 0) {
+            // Check if item belongs to any of the rule's item groups
+            // Note: This would require fetching item group info, for now we'll skip this
+            ruleApplies = false;
+          } else if (!rule.apply_on || rule.apply_on === 'Grand Total') {
+            // Apply to all items if no specific apply_on or if it's Grand Total
+            ruleApplies = true;
+          }
+          
+          if (ruleApplies && rule.discount_percentage && rule.discount_percentage > 0) {
+            const originalRate = updatedItem.rate || 0;
+            const discountAmount = (originalRate * rule.discount_percentage) / 100;
+            updatedItem.rate = originalRate - discountAmount;
+            // Set the pricing rule that was applied
+            updatedItem.appliedPricingRule = rule.name;
+            // Don't set discountPercent - just apply the discount to the rate
+            
+            console.log(`Applied pricing rule ${rule.name} to ${item.itemCode}:`);
+            console.log(`  Original Rate: ₹${originalRate}`);
+            console.log(`  Discount: ${rule.discount_percentage}%`);
+            console.log(`  New Rate: ₹${updatedItem.rate}`);
+            
+            // Only apply the first matching rule (highest priority)
+            break;
+          }
+        }
+        
+        return updatedItem;
+      });
+      
+    } catch (error) {
+      console.error('Error applying pricing rules:', error);
+      return items;
+    }
+  };
+
+  
   // Function to fetch item batches filtered by warehouse and company
   const fetchItemBatches = async (itemCode: string) => {
     try {
@@ -1086,7 +1328,7 @@ export default function NewBill() {
         filters.push(["batch_no", "=", batchNo]);
       }
 
-      const response = await fetch(`${API_BASE_URL}/Item Price?filters=${JSON.stringify(filters)}&fields=["price_list_rate", "valid_from", "valid_upto"]&order_by=valid_from desc&limit=1`, {
+      const response = await fetch(`${API_BASE_URL}/ ?filters=${JSON.stringify(filters)}&fields=["price_list_rate", "valid_from", "valid_upto"]&order_by=valid_from desc&limit=1`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -1347,6 +1589,51 @@ export default function NewBill() {
       setIsDirectReturn(false);
     }
   }, [isReturn]);
+
+  // Reapply pricing rules when transaction type changes
+  useEffect(() => {
+    if (items.length > 0 && selectedCustomer) {
+      console.log('Transaction type changed, reapplying pricing rules...');
+      applyPricingRulesToExistingItems();
+    }
+  }, [transactionType]);
+
+  // Reapply pricing rules when customer changes
+  useEffect(() => {
+    if (items.length > 0) {
+      console.log('Customer changed, reapplying pricing rules...');
+      applyPricingRulesToExistingItems();
+    }
+  }, [selectedCustomer]);
+
+  // Reapply pricing rules when visit type changes (from patient data)
+  useEffect(() => {
+    if (items.length > 0 && selectedCustomer && patientData?.visitType) {
+      console.log('Visit type changed, reapplying pricing rules...');
+      applyPricingRulesToExistingItems();
+    }
+  }, [patientData?.visitType]);
+
+  // Function to apply pricing rules to existing items
+  const applyPricingRulesToExistingItems = async () => {
+    if (!selectedCustomer || items.length === 0) {
+      return;
+    }
+
+    try {
+      const updatedItems = await applyPricingRules(items, selectedCustomer);
+      
+      if (updatedItems && updatedItems.length > 0) {
+        setItems(updatedItems);
+        console.log('Pricing rules reapplied successfully:', updatedItems.length, 'items updated');
+      } else {
+        console.log('No pricing rules applied, keeping original items');
+      }
+    } catch (error) {
+      console.error('Error reapplying pricing rules:', error);
+      showAlert('danger', 'Error', 'Failed to reapply pricing rules. Please try again.');
+    }
+  };
 
   // Function to check if sale exists for requisition
   // const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
@@ -2291,8 +2578,17 @@ export default function NewBill() {
       // We will use these directly.
       const finalBatchNo = item.batchNo;
       const finalExpiryDate = item.expiryDate;
-      const finalRate = item.rate !== null ? item.rate : 0; // Use item's rate, ensure it's not null
+      let finalRate = item.rate !== null ? item.rate : 0; // Use item's rate, ensure it's not null
       const finalBatchStockQty = item.batchStockQty; // Use item's batchStockQty
+
+      // Apply  the rate if customer is selected
+      if (selectedCustomer) {
+        const itemsWithPricingRule = await applyPricingRules([{...item, rate: finalRate}], selectedCustomer);
+        if (itemsWithPricingRule.length > 0 && itemsWithPricingRule[0].rate !== finalRate && itemsWithPricingRule[0].rate !== null) {
+          finalRate = itemsWithPricingRule[0].rate;
+          console.log(`Applied pricing rule in handleAddItemToDetails. New rate: ${finalRate}`);
+        }
+      }
 
       // Fetch bin_location from Item doctype
       console.log(`[BinLocation] Fetching bin_location for item: ${item.itemCode}`);
@@ -2583,6 +2879,15 @@ export default function NewBill() {
         custom_branch_name: p.custom_branch_name || p.branchName || "",
         custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
       })),
+      // Add Pricing Rule Detail child table if any pricing rules were applied
+      pricing_rule_details: items
+        .filter(item => item.appliedPricingRule)
+        .map(item => ({
+          pricing_rule: item.appliedPricingRule,
+          item_code: item.itemCode,
+          rate_or_discount: "Discount",
+          rule_applied: 1
+        })),
       patient_data: {
         mrn: patientData.mrn || "",
         age: patientData.age || "",
@@ -2701,6 +3006,9 @@ export default function NewBill() {
       taxes_and_charges: taxTemplate, // Add taxes_and_charges field
       taxes: taxesPayload,
       total_taxes_and_charges: totalCgstAmount + totalSgstAmount + totalIgstAmount,
+      // Calculate outstanding amount as grand_total - paid_amount
+      outstanding_amount: (totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount) - 
+        (recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0)),
     }
 
     // --- START: Handle file upload ---
@@ -3031,6 +3339,34 @@ export default function NewBill() {
     };
     setPatientData(newPatientData);
 
+    // Auto-set customer based on requisition's patient company or default to self-paid
+    if (customers && customers.length > 0) {
+      // If requisition has a patient company, try to find matching customer
+      if (fullRequisitionData.patient_company) {
+        const matchingCustomer = customers.find((customer: any) => 
+          customer.label === fullRequisitionData.patient_company || customer.value === fullRequisitionData.patient_company
+        );
+        if (matchingCustomer) {
+          setSelectedCustomer(matchingCustomer.value);
+          console.log('Set customer to requisition patient company:', matchingCustomer.value);
+        } else {
+          // If no matching customer found, default to self-paid
+          const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+          if (defaultSelfPaidCustomer) {
+            setSelectedCustomer(defaultSelfPaidCustomer.value);
+            console.log('No matching customer found for requisition, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+          }
+        }
+      } else {
+        // If requisition has no patient company, default to self-paid
+        const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+        if (defaultSelfPaidCustomer) {
+          setSelectedCustomer(defaultSelfPaidCustomer.value);
+          console.log('Requisition has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+        }
+      }
+    }
+
     // Set requisition details
     setRequisitionNo(fullRequisitionData.name);
     setRequisitionFrom(fullRequisitionData.requisition_from);
@@ -3287,6 +3623,34 @@ export default function NewBill() {
       company: fullPrescriptionData.patient_company || "N/A",
     };
     setPatientData(newPatientData);
+
+    // Auto-set customer based on prescription's patient company or default to self-paid
+    if (customers && customers.length > 0) {
+      // If prescription has a patient company, try to find matching customer
+      if (fullPrescriptionData.patient_company) {
+        const matchingCustomer = customers.find((customer: any) => 
+          customer.label === fullPrescriptionData.patient_company || customer.value === fullPrescriptionData.patient_company
+        );
+        if (matchingCustomer) {
+          setSelectedCustomer(matchingCustomer.value);
+          console.log('Set customer to prescription patient company:', matchingCustomer.value);
+        } else {
+          // If no matching customer found, default to self-paid
+          const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+          if (defaultSelfPaidCustomer) {
+            setSelectedCustomer(defaultSelfPaidCustomer.value);
+            console.log('No matching customer found for prescription, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+          }
+        }
+      } else {
+        // If prescription has no patient company, default to self-paid
+        const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+        if (defaultSelfPaidCustomer) {
+          setSelectedCustomer(defaultSelfPaidCustomer.value);
+          console.log('Prescription has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+        }
+      }
+    }
 
     // Set prescription/requisition details
     setRequisitionNo(fullPrescriptionData.name);
@@ -4182,23 +4546,48 @@ export default function NewBill() {
       setTotalSgstAmount(sgstTotal);
       setTotalIgstAmount(igstTotal);
 
-      // Load payments
+      // Load payments and set paid amounts correctly
       if (fullInvoice.payments && Array.isArray(fullInvoice.payments)) {
         const loadedPayments = fullInvoice.payments.map((payment: any, index: number) => ({
           id: index + 1,
           name: payment.name, // Preserve Frappe child table row identifier
           paymentMode: payment.mode_of_payment || "Cash",
+          amount: parseFloat(payment.base_amount || payment.amount || 0) || 0,
+          reference_no: payment.custom_transaction_no || payment.reference_no || "",
+          custom_bank_name: payment.custom_bank_name || payment.bank || "",
+          custom_branch_name: payment.custom_branch_name || payment.branch || "",
           transactionNo: payment.reference_no || "",
           bankName: payment.bank || "",
           branchName: payment.branch || "",
-          paidAmount: Math.abs(payment.base_amount || payment.amount || 0).toString(), // Use base_amount if available
+          paidAmount: Math.abs(payment.base_amount || payment.amount || 0).toString(), // Set individual payment amount
           paymentDate: payment.posting_date || "",
           approvalNo: payment.approval_no || "",
-          custom_bank_name: payment.custom_bank_name || "",
-          custom_branch_name: payment.custom_branch_name || "",
           custom_transaction_no: payment.custom_transaction_no || "",
         }));
+
         setRecordedPayments(loadedPayments);
+        
+        // Log total paid amount for debugging
+        const totalPaidAmount = loadedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+        console.log('Payments loaded successfully. Total paid amount:', totalPaidAmount);
+        console.log('Individual payment amounts:', loadedPayments.map(p => ({ mode: p.paymentMode, amount: p.paidAmount })));
+      } else {
+        // No payments found, set empty payment record
+        setRecordedPayments([{
+          id: 1,
+          name: '',
+          paymentMode: 'Cash',
+          transactionNo: '',
+          bankName: '',
+          branchName: '',
+          paidAmount: '0',
+          paymentDate: '',
+          approvalNo: '',
+          custom_bank_name: '',
+          custom_branch_name: '',
+          custom_transaction_no: ''
+        }]);
+        console.log('No payments found in loaded invoice, set to 0');
       }
 
       // Reset flag after all data is loaded
@@ -4541,6 +4930,15 @@ export default function NewBill() {
           custom_branch_name: p.custom_branch_name || p.branchName || "",
           custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
         })),
+        // Add Pricing Rule Detail child table if any pricing rules were applied
+        pricing_rule_details: items
+          .filter(item => item.appliedPricingRule)
+          .map(item => ({
+            pricing_rule: item.appliedPricingRule,
+            item_code: item.itemCode,
+            rate_or_discount: "Discount",
+            rule_applied: 1
+          })),
         patient_data: {
           mrn: patientData.mrn || "",
           age: patientData.age || "",
@@ -4657,6 +5055,9 @@ export default function NewBill() {
         taxes_and_charges: taxTemplate,
         taxes: taxesPayload,
         total_taxes_and_charges: totalCgstAmount + totalSgstAmount + totalIgstAmount,
+        // Calculate outstanding amount as grand_total - paid_amount
+        outstanding_amount: (roundedGrandTotal || totalBillAmount - totalDiscountAmount + totalCgstAmount + totalSgstAmount + totalIgstAmount) - 
+          (recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0)),
       };
 
       // --- START: Handle file upload ---
@@ -5002,6 +5403,8 @@ export default function NewBill() {
                   onNoBatchesFound={handleNoBatchesFound}
                   selectedWarehouse={selectedWarehouse}
                   selectedCompany={selectedCompany}
+                  selectedCustomer={selectedCustomer}
+                  applyPricingRules={applyPricingRules}
                   // showAlert={showAlert}
                   selectedClassification={selectedSaleType}
                   isGeneric={isGeneric}
