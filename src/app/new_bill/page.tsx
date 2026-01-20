@@ -1542,6 +1542,177 @@ export default function NewBill() {
   const [reqId, setReqId] = useState('');
   const [isReqIdReadonly, setIsReqIdReadonly] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+
+  // Handle barcode scanning
+  const handleBarcodeScan = async (scannedBarcode: string) => {
+    try {
+      console.log('Scanning barcode:', scannedBarcode);
+      console.log('Selected warehouse:', selectedWarehouse);
+      
+      // Fetch batch details using the barcode
+      const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcode(''); // Clear barcode input
+        return;
+      }
+
+      const batchData = await response.json();
+      const batch = batchData.data;
+
+      if (!batch) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcode('');
+        return;
+      }
+
+      console.log('Batch data:', batch);
+
+      // Check if batch has stock in selected warehouse
+      let stockQty = 0;
+      if (selectedWarehouse) {
+        try {
+          const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${apiKey}:${apiSecret}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              item_code: batch.item,
+              warehouse: selectedWarehouse,
+              batch_no: batch.name,
+            }),
+          });
+
+          if (batchQtyResponse.ok) {
+            const stockData = await batchQtyResponse.json();
+            console.log('Stock balance response:', stockData);
+            // The response structure is {message: number} not {message: [{actual_qty: number}]}
+            stockQty = stockData.message || 0;
+          } else {
+            console.log('Stock balance API failed:', batchQtyResponse.status);
+          }
+        } catch (error) {
+          console.error('Error checking stock balance:', error);
+        }
+      } else {
+        console.log('No warehouse selected, using batch quantity as fallback');
+        stockQty = batch.batch_qty || 0;
+      }
+
+      console.log('Final stock quantity:', stockQty);
+
+      // Only show stock warning if we have a warehouse selected and stock is 0
+      if (selectedWarehouse && stockQty <= 0) {
+        showAlert('warning', 'Warning', `Item ${batch.item_name} has no stock in warehouse ${selectedWarehouse}. Adding anyway.`);
+        // Don't return, continue to add the item
+      }
+
+      // Fetch item details
+      const itemResponse = await fetch(`${API_BASE_URL}/Item/${batch.item}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!itemResponse.ok) {
+        showAlert('danger', 'Error', `Item not found: ${batch.item}`);
+        setBarcode('');
+        return;
+      }
+
+      const itemData = await itemResponse.json();
+      const item = itemData.data;
+
+      console.log('Item data:', item);
+
+      // Check if item already exists in the table with the same batch
+      const existingItemIndex = items.findIndex(
+        (item) => item.itemCode === batch.item && item.batchNo === batch.name
+      );
+
+      if (existingItemIndex !== -1) {
+        // Update existing item quantity
+        const updatedItems = [...items];
+        updatedItems[existingItemIndex].saleQty += 1;
+        updatedItems[existingItemIndex].stockQty = stockQty;
+        
+        // Recalculate totals for updated item
+        const recalculatedItem = calculateItemTaxAndTotals(updatedItems[existingItemIndex], item.included_in_print_rate || false);
+        updatedItems[existingItemIndex] = recalculatedItem;
+        
+        setItems(updatedItems);
+        recalculateTotals?.(updatedItems);
+      } else {
+        // Create new item
+        const newItem: Item = {
+          id: Date.now().toString(),
+          alternateBatches: '',
+          substituteItem: '',
+          itemCode: batch.item,
+          itemName: batch.item_name || item.item_name,
+          uom: item.stock_uom || 'Nos',
+          stockQty: stockQty,
+          orderedQty: 0,
+          saleQty: 1,
+          batch: batch.name,
+          batchNo: batch.name,
+          expiryDate: batch.expiry_date || '',
+          batchStockQty: stockQty,
+          rate: batch.custom_mrp || 0, // Use custom_mrp from batch as Unit Sale Rate
+          taxTemplate: item.taxes_and_charges || '',
+          description: item.description || '',
+          itemAmount: 0,
+          discountPercent: 0,
+          discountAmt: 0,
+          cgstPercent: 0,
+          cgstAmt: 0,
+          sgstPercent: 0,
+          sgstAmt: 0,
+          igstPercent: 0,
+          igstAmt: 0,
+          totalAmt: 0,
+          kitName: '',
+          totalPckgAmt: 0,
+          packageName: '',
+          binLocation: '',
+          mrp: batch.custom_mrp, // Store MRP from batch
+          hasStock: stockQty > 0,
+        };
+
+        console.log('New item created:', newItem);
+
+        // Calculate tax and totals for the new item
+        const calculatedItem = calculateItemTaxAndTotals(newItem, item.included_in_print_rate || false);
+        
+        const updatedItems = [...items, calculatedItem];
+        setItems(updatedItems);
+        recalculateTotals?.(updatedItems);
+      }
+
+      showAlert('success', 'Success', `Item ${batch.item_name} added to bill`);
+      setBarcode(''); // Clear barcode input after successful addition
+
+    } catch (error) {
+      console.error('Error processing barcode:', error);
+      showAlert('danger', 'Error', 'Failed to process barcode');
+      setBarcode('');
+    }
+  };
+
+  useEffect(() => {
+    if (barcode && barcode.trim()) {
+      handleBarcodeScan(barcode.trim());
+    }
+  }, [barcode]);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
