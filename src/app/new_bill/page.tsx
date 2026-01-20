@@ -990,7 +990,7 @@ export default function NewBill() {
       if (transactionType === 'cash') {
         // Fetch cash-specific rules
         const cashFilters = [...baseFilters, '["custom_cash","=",1]'];
-        const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+        const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1007,7 +1007,7 @@ export default function NewBill() {
 
         // Fetch rules that apply to all transaction types
         const allFilters = [...baseFilters, '["custom_all","=",1]'];
-        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1024,7 +1024,7 @@ export default function NewBill() {
       } else if (transactionType === 'credit') {
         // Fetch credit-specific rules
         const creditFilters = [...baseFilters, '["custom_credit","=",1]'];
-        const creditResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${creditFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+        const creditResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${creditFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1041,7 +1041,7 @@ export default function NewBill() {
 
         // Fetch rules that apply to all transaction types
         const allFilters = [...baseFilters, '["custom_all","=",1]'];
-        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items"]&order_by=modified desc`,
+        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1137,7 +1137,7 @@ export default function NewBill() {
 
       console.log('Applying pricing rules to', items.length, 'items');
 
-      return items.map(item => {
+      return await Promise.all(items.map(async (item) => {
         const updatedItem = { ...item };
         
         for (const rule of pricingRules) {
@@ -1166,29 +1166,113 @@ export default function NewBill() {
           
           if (ruleApplies && rule.discount_percentage && rule.discount_percentage > 0) {
             const originalRate = updatedItem.rate || 0;
-            const discountAmount = (originalRate * rule.discount_percentage) / 100;
-            updatedItem.rate = originalRate - discountAmount;
-            // Set the pricing rule that was applied
-            updatedItem.appliedPricingRule = rule.name;
-            // Don't set discountPercent - just apply the discount to the rate
             
-            console.log(`Applied pricing rule ${rule.name} to ${item.itemCode}:`);
-            console.log(`  Original Rate: ₹${originalRate}`);
-            console.log(`  Discount: ${rule.discount_percentage}%`);
-            console.log(`  New Rate: ₹${updatedItem.rate}`);
-            
-            // Only apply the first matching rule (highest priority)
-            break;
+            // Check if landing cost is applicable for this rule
+            if (rule.custom_is_landing_cost_applicable) {
+              console.log(`Pricing rule ${rule.name} has landing cost applicable, fetching landing cost...`);
+              
+              // Fetch landing cost from Item Price
+              const landingCost = await fetchLandingCost(item.itemCode, item.batchNo, 'Standard Selling');
+              
+              if (landingCost !== null && landingCost > 0) {
+                // Use landing cost as the base rate instead of original rate
+                const discountAmount = (landingCost * rule.discount_percentage) / 100;
+                updatedItem.rate = landingCost - discountAmount;
+                updatedItem.appliedPricingRule = rule.name;
+                
+                console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with landing cost:`);
+                console.log(`  Original Rate: ₹${originalRate}`);
+                console.log(`  Landing Cost: ₹${landingCost}`);
+                console.log(`  Discount: ${rule.discount_percentage}%`);
+                console.log(`  New Rate: ₹${updatedItem.rate}`);
+                
+                // Only apply the first matching rule (highest priority)
+                break;
+              } else {
+                console.log(`No valid landing cost found for ${item.itemCode}, falling back to original rate`);
+                // Fall back to original rate logic if no landing cost found
+                const discountAmount = (originalRate * rule.discount_percentage) / 100;
+                updatedItem.rate = originalRate - discountAmount;
+                updatedItem.appliedPricingRule = rule.name;
+                
+                console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} (fallback to original rate):`);
+                console.log(`  Original Rate: ₹${originalRate}`);
+                console.log(`  Discount: ${rule.discount_percentage}%`);
+                console.log(`  New Rate: ₹${updatedItem.rate}`);
+                
+                // Only apply the first matching rule (highest priority)
+                break;
+              }
+            } else {
+              // Standard pricing rule logic (not landing cost applicable)
+              const discountAmount = (originalRate * rule.discount_percentage) / 100;
+              updatedItem.rate = originalRate - discountAmount;
+              updatedItem.appliedPricingRule = rule.name;
+              
+              console.log(`Applied pricing rule ${rule.name} to ${item.itemCode}:`);
+              console.log(`  Original Rate: ₹${originalRate}`);
+              console.log(`  Discount: ${rule.discount_percentage}%`);
+              console.log(`  New Rate: ₹${updatedItem.rate}`);
+              
+              // Only apply the first matching rule (highest priority)
+              break;
+            }
           }
         }
         
         return updatedItem;
-      });
+      }));
       
     } catch (error) {
       console.error('Error applying pricing rules:', error);
       return items;
     }
+  };
+
+  // Function to fetch landing cost from Item Price
+  const fetchLandingCost = async (itemCode: string, batchNo: string | null, priceList: string): Promise<number | null> => {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}:${apiSecret}`,
+      };
+      const filters = [
+        ["item_code", "=", itemCode],
+        ["price_list", "=", priceList]
+      ];
+      if (batchNo) {
+        filters.push(["batch_no", "=", batchNo]);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/Item%20Price?filters=${JSON.stringify(filters)}&fields=["custom_landing_cost", "valid_from", "valid_upto"]&order_by=valid_from desc&limit=1`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+      if (data.data && data.data.length > 0) {
+        const itemPrice = data.data[0];
+        const currentDate = new Date();
+        const validFrom = itemPrice.valid_from ? new Date(itemPrice.valid_from) : null;
+        const validUpto = itemPrice.valid_upto ? new Date(itemPrice.valid_upto) : null;
+
+        const isValidPrice = (!validFrom || currentDate >= validFrom) &&
+          (!validUpto || currentDate <= validUpto);
+
+        if (isValidPrice && itemPrice.custom_landing_cost) {
+          console.log(`Found landing cost ${itemPrice.custom_landing_cost} for item ${itemCode}, batch ${batchNo}`);
+          return itemPrice.custom_landing_cost;
+        } else {
+          console.log(`Landing cost found but not valid for current date for item ${itemCode}, batch ${batchNo}`);
+        }
+      } else {
+        console.log(`No landing cost found for item ${itemCode}, batch ${batchNo} in price list ${priceList}`);
+      }
+    } catch (error) {
+      console.error('Error fetching landing cost from Item Price:', error);
+    }
+    return null;
   };
 
   
@@ -1328,7 +1412,7 @@ export default function NewBill() {
         filters.push(["batch_no", "=", batchNo]);
       }
 
-      const response = await fetch(`${API_BASE_URL}/ ?filters=${JSON.stringify(filters)}&fields=["price_list_rate", "valid_from", "valid_upto"]&order_by=valid_from desc&limit=1`, {
+      const response = await fetch(`${API_BASE_URL}/Item%20Price?filters=${JSON.stringify(filters)}&fields=["price_list_rate", "valid_from", "valid_upto", "custom_landing_cost"]&order_by=valid_from desc&limit=1`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -3340,17 +3424,24 @@ export default function NewBill() {
     setPatientData(newPatientData);
 
     // Auto-set customer based on requisition's patient company or default to self-paid
+    console.log('Customer population - requisition data:', fullRequisitionData);
+    console.log('Customer population - patient_company:', fullRequisitionData.patient_company);
+    console.log('Customer population - available customers:', customers);
+    
     if (customers && customers.length > 0) {
       // If requisition has a patient company, try to find matching customer
       if (fullRequisitionData.patient_company) {
+        console.log('Looking for customer matching:', fullRequisitionData.patient_company);
         const matchingCustomer = customers.find((customer: any) => 
           customer.label === fullRequisitionData.patient_company || customer.value === fullRequisitionData.patient_company
         );
+        console.log('Found matching customer:', matchingCustomer);
         if (matchingCustomer) {
           setSelectedCustomer(matchingCustomer.value);
           console.log('Set customer to requisition patient company:', matchingCustomer.value);
         } else {
           // If no matching customer found, default to self-paid
+          console.log('No matching customer found, looking for self-paid customer');
           const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
           if (defaultSelfPaidCustomer) {
             setSelectedCustomer(defaultSelfPaidCustomer.value);
@@ -3359,12 +3450,15 @@ export default function NewBill() {
         }
       } else {
         // If requisition has no patient company, default to self-paid
+        console.log('Requisition has no patient company, looking for self-paid customer');
         const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
         if (defaultSelfPaidCustomer) {
           setSelectedCustomer(defaultSelfPaidCustomer.value);
           console.log('Requisition has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
         }
       }
+    } else {
+      console.log('No customers available for population');
     }
 
     // Set requisition details
@@ -5752,6 +5846,8 @@ export default function NewBill() {
                 setIsReqIdReadonly={setIsReqIdReadonly}
                 isComplete={isComplete}
                 setIsComplete={setIsComplete}
+                applyPricingRules={applyPricingRules}
+                selectedCustomer={selectedCustomer}
               />
             </CardContent>
           </Card>
