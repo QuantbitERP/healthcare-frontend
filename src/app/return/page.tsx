@@ -34,6 +34,7 @@ import { Search, X, Plus } from 'lucide-react';
 import OpdCard from "@/components/OpdInfo/Opdinfo";
 import HorizontallyScrollableTable from "@/components/editableTablePos/editable";
 import PatientRequisitionList from "@/components/patientRequisitionList/PatientRequisitionList";
+import PatientReturnRequisitionList from "@/components/patientReturnRequisitionList/PatientReturnRequisitionList";
 import PrescriptionList from "@/components/prescriptionList/PrescriptionList";
 import Alerts from "@/components/alerts/Alerts";
 import AlternativeItemsPopover from "@/components/itemAlternative/ItemAlternative";
@@ -96,6 +97,7 @@ export interface Item {
   _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
   custom_business_category?: string; // Add custom_business_category field for filtering by company
   max_discount?: number; // Add max_discount field for discount validation
+  saleBillNo?: string; // Add saleBillNo field to track source invoice
 }
 
 interface ItemSearchProps {
@@ -1216,6 +1218,177 @@ export default function Return() {
   const [reqId, setReqId] = useState('');
   const [isReqIdReadonly, setIsReqIdReadonly] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+
+  // Handle barcode scanning
+  const handleBarcodeScan = async (scannedBarcode: string) => {
+    try {
+      console.log('Scanning barcode:', scannedBarcode);
+      console.log('Selected warehouse:', selectedWarehouse);
+      
+      // Fetch batch details using the barcode
+      const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcode(''); // Clear barcode input
+        return;
+      }
+
+      const batchData = await response.json();
+      const batch = batchData.data;
+
+      if (!batch) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcode('');
+        return;
+      }
+
+      console.log('Batch data:', batch);
+
+      // Check if batch has stock in selected warehouse
+      let stockQty = 0;
+      if (selectedWarehouse) {
+        try {
+          const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${apiKey}:${apiSecret}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              item_code: batch.item,
+              warehouse: selectedWarehouse,
+              batch_no: batch.name,
+            }),
+          });
+
+          if (batchQtyResponse.ok) {
+            const stockData = await batchQtyResponse.json();
+            console.log('Stock balance response:', stockData);
+            // The response structure is {message: number} not {message: [{actual_qty: number}]}
+            stockQty = stockData.message || 0;
+          } else {
+            console.log('Stock balance API failed:', batchQtyResponse.status);
+          }
+        } catch (error) {
+          console.error('Error checking stock balance:', error);
+        }
+      } else {
+        console.log('No warehouse selected, using batch quantity as fallback');
+        stockQty = batch.batch_qty || 0;
+      }
+
+      console.log('Final stock quantity:', stockQty);
+
+      // Only show stock warning if we have a warehouse selected and stock is 0
+      if (selectedWarehouse && stockQty <= 0) {
+        showAlert('warning', 'Warning', `Item ${batch.item_name} has no stock in warehouse ${selectedWarehouse}. Adding anyway.`);
+        // Don't return, continue to add the item
+      }
+
+      // Fetch item details
+      const itemResponse = await fetch(`${API_BASE_URL}/Item/${batch.item}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!itemResponse.ok) {
+        showAlert('danger', 'Error', `Item not found: ${batch.item}`);
+        setBarcode('');
+        return;
+      }
+
+      const itemData = await itemResponse.json();
+      const item = itemData.data;
+
+      console.log('Item data:', item);
+
+      // Check if item already exists in the table with the same batch
+      const existingItemIndex = items.findIndex(
+        (item) => item.itemCode === batch.item && item.batchNo === batch.name
+      );
+
+      if (existingItemIndex !== -1) {
+        // Update existing item quantity
+        const updatedItems = [...items];
+        updatedItems[existingItemIndex].saleQty += 1;
+        updatedItems[existingItemIndex].stockQty = stockQty;
+        
+        // Recalculate totals for the updated item
+        const recalculatedItem = calculateItemTaxAndTotals(updatedItems[existingItemIndex], item.included_in_print_rate || false);
+        updatedItems[existingItemIndex] = recalculatedItem;
+        
+        setItems(updatedItems);
+        recalculateTotals?.(updatedItems);
+      } else {
+        // Create new item
+        const newItem: Item = {
+          id: Date.now().toString(),
+          alternateBatches: '',
+          substituteItem: '',
+          itemCode: batch.item,
+          itemName: batch.item_name || item.item_name,
+          uom: item.stock_uom || 'Nos',
+          stockQty: stockQty,
+          orderedQty: 0,
+          saleQty: 1,
+          batch: batch.name,
+          batchNo: batch.name,
+          expiryDate: batch.expiry_date || '',
+          batchStockQty: stockQty,
+          rate: batch.custom_mrp || 0, // Use custom_mrp from batch as Unit Sale Rate
+          taxTemplate: item.taxes_and_charges || '',
+          description: item.description || '',
+          itemAmount: 0,
+          discountPercent: 0,
+          discountAmt: 0,
+          cgstPercent: 0,
+          cgstAmt: 0,
+          sgstPercent: 0,
+          sgstAmt: 0,
+          igstPercent: 0,
+          igstAmt: 0,
+          totalAmt: 0,
+          kitName: '',
+          totalPckgAmt: 0,
+          packageName: '',
+          binLocation: '',
+          mrp: batch.custom_mrp, // Store MRP from batch
+          hasStock: stockQty > 0,
+        };
+
+        console.log('New item created:', newItem);
+
+        // Calculate tax and totals for the new item
+        const calculatedItem = calculateItemTaxAndTotals(newItem, item.included_in_print_rate || false);
+        
+        const updatedItems = [...items, calculatedItem];
+        setItems(updatedItems);
+        recalculateTotals?.(updatedItems);
+      }
+
+      showAlert('success', 'Success', `Item ${batch.item_name} added to return`);
+      setBarcode(''); // Clear barcode input after successful addition
+
+    } catch (error) {
+      console.error('Error processing barcode:', error);
+      showAlert('danger', 'Error', 'Failed to process barcode');
+      setBarcode('');
+    }
+  };
+
+  useEffect(() => {
+    if (barcode && barcode.trim()) {
+      handleBarcodeScan(barcode.trim());
+    }
+  }, [barcode]);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
@@ -1230,6 +1403,7 @@ export default function Return() {
   const [_showDropdown, setShowDropdown] = useState(false);
   const [showPosProfileSelector, setShowPosProfileSelector] = useState(false);
   const [showPatientRequisitionList, setShowPatientRequisitionList] = useState(false);
+  const [showPatientReturnRequisitionList, setShowPatientReturnRequisitionList] = useState(false);
   const [showPrescriptionList, setShowPrescriptionList] = useState(false);
   // const [showDocumentUpload, setShowDocumentUpload] = useState(false); // This state is now managed above
   const [kitOptions, setKitOptions] = useState<{ label: string; value: string }[]>([]);
@@ -1246,7 +1420,7 @@ export default function Return() {
   const [showViewPosInvoicesModal, setShowViewPosInvoicesModal] = useState(false); // New state for View POS Invoices modal
   const [_isItemsLoadedFromRequisitionOrPrescription, setIsItemsLoadedFromRequisitionOrPrescription] = useState(false); // Track if items are loaded from requisition or prescription
   const [sourceDocumentName, setSourceDocumentName] = useState<string>(''); // Track the source document name (requisition or prescription)
-  const [sourceDocumentType, setSourceDocumentType] = useState<'requisition' | 'prescription' | ''>(''); // Track the source document type
+  const [sourceDocumentType, setSourceDocumentType] = useState<'requisition' | 'prescription' | 'return_requisition' | ''>(''); // Track the source document type
 
   const [showSelectInvoiceModal, setShowSelectInvoiceModal] = useState(false);
   const [_showCreateReturnModal, setShowCreateReturnModal] = useState(false);
@@ -1279,6 +1453,7 @@ export default function Return() {
   const [isReturnInvoice, setIsReturnInvoice] = useState(false);
   const [isDirectReturn, setIsDirectReturn] = useState(false);
   const [returnAgainstInvoice, setReturnAgainstInvoice] = useState<string>('');
+  const [selectedInvoicesForReturn, setSelectedInvoicesForReturn] = useState<string[]>([]); // Store actual invoice names
   const [roundedGrandTotal, setRoundedGrandTotal] = useState<number>(0);
   // Payments captured from RecordPaymentModal
   const [recordedPayments, setRecordedPayments] = useState<Array<{
@@ -1810,6 +1985,7 @@ export default function Return() {
     setShowDropdown(false);
     setShowPosProfileSelector(false);
     setShowPatientRequisitionList(false);
+    setShowPatientReturnRequisitionList(false);
     setShowPrescriptionList(false);
     setKitOptions([]);
     setShowAlternativeItemsPopover(false);
@@ -2279,10 +2455,56 @@ export default function Return() {
 
       console.log("Duplicate check result:", { existingItemIndex, itemCode: item.itemCode, batchNo: item.batchNo });
 
+      // For return requisitions, allow updating existing items instead of blocking
       if (existingItemIndex !== -1) {
-        const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
-        showAlert("danger", "Duplicate Item", `Item ${item.itemName} with batch ${item.batchNo} already exists in grid at row number ${rowNum}.`);
-        return; // Don't add the duplicate item
+        // If this is a return requisition item and it already exists, update quantities
+        if (item.returnQty !== undefined || isReturn) {
+          console.log("Updating existing return item instead of adding duplicate");
+          console.log("Existing item before update:", items[existingItemIndex]);
+          console.log("New item data:", item);
+          setItems(prevItems => {
+            const updatedItems = [...prevItems];
+            const existingItem = updatedItems[existingItemIndex];
+            
+            // Update return quantity and sale quantity
+            existingItem.returnQty = (existingItem.returnQty || 0) + (item.returnQty || item.saleQty || 0);
+            existingItem.saleQty = existingItem.returnQty;
+            
+            console.log("Updated item with new quantities:", existingItem);
+            
+            // Recalculate totals for the updated item
+            const calculatedItem = calculateItemTaxAndTotals(existingItem, true);
+            updatedItems[existingItemIndex] = calculatedItem;
+            
+            console.log("Calculated item after tax and totals:", calculatedItem);
+            
+            // Recalculate totals for all items
+            const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
+
+            // Update bill totals
+            const newTotalBillAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.totalAmt, 0);
+            const newTotalDiscountAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.discountAmt, 0);
+            const newTotalCgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.cgstAmt, 0);
+            const newTotalSgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.sgstAmt, 0);
+            const newTotalIgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.igstAmt, 0);
+
+            setTotalBillAmount(newTotalBillAmount);
+            setTotalDiscountAmount(newTotalDiscountAmount);
+            setTotalCgstAmount(newTotalCgstAmount);
+            setTotalSgstAmount(newTotalSgstAmount);
+            setTotalIgstAmount(newTotalIgstAmount);
+
+            console.log("Final updated items array:", allCalculatedItems);
+            return allCalculatedItems;
+          });
+          showAlert("success", "Success", `Return quantity updated for ${item.itemName} with batch ${item.batchNo}.`);
+          return;
+        } else {
+          // For non-return items, show duplicate error
+          const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
+          showAlert("danger", "Duplicate Item", `Item ${item.itemName} with batch ${item.batchNo} already exists in grid at row number ${rowNum}.`);
+          return; // Don't add the duplicate item
+        }
       }
 
       const taxDetails = await fetchTaxDetails(item.itemCode, item.rate || 0, 1, item.uom);
@@ -2319,6 +2541,9 @@ export default function Return() {
       }
 
       setItems(prevItems => {
+        console.log("Adding new item to grid. Previous items count:", prevItems.length);
+        console.log("Previous items:", prevItems);
+        
         // Always add as a new item, as each batch-specific item has a unique ID now
         const newItemWithCalculations = calculateItemTaxAndTotals({
           ...item,
@@ -2339,8 +2564,12 @@ export default function Return() {
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         if (newItemWithCalculations) {
           const updatedItems = [...prevItems, newItemWithCalculations];
+          console.log("Updated items array after adding new item:", updatedItems);
+          console.log("New items count:", updatedItems.length);
+          
           // Recalculate totals for all items
           const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
+          console.log("Final calculated items array:", allCalculatedItems);
 
           // Update bill totals
           const newTotalBillAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.totalAmt, 0);
@@ -2355,6 +2584,7 @@ export default function Return() {
           setTotalSgstAmount(newTotalSgstAmount);
           setTotalIgstAmount(newTotalIgstAmount);
 
+          console.log("Returning final items array with", allCalculatedItems.length, "items");
           return allCalculatedItems;
         } else {
           console.error("Error adding item to details: newItemWithCalculations is null or undefined");
@@ -3176,6 +3406,205 @@ export default function Return() {
 
     setShowPatientRequisitionList(false);
     showAlert("success", "Success", `Requisition ${requisition.name} selected and loaded.`);
+  };
+
+  const handleSelectReturnRequisition = async (requisition: any) => {
+    console.log("Selected return requisition:", requisition);
+    console.log("Current warehouse:", selectedWarehouse);
+    console.log("Current company:", selectedCompany);
+    
+    // Set source document information
+    setSourceDocumentName(requisition.name);
+    setSourceDocumentType('return_requisition');
+    setIsItemsLoadedFromRequisitionOrPrescription(true);
+
+    // Set Req ID field with requisition name and make it readonly
+    setReqId(requisition.name);
+    setIsReqIdReadonly(true);
+
+    // Set patient data
+    const newPatientData = {
+      name: requisition.custom_patient_name || "N/A",
+      age: requisition.custom_age || "N/A",
+      sex: requisition.custom_gender || "N/A",
+      phone: requisition.custom_mobile || "N/A",
+      ABHAID: requisition.custom_mrn || "N/A",
+      category: "N/A",
+      doctor: "N/A",
+      mrn: requisition.custom_mrn || "N/A",
+      displayNo: requisition.custom_mrn || "N/A",
+      dept: requisition.department || "N/A",
+      visitType: "N/A",
+      company: "N/A",
+    };
+    setPatientData(newPatientData);
+
+    // Set requisition details
+    setRequisitionNo(requisition.name);
+    setRequisitionFrom(requisition.set_warehouse);
+    setRequisitionDate(new Date(requisition.from_date));
+    setToLocation(requisition.set_warehouse);
+
+    // Set boolean flags
+    setIsRoutine(requisition.routine === 1);
+    setIsStat(requisition.emergency === 1);
+    setIsDischarge(requisition.discharge === 1);
+    setIsAsap(false);
+    setIsExpired(false);
+    setIsReturn(true);
+
+    // Add return requisition items to the table
+    const warehouse = selectedWarehouse; // Ensure selectedWarehouse is set before this point
+    if (!warehouse) {
+      showAlert("danger", "Error", "Please select a warehouse first to load return requisition items.");
+      setShowPatientReturnRequisitionList(false);
+      return;
+    }
+
+    const company = selectedCompany; // Ensure selectedCompany is set before this point
+    if (!company) {
+      showAlert("danger", "Error", "Please select a company first to load return requisition items.");
+      setShowPatientReturnRequisitionList(false);
+      return;
+    }
+
+    console.log("Requisition table_vbbs:", requisition.table_vbbs);
+    console.log("Is table_vbbs array?", Array.isArray(requisition.table_vbbs));
+    console.log("table_vbbs length:", requisition.table_vbbs?.length);
+
+    if (!requisition.table_vbbs || !Array.isArray(requisition.table_vbbs)) {
+      showAlert("danger", "Error", "Return requisition item details are missing or not in a valid format.");
+      setShowPatientReturnRequisitionList(false);
+      return;
+    }
+
+    for (const reqItem of requisition.table_vbbs) {
+      const itemCode = reqItem.item_code;
+      const returnQty = reqItem.acknowledge_qty || reqItem.issue_qty;
+
+      console.log(`Processing return requisition item: ${itemCode}, returnQty: ${returnQty}`);
+
+      try {
+        // Skip items with zero quantity
+        if (returnQty <= 0) {
+          console.log(`Skipping item ${itemCode} - no quantity to return`);
+          continue;
+        }
+
+        console.log(`Fetching batches for item: ${itemCode}, warehouse: ${warehouse}, company: ${company}`);
+        const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
+        console.log(`Batches found for ${itemCode}:`, batches);
+        console.log(`Looking for batch_no: ${reqItem.batch_no}`);
+        
+        if (!batches || !Array.isArray(batches)) {
+          console.error(`Invalid batches response for ${itemCode}:`, batches);
+          continue;
+        }
+        
+        const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
+        console.log(`Sorted batches for ${itemCode}:`, sortedBatches);
+
+        if (sortedBatches.length === 0) {
+          console.warn(`No batches found for item ${itemCode} in warehouse ${warehouse}`);
+          continue;
+        }
+
+        // Find the matching batch
+        console.log(`Looking for batch_no: ${reqItem.batch_no} in batches:`, sortedBatches.map(b => ({ 
+          batch_no: b.batch_no, 
+          item_code: b.item_code,
+          name: b.name,
+          batch_qty: b.batch_qty,
+          actual_qty: b.actual_qty
+        })));
+        
+        const matchingBatch = sortedBatches.find(batch => {
+          // Try multiple possible field names for batch number
+          const batchNumber = batch.batch_no || batch.name || batch.batch_id || batch.batch;
+          console.log(`Comparing "${reqItem.batch_no}" with "${batchNumber}"`);
+          return batchNumber === reqItem.batch_no;
+        });
+        
+        let selectedBatch = matchingBatch;
+        
+        if (!matchingBatch) {
+          console.warn(`Batch ${reqItem.batch_no} not found for item ${itemCode}. Available batches:`, sortedBatches.map(b => ({ batch_no: b.batch_no, item_code: b.item_code })));
+          
+          // Instead of skipping, use the first available batch with FEFO logic
+          if (sortedBatches.length > 0) {
+            selectedBatch = sortedBatches[0]; // Use first batch (already sorted by expiry date)
+            console.log(`Using alternative batch ${selectedBatch.batch_no || selectedBatch.name} for item ${itemCode} instead of ${reqItem.batch_no}`);
+            showAlert("warning", "Batch Substituted", `Batch ${reqItem.batch_no} not found for ${reqItem.item_name}. Using batch ${selectedBatch.batch_no || selectedBatch.name} instead.`);
+          } else {
+            console.warn(`No batches available for item ${itemCode} in warehouse ${warehouse}`);
+            showAlert("danger", "No Stock Available", `No batches available for ${reqItem.item_name} in warehouse ${warehouse}.`);
+            continue;
+          }
+        }
+
+        console.log("Found selected batch:", selectedBatch);
+
+        // Create item object for the table with return quantities
+        console.log("Creating item object with selected batch:", selectedBatch);
+        const itemObj: Item = {
+          id: selectedBatch.batch_no || selectedBatch.name || selectedBatch.batch_id || selectedBatch.batch || 'NO-BATCH',
+          itemCode: itemCode,
+          itemName: reqItem.item_name,
+          batch: selectedBatch.batch_no || selectedBatch.name || selectedBatch.batch_id || selectedBatch.batch || 'NO-BATCH',
+          batchNo: selectedBatch.batch_no || selectedBatch.name || selectedBatch.batch_id || selectedBatch.batch || 'NO-BATCH',
+          expiryDate: selectedBatch.expiry_date,
+          stockQty: selectedBatch.actual_qty || 0,
+          batchStockQty: selectedBatch.actual_qty || 0,
+          orderedQty: reqItem.issue_qty, // Original issue quantity from requisition
+          saleQty: reqItem.acknowledge_qty, // Return quantity from requisition
+          returnQty: reqItem.acknowledge_qty, // Explicitly set returnQty for table display
+          rate: selectedBatch.valuation_rate || reqItem.mrp || 0,
+          mrp: reqItem.mrp || 0,
+          uom: selectedBatch.stock_uom || "Nos",
+          taxTemplate: "",
+          description: "",
+          itemAmount: reqItem.acknowledge_qty * (selectedBatch.valuation_rate || reqItem.mrp || 0), // Use return quantity for amount
+          discountPercent: 0,
+          discountAmt: 0,
+          cgstPercent: 0,
+          cgstAmt: 0,
+          sgstPercent: 0,
+          sgstAmt: 0,
+          igstPercent: 0,
+          igstAmt: 0,
+          totalAmt: reqItem.acknowledge_qty * (selectedBatch.valuation_rate || reqItem.mrp || 0), // Use return quantity for total amount
+          kitName: "",
+          totalPckgAmt: 0,
+          packageName: "",
+          binLocation: selectedBatch.bin_location || "",
+          substituteItem: "",
+          alternateBatches: "",
+          max_discount: 0,
+          custom_classification: "",
+        };
+
+        console.log("Final item object to be added:", itemObj);
+        console.log("Item object properties:", {
+          itemCode: itemObj.itemCode,
+          itemName: itemObj.itemName,
+          batchNo: itemObj.batchNo,
+          returnQty: itemObj.saleQty,
+          saleQty: itemObj.saleQty,
+          orderedQty: itemObj.orderedQty
+        });
+
+        console.log("Calling handleAddItemToDetails with itemObj...");
+        await handleAddItemToDetails(itemObj);
+        console.log("handleAddItemToDetails call completed");
+
+      } catch (error) {
+        console.error(`Error processing return requisition item ${itemCode}:`, error);
+        continue;
+      }
+    }
+
+    setShowPatientReturnRequisitionList(false);
+    showAlert("success", "Success", `Return Requisition ${requisition.name} selected and loaded.`);
   };
 
   const handleSelectPrescription = async (prescription: any) => {
@@ -4227,96 +4656,154 @@ export default function Return() {
           return;
         }
 
-        // Prepare return data with proper GST-inclusive calculations
-        const returnData = {
-          original_invoice: returnAgainstInvoice || null, // null for direct returns
-          included_in_print_rate: 1, // GST included in MRP - set at invoice level
-          customer: selectedCustomer || '',
-          company: selectedCompany || '',
-          pos_profile: posProfile || '',
-          // Custom fields
-          custom_patient_name: patientData?.name || '',
-          custom_uhid: patientData?.ABHAID || '',
-          custom_bed_no: patientData?.bed || '',
-          custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
-          custom_visit_code: patientData?.visitID || '',
-          custom_phone: patientData?.phone || '',
-          custom_doctor_name: patientData?.doctor || '',
-          custom_age: patientData?.age || '',
-          return_items: itemsToReturn.map(item => {
-          const returnQty = item.returnQty || 0;
-          // const saleQty = item.saleQty || 1;
-          const discountPercent = item.discountPercent || 0;
-            
-            // Rate per unit (MRP with GST included)
-            const ratePerUnit = item.rate || 0;
-            
-            // For GST-inclusive calculations with discount:
-            // If discount is applied, we need to send the rate AFTER discount
-            // Backend will handle the GST extraction
-            const discountAmount = ratePerUnit * (discountPercent / 100);
-            const rateAfterDiscount = ratePerUnit - discountAmount;
-            
-            return {
-              item_code: item.itemCode,
-              item_name: item.itemName,
-              return_qty: returnQty,
-              margin_type: discountPercent > 0 ? "Percentage" : "", // Use Percentage only if discount applied
-              margin_rate_or_amount: 0,
-              discount_percentage: discountPercent, // Original discount percentage
-              discount_amount: discountAmount * returnQty, // Total discount amount for return qty
-              rate: rateAfterDiscount, // Rate after discount (GST still included)
-              price_list_rate: ratePerUnit, // Original MRP before discount
-              cgst_rate: item.cgstPercent || 0,
-              sgst_rate: item.sgstPercent || 0,
-              igst_rate: item.igstPercent || 0,
-              batch_no: item.batchNo || '',
-              custom_expiry_date: item.expiryDate || '',
-              warehouse: item.warehouse || selectedWarehouse,
-              item_tax_template: item.taxTemplate || '',
-            };
-          }),
-          refund_mode: 'Cash',
-          return_remarks: remarks || (returnAgainstInvoice ? 'Return invoice' : 'Direct return invoice'),
-          taxes: []
-        };
-
         try {
-          const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `token ${apiKey}:${apiSecret}`,
-            },
-            body: JSON.stringify(returnData),
-          });
-
-          const result = await response.json();
+          // Filter items by their source invoice and create separate returns for each
+          const invoicesToProcess = selectedInvoicesForReturn.length > 0 ? selectedInvoicesForReturn : 
+                                  (returnAgainstInvoice ? [returnAgainstInvoice] : []);
           
-          if (response.ok) {
-            const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
-            const returnMessage = returnAgainstInvoice 
-              ? `Return invoice ${returnInvoiceName} created successfully against ${returnAgainstInvoice}.`
-              : `Direct return invoice ${returnInvoiceName} created successfully.`;
-            showAlert('success', 'Success', returnMessage);
+          if (invoicesToProcess.length === 0) {
+            showAlert("danger", "Error", "No source invoices found for return.");
+            return;
+          }
+
+          let successCount = 0;
+          const failedInvoices: string[] = [];
+          const createdReturnInvoices: string[] = [];
+
+          // Process each invoice separately
+          for (const sourceInvoice of invoicesToProcess) {
+            // Filter items that belong to this specific invoice
+            const itemsForThisInvoice = itemsToReturn.filter(item => item.saleBillNo === sourceInvoice);
             
-            // Print the return invoice
-            if (returnInvoiceName) {
-              const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
-              window.open(printUrl, '_blank');
+            if (itemsForThisInvoice.length === 0) {
+              console.log(`No items to return for invoice ${sourceInvoice}`);
+              continue;
+            }
+
+            console.log(`Processing return for invoice ${sourceInvoice} with ${itemsForThisInvoice.length} items`);
+
+            // Prepare the three required arguments for the API
+            const originalInvoice = sourceInvoice;
+            
+            const returnItems = itemsForThisInvoice.map(item => {
+            const returnQty = item.returnQty || 0;
+            const discountPercent = item.discountPercent || 0;
+              
+              // Rate per unit (MRP with GST included)
+              const ratePerUnit = item.rate || 0;
+              
+              // For GST-inclusive calculations with discount:
+              // If discount is applied, we need to send the rate AFTER discount
+              // Backend will handle the GST extraction
+              const discountAmount = ratePerUnit * (discountPercent / 100);
+              const rateAfterDiscount = ratePerUnit - discountAmount;
+              
+              return {
+                item_code: item.itemCode,
+                item_name: item.itemName,
+                return_qty: returnQty,
+                margin_type: discountPercent > 0 ? "Percentage" : "", // Use Percentage only if discount applied
+                margin_rate_or_amount: 0,
+                discount_percentage: discountPercent, // Original discount percentage
+                discount_amount: discountAmount * returnQty, // Total discount amount for return qty
+                rate: rateAfterDiscount, // Rate after discount (GST still included)
+                price_list_rate: ratePerUnit, // Original MRP before discount
+                cgst_rate: item.cgstPercent || 0,
+                sgst_rate: item.sgstPercent || 0,
+                igst_rate: item.igstPercent || 0,
+                batch_no: item.batchNo || '',
+                custom_expiry_date: item.expiryDate || '',
+                warehouse: item.warehouse || selectedWarehouse,
+                item_tax_template: item.taxTemplate || '',
+              };
+            });
+            const refundMode = 'Cash';
+
+            const payload = {
+              original_invoice: originalInvoice,
+              return_items: returnItems,
+              refund_mode: refundMode,
+              // Additional fields for complete invoice creation
+              included_in_print_rate: 1, // GST included in MRP - set at invoice level
+              customer: selectedCustomer || '',
+              company: selectedCompany || '',
+              pos_profile: posProfile || '',
+              // Custom fields
+              custom_patient_name: patientData?.name || '',
+              custom_uhid: patientData?.ABHAID || '',
+              custom_bed_no: patientData?.bed || '',
+              custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
+              custom_visit_code: patientData?.visitID || '',
+              custom_phone: patientData?.phone || '',
+              custom_doctor_name: patientData?.doctor || '',
+              custom_age: patientData?.age || '',
+              return_remarks: remarks || `Return invoice against ${originalInvoice}`,
+              taxes: []
+            };
+
+            console.log(`Return API Payload for ${originalInvoice}:`, payload);
+
+            try {
+              const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `token ${apiKey}:${apiSecret}`,
+                },
+                body: JSON.stringify(payload),
+              });
+
+              const result = await response.json();
+              console.log(`Return API Response for ${originalInvoice}:`, result);
+              
+              if (response.ok) {
+                const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
+                createdReturnInvoices.push(returnInvoiceName);
+                successCount++;
+                
+                // Print the return invoice
+                if (returnInvoiceName) {
+                  const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+                  window.open(printUrl, '_blank');
+                }
+              } else {
+                console.error(`API Error Response for ${originalInvoice}:`, result);
+                failedInvoices.push(originalInvoice);
+              }
+            } catch (error: any) {
+              console.error(`Return API Error for ${originalInvoice}:`, error);
+              failedInvoices.push(originalInvoice);
+            }
+          }
+
+          // Show final result
+          if (successCount > 0) {
+            const returnMessage = successCount === 1 ? 
+              `${successCount} return invoice created successfully: ${createdReturnInvoices.join(', ')}` :
+              `${successCount} return invoices created successfully: ${createdReturnInvoices.join(', ')}`;
+            
+            if (failedInvoices.length > 0) {
+              showAlert('warning', 'Partial Success', `${returnMessage}\nFailed to create returns for: ${failedInvoices.join(', ')}`);
+            } else {
+              showAlert('success', 'Success', returnMessage);
             }
             
-            // Reset form
-            handleReset();
-            setIsReturn(false);
-            setIsReturnInvoice(false);
-            setIsDirectReturn(false);
-            setReturnAgainstInvoice('');
+            // Reset form only if all returns were successful
+            if (failedInvoices.length === 0) {
+              handleReset();
+              setIsReturn(false);
+              setIsReturnInvoice(false);
+              setIsDirectReturn(false);
+              setReturnAgainstInvoice('');
+              setSelectedInvoicesForReturn([]);
+            }
           } else {
-            throw new Error(result.message || 'Failed to create return invoice');
+            showAlert('danger', 'Error', 'Failed to create any return invoices.');
           }
+        
         } catch (error: any) {
-          showAlert('danger', 'Error', error.message || 'Failed to create return invoice');
+          console.error('Return processing error:', error);
+          showAlert('danger', 'Error', error.message || 'Failed to process return invoices.');
         }
         
         return;
@@ -4810,7 +5297,7 @@ export default function Return() {
           parentTitle="POS"
           parentLink="/pos"
           title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New OPD Bill"}
-          icon="../assets/icons/BriefcaseIcon.svg"
+          icon="assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           warehouse={selectedWarehouse || undefined}
           rightButtons={
@@ -4959,17 +5446,24 @@ export default function Return() {
                 <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
                   <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
                   <Label htmlFor="terms">Generic</Label>
-                  <Button type="primary-button" size="button-medium" onClick={() => {
+                  {/* <Button type="primary-button" size="button-medium" onClick={() => {
                     console.log('Patient Requisition button clicked');
                     setShowPatientRequisitionList(true)
                     console.log('showPatientRequisitionList', showPatientRequisitionList);
                   }
                   }>
                     Patient Requisition
+                  </Button> */}
+                  <Button type="primary-button" size="button-medium" onClick={() => {
+                    console.log('Patient Return Requisition button clicked');
+                    setShowPatientReturnRequisitionList(true)
+                  }
+                  }>
+                    Patient Return Requisition
                   </Button>
-                  <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
+                  {/* <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
                     Prescription
-                  </Button>
+                  </Button> */}
 
                   {/* --- START: Modified Upload Button --- */}
                   <Button
@@ -5328,7 +5822,7 @@ export default function Return() {
           <Popover>
             <PopoverTrigger asChild>
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="Dots"
                 width={50}
                 height={50}
@@ -5438,6 +5932,17 @@ export default function Return() {
         />
       )}
 
+      {showPatientReturnRequisitionList && (
+        <PatientReturnRequisitionList
+          isOpen={showPatientReturnRequisitionList}
+          onClose={() => {
+            console.log('Closing PatientReturnRequisitionList');
+            setShowPatientReturnRequisitionList(false)
+          }}
+          onSelectRequisition={handleSelectReturnRequisition}
+        />
+      )}
+
       {showPrescriptionList && (
         <PrescriptionList
           isOpen={showPrescriptionList}
@@ -5489,131 +5994,152 @@ export default function Return() {
   <SelectInvoiceModal
     isOpen={showSelectInvoiceModal}
     onClose={() => setShowSelectInvoiceModal(false)}
-    onSelect={async (invoice) => {  // Make the handler async
+    patientName={patientData?.name} // Pass patient name for default filtering
+    onSelect={async (invoices: any[]) => {  // Update to handle array of invoices
       try {
+        if (!invoices || invoices.length === 0) {
+          showAlert('danger', 'Error', 'No invoices selected');
+          return;
+        }
+
         // Load invoice data into the new_bill page for return processing
         setIsReturn(true);
         setIsReturnInvoice(true);
         setIsDirectReturn(false); // This is not a direct return
-        setReturnAgainstInvoice(invoice.name);
+
+        // Use the first invoice for customer/patient data (assuming they're the same)
+        const firstInvoice = invoices[0];
+        const selectedInvoiceNames = invoices.map(inv => inv.name);
+        
+        setReturnAgainstInvoice(invoices.length === 1 ? firstInvoice.name : `${invoices.length} Invoices`);
+        setSelectedInvoicesForReturn(selectedInvoiceNames); // Store actual invoice names
 
         // Load customer and patient data
-        setSelectedCustomer(invoice.customer || '');
-        if (invoice.custom_patient_name) {
+        setSelectedCustomer(firstInvoice.customer || '');
+        if (firstInvoice.custom_patient_name) {
           setPatientData({
-            name: invoice.custom_patient_name || '',
-            age: invoice.custom_age || '',
-            sex: invoice.custom_sex || '',
-            phone: invoice.custom_phone || '',
-            ABHAID: invoice.custom_abha_id || '',
-            category: invoice.custom_category || '',
-            doctor: invoice.custom_doctor_name || '',
-            mrn: invoice.custom_mrn || '',
-            displayNo: invoice.custom_display_no || '',
-            dept: invoice.custom_department || '',
-            visitType: invoice.custom_visit_type || '',
-            company: invoice.custom_company || '',
-            visitID: invoice.custom_visit_id || '',
-            bed: invoice.custom_bed || '',
+            name: firstInvoice.custom_patient_name || '',
+            age: firstInvoice.custom_age || '',
+            sex: firstInvoice.custom_sex || '',
+            phone: firstInvoice.custom_phone || '',
+            ABHAID: firstInvoice.custom_abha_id || '',
+            category: firstInvoice.custom_category || '',
+            doctor: firstInvoice.custom_doctor_name || '',
+            mrn: firstInvoice.custom_mrn || '',
+            displayNo: firstInvoice.custom_display_no || '',
+            dept: firstInvoice.custom_department || '',
+            visitType: firstInvoice.custom_visit_type || '',
+            company: firstInvoice.custom_company || '',
+            visitID: firstInvoice.custom_visit_id || '',
+            bed: firstInvoice.custom_bed || '',
           });
         }
 
         // Load company, warehouse, and other settings
-        setSelectedCompany(invoice.company || '');
-        setSelectedWarehouse(invoice.set_warehouse || '');
+        setSelectedCompany(firstInvoice.company || '');
+        setSelectedWarehouse(firstInvoice.set_warehouse || '');
 
-        // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
-        const loadedItems: Item[] = await Promise.all(
-          invoice.items.map(async (item: any, index: number) => {
-            let alreadyReturnedQty = 0;
+        // Process all invoices and merge their items
+        const allLoadedItems: Item[] = [];
+        
+        for (const invoice of invoices) {
+          // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
+          const loadedItems: Item[] = await Promise.all(
+            invoice.items.map(async (item: any, index: number) => {
+              let alreadyReturnedQty = 0;
 
-            try {
-              // Fetch return invoices against this invoice
-              const returnResponse = await fetch(
-                `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
-                {
-                  headers: {
-                    Authorization: `token ${apiKey}:${apiSecret}`,
-                  },
-                }
-              );
-              const returnData = await returnResponse.json();
+              try {
+                // Fetch return invoices against this invoice
+                const returnResponse = await fetch(
+                  `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                  {
+                    headers: {
+                      Authorization: `token ${apiKey}:${apiSecret}`,
+                    },
+                  }
+                );
+                const returnData = await returnResponse.json();
 
-              if (returnData.data && returnData.data.length > 0) {
-                for (const returnInv of returnData.data) {
-                  const returnInvResponse = await fetch(
-                    `https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`,
-                    {
-                      headers: {
-                        Authorization: `token ${apiKey}:${apiSecret}`,
-                      },
-                    }
-                  );
-                  const returnInvData = await returnInvResponse.json();
-
-                  if (returnInvData.data?.items) {
-                    const returnedItem = returnInvData.data.items.find(
-                      (ri: any) => ri.item_code === item.item_code
+                if (returnData.data && returnData.data.length > 0) {
+                  for (const returnInv of returnData.data) {
+                    const returnInvResponse = await fetch(
+                      `https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`,
+                      {
+                        headers: {
+                          Authorization: `token ${apiKey}:${apiSecret}`,
+                        },
+                      }
                     );
-                    if (returnedItem) {
-                      alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                    const returnInvData = await returnInvResponse.json();
+
+                    if (returnInvData.data?.items) {
+                      const returnedItem = returnInvData.data.items.find(
+                        (ri: any) => ri.item_code === item.item_code
+                      );
+                      if (returnedItem) {
+                        alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                      }
                     }
                   }
                 }
+              } catch (error) {
+                console.error('Failed to fetch already returned quantities:', error);
+                alreadyReturnedQty = 0;
               }
-            } catch (error) {
-              console.error('Failed to fetch already returned quantities:', error);
-              alreadyReturnedQty = 0;
-            }
 
-            return {
-              id: `${item.item_code}-${item.batch_no || ''}-${index}`,
-              alternateBatches: '',
-              substituteItem: '',
-              itemCode: item.item_code,
-              itemName: item.item_name,
-              uom: item.uom,
-              stockQty: item.actual_qty || 0,
-              orderedQty: 0,
-              saleQty: item.qty,
-              returnQty: 0,
-              alreadyReturnedQty,
-              batch: item.batch_no || '',
-              batchNo: item.batch_no || '',
-              expiryDate: item.custom_expiry_date || '',
-              batchStockQty: item.actual_batch_qty || 0,
-              rate: item.rate,
-              taxTemplate: item.item_tax_template || '',
-              description: item.description || '',
-              itemAmount: item.base_amount || 0,
-              discountPercent: item.discount_percentage || 0,
-              discountAmt: item.discount_amount || 0,
-              cgstPercent: item.cgst_rate || 0,
-              cgstAmt: item.cgst_amount || 0,
-              sgstPercent: item.sgst_rate || 0,
-              sgstAmt: item.sgst_amount || 0,
-              igstPercent: item.igst_rate || 0,
-              igstAmt: item.igst_amount || 0,
-              totalAmt: item.amount || 0,
-              kitName: '',
-              totalPckgAmt: 0,
-              packageName: '',
-              binLocation: item.custom_bin_location || '',
-              warehouse: item.warehouse || '',
-              marginType: item.margin_type || '',
-              includedInPrintRate: true,
-              mrp: item.custom_mrp || 0,
-            };
-          })
-        );
+              return {
+                id: `${item.item_code}-${item.batch_no || ''}-${invoice.name}-${index}`, // Include invoice name in ID for uniqueness
+                alternateBatches: '',
+                substituteItem: '',
+                itemCode: item.item_code,
+                itemName: item.item_name,
+                uom: item.uom,
+                stockQty: item.actual_qty || 0,
+                orderedQty: 0,
+                saleQty: item.qty,
+                returnQty: 0,
+                alreadyReturnedQty,
+                batch: item.batch_no || '',
+                batchNo: item.batch_no || '',
+                expiryDate: item.custom_expiry_date || '',
+                batchStockQty: item.actual_batch_qty || 0,
+                rate: item.rate,
+                taxTemplate: item.item_tax_template || '',
+                description: item.description || '',
+                itemAmount: item.base_amount || 0,
+                discountPercent: item.discount_percentage || 0,
+                discountAmt: item.discount_amount || 0,
+                cgstPercent: item.cgst_rate || 0,
+                cgstAmt: item.cgst_amount || 0,
+                sgstPercent: item.sgst_rate || 0,
+                sgstAmt: item.sgst_amount || 0,
+                igstPercent: item.igst_rate || 0,
+                igstAmt: item.igst_amount || 0,
+                totalAmt: item.amount || 0,
+                kitName: '',
+                totalPckgAmt: 0,
+                packageName: '',
+                binLocation: item.custom_bin_location || '',
+                warehouse: item.warehouse || '',
+                marginType: item.margin_type || '',
+                includedInPrintRate: true,
+                mrp: item.custom_mrp || 0,
+                saleBillNo: invoice.name, // Add the source invoice number
+              };
+            })
+          );
+          
+          allLoadedItems.push(...loadedItems);
+        }
 
-        setItems(loadedItems);
+        setItems(allLoadedItems);
 
         // Close modal
         setShowSelectInvoiceModal(false);
 
         // Show success message
-        showAlert('success', 'Invoice Loaded', `Invoice ${invoice.name} loaded for return. Enter return quantities and submit.`);
+        const invoiceNames = invoices.map(inv => inv.name).join(', ');
+        showAlert('success', 'Invoices Loaded', `${invoices.length} invoice(s) loaded for return: ${invoiceNames}. Enter return quantities and submit.`);
       } catch (err) {
         console.error('Error loading invoice for return:', err);
         showAlert('danger', 'Error', 'Failed to load invoice data.');
