@@ -93,10 +93,13 @@ const OpdCard: React.FC<PatientCardProps> = ({
     onReturnStatusChange,
 }) => {
     const [open, setOpen] = useState<boolean>(false);
-    const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors, doctors } = useFrappeApi();
+    const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors } = useFrappeApi();
     const { apiKey, apiSecret, isInitialized } = useAuth();
     // fetchWarehouseForSubdepartment
     const { showAlert } = useAlert();
+
+    // Local state for doctors since API hook doesn't provide setter
+    const [localDoctors, setLocalDoctors] = useState<any[]>([]);
 
     // State for editable fields
     const [editedPatient, setEditedPatient] = useState<SelectedPatient>({
@@ -300,13 +303,79 @@ const OpdCard: React.FC<PatientCardProps> = ({
             displayNo: patient.displayNo || "N/A",
             dept: patient.departmentName || "N/A",
             visitType: patient.patientVisitType || "N/A",
-            company: patient.company || "N/A",
+            company: patient.patientCompany || "N/A",
             Bed: patient.bedName || "N/A",
         };
         setEditedPatient(newPatientData);
         if (onPatientChange) {
             onPatientChange(newPatientData);
         }
+
+        // Auto-set customer based on patient's company or default to self-paid
+        if (setSelectedCustomer && customers.length > 0) {
+            // If patient has a company, try to find matching customer
+            if (newPatientData.company && newPatientData.company !== "N/A") {
+                const matchingCustomer = customers.find((customer: any) => 
+                    customer.label === newPatientData.company || customer.value === newPatientData.company
+                );
+                if (matchingCustomer) {
+                    setSelectedCustomer(matchingCustomer.value);
+                    console.log('Set customer to patient company:', matchingCustomer.value);
+                } else {
+                    // If no matching customer found, default to self-paid
+                    const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+                    if (defaultSelfPaidCustomer) {
+                        setSelectedCustomer(defaultSelfPaidCustomer.value);
+                        console.log('No matching customer found, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+                    }
+                }
+            } else {
+                // If patient has no company, default to self-paid
+                const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
+                if (defaultSelfPaidCustomer) {
+                    setSelectedCustomer(defaultSelfPaidCustomer.value);
+                    console.log('Patient has no company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+                }
+            }
+        }
+
+        // Fetch doctors for patient's department if available
+        // Use department for doctors API since that's what we have in patient data
+        if (newPatientData.dept && newPatientData.dept !== "N/A" && fetchDoctors) {
+            console.log('Fetching doctors for department:', newPatientData.dept);
+            fetchDoctors(newPatientData.dept).then(doctorData => {
+                setLocalDoctors(doctorData);
+                // If API succeeds but returns empty doctors, still set from patient data
+                if (!doctorData || doctorData.length === 0) {
+                    if (newPatientData.doctor && newPatientData.doctor !== "N/A") {
+                        console.log('No doctors found from API, setting doctor from patient data:', newPatientData.doctor);
+                        const patientDoctor = [{
+                            name: newPatientData.doctor,
+                            label: newPatientData.doctor,
+                            value: newPatientData.doctor
+                        }];
+                        setLocalDoctors(patientDoctor);
+                    }
+                }
+            }).catch(error => {
+                console.error('Failed to fetch doctors:', error);
+                // If doctors API fails, still set the doctor from patient data
+                if (newPatientData.doctor && newPatientData.doctor !== "N/A") {
+                    console.log('Setting doctor from patient data due to API failure:', newPatientData.doctor);
+                    // Create a doctors array with just the patient's doctor for the dropdown
+                    const patientDoctor = [{
+                        name: newPatientData.doctor,
+                        label: newPatientData.doctor,
+                        value: newPatientData.doctor
+                    }];
+                    setLocalDoctors(patientDoctor);
+                } else {
+                    // Clear doctors if API fails and no patient doctor available
+                    setLocalDoctors([]);
+                }
+            });
+        }
+
         setSearchValue(`${patient.patientFullName} (${patient.mrn})`);
         setShowDropdown(false);
         setHighlightedIndex(-1);
@@ -580,7 +649,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         </div>
                     </div>
                     <InfoRow
-                        icon="/assets/icons/Cake.svg"
+                        icon="assets/icons/Cake.svg"
                         label="Gender"
                         value={editedPatient.age}
                         selectValue={editedPatient.sex}
@@ -590,19 +659,19 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     />
                     {/* This is the new row for Age only */}
                     <InfoRow
-                        icon="/assets/icons/Cake.svg"
+                        icon="assets/icons/Cake.svg"
                         label="Age"
                         value={editedPatient.age}
                         onChange={(value) => handleFieldChange('age', value)}
                     />
                     <InfoRow
-                        icon="/assets/icons/Phone.svg"
+                        icon="assets/icons/Phone.svg"
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
                     />
                     <InfoRow
-                        icon="/assets/icons/Id.svg"
+                        icon="assets/icons/Id.svg"
                         label="ABHA ID"
                         value={editedPatient.ABHAID}
                         onChange={(value) => handleFieldChange('ABHAID', value)}
@@ -701,23 +770,23 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     </div>
 
                     <InfoRow
-                        icon="/assets/icons/Building.svg"
+                        icon="assets/icons/Building.svg"
                         label="Customer Name"
                         value={editedPatient.name || ''}
                         onChange={(value) => handleFieldChange('name', value)}
                     />
                     <InfoRow
-                        icon="/assets/icons/DoorEnter.svg"
+                        icon="assets/icons/DoorEnter.svg"
                         label="Visit Type"
                         value={editedPatient.visitType || ''}
                         disabled={true} // <-- 1. THIS IS YOUR ORIGINAL GOAL
                     />
                     <InfoRow
-                        icon="/assets/icons/FirstAidKit.svg"
+                        icon="assets/icons/FirstAidKit.svg"
                         label="Consulting Doctor"
                         value={editedPatient.doctor}
                         onChange={(value) => handleFieldChange('doctor', value)}
-                        selectOptions={doctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
+                        selectOptions={localDoctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
                         selectValue={editedPatient.doctor}
                         onSelectChange={(value) => handleFieldChange('doctor', value)}
                     />

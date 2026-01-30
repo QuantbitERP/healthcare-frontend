@@ -37,8 +37,13 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [manuallyEdited, setManuallyEdited] = useState<boolean>(false);
 
-  // Auto-set paid amount based on transaction type
+  // Auto-set paid amount based on transaction type (only for new invoices, not loaded ones)
   useEffect(() => {
+    // Don't auto-set paid amounts when loading an existing invoice
+    if (isLoadedInvoice) {
+      return;
+    }
+
     if (transactionType === 'credit') {
       // For credit transactions, set paid amount to 0
       setPayments(prev =>
@@ -57,7 +62,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
         }))
       );
     }
-  }, [transactionType, roundedGrandTotal, totalBillAmount, setPayments]);
+  }, [transactionType, roundedGrandTotal, totalBillAmount, setPayments, isLoadedInvoice]);
 
   useEffect(() => {
     const initializePaymentMethods = async () => {

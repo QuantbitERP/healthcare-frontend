@@ -56,6 +56,7 @@ interface Item {
   custom_allow_sale_days?: number; // Add custom_allow_sale_days field
   hasStock?: boolean; // Add hasStock field to track if item has stock
   max_discount?: number; // Add max_discount field for discount validation
+  saleBillNo?: string; // Add saleBillNo field to track source invoice
 }
 
 // Helper function to truncate to 2 decimal places (not round)
@@ -416,6 +417,8 @@ interface EditableTableProps {
   isReturnMode?: boolean; // Add prop to enable return mode
   isReturnInvoice?: boolean; // Add prop to track when invoice is loaded from return bill
   isDirectReturn?: boolean; // Add prop to distinguish direct returns (hide Sale Qty column)
+  applyPricingRules?: (items: Item[], customer: string) => Promise<Item[]>; // Add pricing rules function
+  selectedCustomer?: string; // Add selected customer for pricing rules
 }
 
 const EditableTable = ({
@@ -445,6 +448,8 @@ const EditableTable = ({
   isReturnMode = false, // Default to false (normal mode)
   isReturnInvoice = false, // Default to false (not loaded from return bill)
   isDirectReturn = false, // Default to false (not direct return)
+  applyPricingRules, // Pricing rules function
+  selectedCustomer, // Selected customer for pricing rules
 }: EditableTableProps) => {
   const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
   const effectiveApiKey = apiKey || authApiKey;
@@ -678,6 +683,28 @@ const EditableTable = ({
         recalculateTotals(updated);
       }
 
+      // Apply pricing rules when batchNo or rate changes
+      console.log('updateCell called - columnId:', columnId, 'applyPricingRules:', !!applyPricingRules, 'selectedCustomer:', selectedCustomer);
+      
+      if (applyPricingRules && selectedCustomer && (columnId === 'batchNo' || columnId === 'rate')) {
+        console.log('Applying pricing rules for column:', columnId, 'customer:', selectedCustomer);
+        console.log('Updated items count:', updated.length);
+        
+        const applyPricingRulesAsync = async () => {
+          try {
+            const updatedItemsWithPricing = await applyPricingRules(updated, selectedCustomer);
+            console.log('Pricing rules applied, updated items:', updatedItemsWithPricing?.length);
+            if (updatedItemsWithPricing && updatedItemsWithPricing.length > 0) {
+              console.log('Setting items with pricing rules applied');
+              setItems(updatedItemsWithPricing);
+            }
+          } catch (error) {
+            console.error('Error applying pricing rules:', error);
+          }
+        };
+        applyPricingRulesAsync();
+      }
+
       return updated;
     });
   };
@@ -688,6 +715,9 @@ const EditableTable = ({
         id: "select",
         header: ({ table }) => (
           <Checkbox
+            checked={table.getIsAllRowsSelected()}
+            onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+            aria-label="Select all rows"
             className="flex items-center justify-center"
           />
         ),
@@ -855,6 +885,24 @@ const EditableTable = ({
                   const updatedItems = prev.filter(i => i.id !== item.id);
                   updatedItems.splice(prev.findIndex(i => i.id === item.id), 0, ...newBatchItems);
                   if (recalculateTotals) recalculateTotals(updatedItems);
+                  
+                  // Apply pricing rules after batches are applied
+                  if (applyPricingRules && selectedCustomer) {
+                    console.log('Applying pricing rules after batch selection');
+                    const applyPricingRulesAsync = async () => {
+                      try {
+                        const updatedItemsWithPricing = await applyPricingRules(updatedItems, selectedCustomer);
+                        if (updatedItemsWithPricing && updatedItemsWithPricing.length > 0) {
+                          console.log('Setting items with pricing rules applied after batch selection');
+                          setItems(updatedItemsWithPricing);
+                        }
+                      } catch (error) {
+                        console.error('Error applying pricing rules after batch selection:', error);
+                      }
+                    };
+                    applyPricingRulesAsync();
+                  }
+                  
                   return updatedItems;
                 });
               }
@@ -1091,6 +1139,24 @@ const EditableTable = ({
                   updatedItems.push(newItems[i]);
                 }
                 if (recalculateTotals) recalculateTotals(updatedItems);
+                
+                // Apply pricing rules after substitute items are applied
+                if (applyPricingRules && selectedCustomer) {
+                  console.log('Applying pricing rules after substitute item selection');
+                  const applyPricingRulesAsync = async () => {
+                    try {
+                      const updatedItemsWithPricing = await applyPricingRules(updatedItems, selectedCustomer);
+                      if (updatedItemsWithPricing && updatedItemsWithPricing.length > 0) {
+                        console.log('Setting items with pricing rules applied after substitute selection');
+                        setItems(updatedItemsWithPricing);
+                      }
+                    } catch (error) {
+                      console.error('Error applying pricing rules after substitute selection:', error);
+                    }
+                  };
+                  applyPricingRulesAsync();
+                }
+                
                 return updatedItems;
               });
 
@@ -1139,6 +1205,19 @@ const EditableTable = ({
           <EditableCell value={getValue()} row={row} column={column} table={table} />
         ),
       },
+      // Conditionally add Sale Bill No column only in return mode
+      ...(isReturnMode ? [{
+        accessorKey: "saleBillNo",
+        header: "Sale Bill No",
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600">
+              {item.saleBillNo || '-'}
+            </div>
+          );
+        },
+      }] : []),
       {
         accessorKey: "batchNo",
         header: "Batch No.",

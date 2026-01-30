@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Loader, AlertTriangle, Eye } from 'lucide-react';
+import { X, FileText, Loader, AlertTriangle, Eye, CheckSquare, Square } from 'lucide-react';
 import Button from '../buttons/Button';
 import { useAuth } from '@/context/AuthContext';
 import DataTableComponent from '../DataTable';
 import { TableCellComponents } from '../DataTable';
+import { useAlert } from '@/components/AlertContext/AlertContext';
 
 interface SelectInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (invoice: any) => void;
+  onSelect: (invoices: any[]) => void;
+  patientName?: string; // Add patientName prop for default filtering
 }
 
-const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose, onSelect }) => {
+const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose, onSelect, patientName }) => {
   const { apiKey, apiSecret } = useAuth();
+  const { showAlert } = useAlert();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +25,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [itemsPopup, setItemsPopup] = useState<{ visible: boolean; items: any[]; invoiceName: string }>({ visible: false, items: [], invoiceName: '' });
   const [loadingItems, setLoadingItems] = useState(false);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
 
   // Live search with debouncing
   const handleSearchChange = (term: string) => {
@@ -45,7 +49,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       fetchInvoices();
       fetchSaleReturnAllowDays();
     }
-  }, [isOpen]);
+  }, [isOpen, patientName]); // Add patientName to dependency array
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -57,6 +61,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   }, [searchTimeout]);
 
   const columnNames = {
+    select: 'Select',
     name: 'Invoice No',
     customer: 'Customer',
     custom_patient_name: 'Patient Name',
@@ -69,6 +74,46 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   };
 
   const columns = [
+    {
+      id: 'select',
+      header: 'Select',
+      cell: ({ row }: any) => {
+        const postingDate = new Date(row.original.posting_date);
+        const today = new Date();
+        const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
+        const isAllowed = daysDifference <= saleReturnAllowDays;
+        const isSelected = selectedInvoices.has(row.original.name);
+        
+        return (
+          <button
+            onClick={() => {
+              if (!isAllowed) {
+                setRestrictedInvoice(row.original.name);
+                return;
+              }
+              
+              const newSelected = new Set(selectedInvoices);
+              if (isSelected) {
+                newSelected.delete(row.original.name);
+              } else {
+                newSelected.add(row.original.name);
+              }
+              setSelectedInvoices(newSelected);
+            }}
+            disabled={!isAllowed}
+            className={`p-2 rounded transition-colors ${
+              isAllowed 
+                ? isSelected 
+                  ? 'text-blue-600 hover:bg-blue-50' 
+                  : 'text-gray-400 hover:bg-gray-50'
+                : 'text-gray-200 cursor-not-allowed'
+            }`}
+          >
+            {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+          </button>
+        );
+      },
+    },
     {
       accessorKey: 'name',
       header: 'Invoice No',
@@ -149,43 +194,43 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         );
       },
     },
-    {
-      id: 'action',
-      header: 'Action',
-      cell: ({ row }: any) => {
-        const postingDate = new Date(row.original.posting_date);
-        const today = new Date();
-        const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
-        const isAllowed = daysDifference <= saleReturnAllowDays;
+    // {
+    //   id: 'action',
+    //   header: 'Action',
+    //   cell: ({ row }: any) => {
+    //     const postingDate = new Date(row.original.posting_date);
+    //     const today = new Date();
+    //     const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
+    //     const isAllowed = daysDifference <= saleReturnAllowDays;
         
-        return (
-          <Button
-            type={isAllowed ? 'primary-button' : 'secondary-button'}
-            onClick={async () => {
-              if (!isAllowed) {
-                setRestrictedInvoice(row.original.name);
-                return;
-              }
+    //     return (
+    //       <Button
+    //         type={isAllowed ? 'primary-button' : 'secondary-button'}
+    //         onClick={async () => {
+    //           if (!isAllowed) {
+    //             setRestrictedInvoice(row.original.name);
+    //             return;
+    //           }
               
-              setLoading(true);
-              try {
-                const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${row.original.name}`, {
-                  headers: {
-                    'Authorization': `token ${apiKey}:${apiSecret}`,
-                  }
-                });
-                const data = await res.json();
-                onSelect(data.data);
-              } catch (e) {
-                console.error('Failed to fetch full invoice', e);
-              }
-              setLoading(false);
-            }}>
-            Select
-          </Button>
-        );
-      },
-    },
+    //           setLoading(true);
+    //           try {
+    //             const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${row.original.name}`, {
+    //               headers: {
+    //                 'Authorization': `token ${apiKey}:${apiSecret}`,
+    //               }
+    //             });
+    //             const data = await res.json();
+    //             onSelect(data.data);
+    //           } catch (e) {
+    //             console.error('Failed to fetch full invoice', e);
+    //           }
+    //           setLoading(false);
+    //         }}>
+    //         Select
+    //       </Button>
+    //     );
+    //   },
+    // },
   ];
 
 const fetchInvoiceItems = async (invoiceName: string) => {
@@ -268,18 +313,33 @@ const fetchInvoiceItems = async (invoiceName: string) => {
   const fetchInvoices = async (search = searchTerm, dRange = dateRange) => {
     setLoading(true);
     try {
-      const apiFilters: any[] = [['docstatus', '=', 1]];
+      let apiFilters: any[] = [['docstatus', '=', 1]];
       
-      // Multi-field search: Invoice No, Patient Name, Doctor Name
+      // Multi-field search: Invoice No, Patient Name, Doctor Name (only if search term is provided)
       if (search) {
-        const searchFilters = [
-          ['name', 'like', `%${search}%`],
-          ['custom_patient_name', 'like', `%${search}%`],
-          ['custom_doctor_name', 'like', `%${search}%`]
-        ];
-        apiFilters.push(searchFilters);
+        // const searchFilters = [
+        //   ['name', 'like', `%${search}%`],
+        //   ['custom_patient_name', 'like', `%${search}%`],
+        //   ['custom_doctor_name', 'like', `%${search}%`]
+        // ];
+        
+        if (patientName) {
+          // When patient name is provided, combine patient filter with search using OR logic
+          apiFilters = [
+            ['docstatus', '=', 1],
+            ['custom_patient_name', '=', patientName],
+            ['or', ['name', 'like', `%${search}%`], ['custom_patient_name', 'like', `%${search}%`], ['custom_doctor_name', 'like', `%${search}%`]]
+          ];
+        } else {
+          // When no patient name, just use search filters
+          apiFilters.push(['or', ['name', 'like', `%${search}%`], ['custom_patient_name', 'like', `%${search}%`], ['custom_doctor_name', 'like', `%${search}%`]]);
+        }
+      } else if (patientName) {
+        // When no search but patient name is provided, just use patient filter
+        apiFilters.push(['custom_patient_name', '=', patientName]);
       }
       
+      // Temporarily comment out date filters for debugging
       if (dRange[0]) apiFilters.push(['posting_date', '>=', dRange[0].toISOString()]);
       if (dRange[1]) apiFilters.push(['posting_date', '<=', dRange[1].toISOString()]);
 
@@ -289,7 +349,11 @@ const fetchInvoiceItems = async (invoiceName: string) => {
         limit_page_length: '100'
       });
 
-      const response = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice?${queryParams.toString()}`, {
+      const fullUrl = `https://192.168.7.221:4422/api/resource/POS%20Invoice?${queryParams.toString()}`;
+      console.log('Fetching invoices from URL:', fullUrl);
+      console.log('Filters being used:', apiFilters);
+
+      const response = await fetch(fullUrl, {
         headers: {
           'Authorization': `token ${apiKey}:${apiSecret}`,
         }
@@ -379,8 +443,63 @@ const fetchInvoiceItems = async (invoiceName: string) => {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-end p-6 border-t border-gray-200 gap-3 bg-white">
-          <Button onClick={onClose} type='secondary-button' className="px-6 py-2.5">Close</Button>
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 gap-3 bg-white">
+          <div className="text-sm text-gray-600">
+            {selectedInvoices.size > 0 && (
+              <span className="font-medium">{selectedInvoices.size} invoice(s) selected</span>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={onClose} type='secondary-button' className="px-6 py-2.5">Close</Button>
+            <Button 
+              onClick={async () => {
+                if (selectedInvoices.size === 0) {
+                  showAlert('warning', 'No Selection', 'Please select at least one invoice');
+                  return;
+                }
+                
+                setLoading(true);
+                try {
+                  const selectedInvoiceData: any[] = [];
+                  const customers = new Set<string>();
+                  
+                  for (const invoiceName of selectedInvoices) {
+                    const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${invoiceName}`, {
+                      headers: {
+                        'Authorization': `token ${apiKey}:${apiSecret}`,
+                      }
+                    });
+                    const data = await res.json();
+                    selectedInvoiceData.push(data.data);
+                    
+                    // Add customer to set for validation
+                    if (data.data.customer) {
+                      customers.add(data.data.customer);
+                    }
+                  }
+                  
+                  // Check if selected invoices have different customers
+                  if (customers.size > 1) {
+                    showAlert('danger', 'Validation Error', 'Sale bill transaction type is different so cannot add bill');
+                    setLoading(false);
+                    return;
+                  }
+                  
+                  onSelect(selectedInvoiceData);
+                  setSelectedInvoices(new Set());
+                  onClose();
+                } catch (e) {
+                  console.error('Failed to fetch selected invoices', e);
+                }
+                setLoading(false);
+              }}
+              type='primary-button' 
+              className="px-6 py-2.5"
+              disabled={selectedInvoices.size === 0 || loading}
+            >
+              {loading ? 'Loading...' : `Process ${selectedInvoices.size} Invoice(s)`}
+            </Button>
+          </div>
         </div>
 
         {/* Restriction Alert Modal */}
