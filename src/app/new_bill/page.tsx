@@ -97,6 +97,21 @@ export interface Item {
   custom_business_category?: string; // Add custom_business_category field for filtering by company
   max_discount?: number; // Add max_discount field for discount validation
   appliedPricingRule?: string; // Add field to track which pricing rule was applied
+  // Critical category fields
+  custom_is_hazardous?: number;
+  custom_reserved_antibiotic?: number;
+  custom_stent?: number;
+  custom_consignment_items?: number;
+  custom_narcotic_drug?: number;
+  custom_tb_drug?: number;
+  custom_lasa?: number;
+  custom_emergency_drug?: number;
+  custom_ndps?: number;
+  custom_controled_drug?: number;
+  custom_high_risk_drug?: number;
+  custom_banned_drug?: number;
+  custom_edrug?: number;
+  custom_is_prescribed?: number;
 }
 
 interface ItemSearchProps {
@@ -107,7 +122,7 @@ interface ItemSearchProps {
   fetchItemPrice: (itemCode: string, batchNo: string | null, priceList: string) => Promise<number | null>;
   getBatchQty: (itemCode: string, batchNo: string, warehouse: string) => Promise<number>;
   onNoBatchesFound?: (item: Item) => void;
-  selectedWarehouse?: string; // Add selectedWarehouse to the interface
+  selectedWarehouse?: string;
   selectedCompany?: string; // Add selectedCompany to the interface
   selectedCustomer?: string; // Add selectedCustomer to pass pricing rule context
   applyPricingRules?: (items: Item[], customer: string) => Promise<Item[]>; // Pricing rule handler
@@ -115,6 +130,12 @@ interface ItemSearchProps {
   selectedClassification?: string;
   isGeneric?: boolean;
   isDisabled?: boolean; // Add disabled prop
+  criticalCategoryDialog?: {
+    show: boolean;
+    item: Item | null;
+    categories: string[];
+  };
+  setCriticalCategoryDialog?: (dialog: { show: boolean; item: Item | null; categories: string[] }) => void;
 }
 
 type SelectedPatient = {
@@ -151,6 +172,8 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   selectedClassification,
   isGeneric,
   isDisabled = false, // Add disabled prop with default value
+  // criticalCategoryDialog,
+  // setCriticalCategoryDialog,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [subSearchTerm, setSubSearchTerm] = useState('');
@@ -189,7 +212,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
-      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category", "max_discount"]; // Add any fields you need
+      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category", "max_discount", 
+        "custom_is_hazardous", "custom_reserved_antibiotic", "custom_stent", "custom_consignment_items", "custom_narcotic_drug", "custom_tb_drug", "custom_lasa", 
+        "custom_emergency_drug", "custom_ndps", "custom_controled_drug", "custom_high_risk_drug", "custom_banned_drug", "custom_edrug", "custom_is_prescribed"]; // Add any fields you need
 
 
       const response = await fetch(
@@ -242,6 +267,21 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           custom_classification: item.custom_classification || '', // Map custom_classification from API
           custom_business_category: item.custom_business_category || '', // Map custom_business_category from API
           max_discount: item.max_discount || 0, // Map max_discount from API
+          // Map critical category fields
+          custom_is_hazardous: item.custom_is_hazardous || 0,
+          custom_reserved_antibiotic: item.custom_reserved_antibiotic || 0,
+          custom_stent: item.custom_stent || 0,
+          custom_consignment_items: item.custom_consignment_items || 0,
+          custom_narcotic_drug: item.custom_narcotic_drug || 0,
+          custom_tb_drug: item.custom_tb_drug || 0,
+          custom_lasa: item.custom_lasa || 0,
+          custom_emergency_drug: item.custom_emergency_drug || 0,
+          custom_ndps: item.custom_ndps || 0,
+          custom_controled_drug: item.custom_controled_drug || 0,
+          custom_high_risk_drug: item.custom_high_risk_drug || 0,
+          custom_banned_drug: item.custom_banned_drug || 0,
+          custom_edrug: item.custom_edrug || 0,
+          custom_is_prescribed: item.custom_is_prescribed || 0,
         }));
 
         // Apply pricing rules if customer is selected
@@ -613,7 +653,6 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
     );
   };
 
-
   return (
     <div ref={searchRef} className={`relative w-full ${className}`}>
       <div className="relative">
@@ -952,6 +991,27 @@ export default function NewBill() {
   const [_previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   // --- END: Added state for file upload ---
 
+  // Critical category dialog state
+  const [criticalCategoryDialog, setCriticalCategoryDialog] = useState<{
+    show: boolean;
+    item: Item | null;
+    categories: string[];
+  }>({ show: false, item: null, categories: [] });
+
+  // Handler functions for critical category dialog
+  const handleCriticalCategoryConfirm = async () => {
+    if (criticalCategoryDialog.item) {
+      // Add the _skipHighAlertCheck flag to bypass the check on retry
+      const itemToAdd = { ...criticalCategoryDialog.item, _skipHighAlertCheck: true };
+      await handleAddItemToDetails(itemToAdd);
+    }
+    setCriticalCategoryDialog({ show: false, item: null, categories: [] });
+  };
+
+  const handleCriticalCategoryCancel = () => {
+    setCriticalCategoryDialog({ show: false, item: null, categories: [] });
+  };
+
   const router = useRouter();
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole, currentUser } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
@@ -982,7 +1042,8 @@ export default function NewBill() {
       const baseFilters = [
         `["customer","=","${encodedCustomer}"]`,
         '["selling","=",1]',
-        `["custom_visit_type","=","${visitType}"]`
+        `["custom_visit_type","=","${visitType}"]`,
+        `["disable","=",0]`
       ];
 
       let allPricingRules: any[] = [];
@@ -990,7 +1051,7 @@ export default function NewBill() {
       if (transactionType === 'cash') {
         // Fetch cash-specific rules
         const cashFilters = [...baseFilters, '["custom_cash","=",1]'];
-        const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
+        const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable","margin_rate_or_amount"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1007,7 +1068,7 @@ export default function NewBill() {
 
         // Fetch rules that apply to all transaction types
         const allFilters = [...baseFilters, '["custom_all","=",1]'];
-        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
+        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable","margin_rate_or_amount"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1024,7 +1085,7 @@ export default function NewBill() {
       } else if (transactionType === 'credit') {
         // Fetch credit-specific rules
         const creditFilters = [...baseFilters, '["custom_credit","=",1]'];
-        const creditResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${creditFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
+        const creditResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${creditFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable","margin_rate_or_amount"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1041,7 +1102,7 @@ export default function NewBill() {
 
         // Fetch rules that apply to all transaction types
         const allFilters = [...baseFilters, '["custom_all","=",1]'];
-        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable"]&order_by=modified desc`,
+        const allResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${allFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable","margin_rate_or_amount"]&order_by=modified desc`,
           {
             method: 'GET',
             headers,
@@ -1141,6 +1202,12 @@ export default function NewBill() {
         const updatedItem = { ...item };
         
         for (const rule of pricingRules) {
+          // Skip disabled pricing rules
+          if (rule.disable) {
+            console.log(`Skipping disabled pricing rule ${rule.name}`);
+            continue;
+          }
+          
           // Check if this rule applies to the item
           let ruleApplies = false;
           
@@ -1164,47 +1231,54 @@ export default function NewBill() {
             ruleApplies = true;
           }
           
-          if (ruleApplies && rule.discount_percentage && rule.discount_percentage > 0) {
+          if (ruleApplies) {
             const originalRate = updatedItem.rate || 0;
             
             // Check if landing cost is applicable for this rule
             if (rule.custom_is_landing_cost_applicable) {
-              console.log(`Pricing rule ${rule.name} has landing cost applicable, fetching landing cost...`);
-              
-              // Fetch landing cost from Item Price
-              const landingCost = await fetchLandingCost(item.itemCode, item.batchNo, 'Standard Selling');
-              
-              if (landingCost !== null && landingCost > 0) {
-                // Use landing cost as the base rate instead of original rate
-                const discountAmount = (landingCost * rule.discount_percentage) / 100;
-                updatedItem.rate = landingCost - discountAmount;
-                updatedItem.appliedPricingRule = rule.name;
+              // For landing cost rules, we need margin_rate_or_amount
+              if (rule.margin_rate_or_amount && rule.margin_rate_or_amount > 0) {
+                console.log(`Pricing rule ${rule.name} has landing cost applicable with margin ${rule.margin_rate_or_amount}%, fetching landing cost...`);
                 
-                console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with landing cost:`);
-                console.log(`  Original Rate: ₹${originalRate}`);
-                console.log(`  Landing Cost: ₹${landingCost}`);
-                console.log(`  Discount: ${rule.discount_percentage}%`);
-                console.log(`  New Rate: ₹${updatedItem.rate}`);
+                // Fetch landing cost from Item Price
+                const landingCost = await fetchLandingCost(item.itemCode, item.batchNo, 'Standard Selling');
                 
-                // Only apply the first matching rule (highest priority)
-                break;
+                if (landingCost !== null && landingCost > 0) {
+                  // Use landing cost + margin as the new rate
+                  const marginAmount = (landingCost * rule.margin_rate_or_amount) / 100;
+                  updatedItem.rate = landingCost + marginAmount;
+                  updatedItem.appliedPricingRule = rule.name;
+                  
+                  console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with landing cost + margin:`);
+                  console.log(`  Original Rate: ₹${originalRate}`);
+                  console.log(`  Landing Cost: ₹${landingCost}`);
+                  console.log(`  Margin: ${rule.margin_rate_or_amount}%`);
+                  console.log(`  Margin Amount: ₹${marginAmount}`);
+                  console.log(`  New Rate: ₹${updatedItem.rate}`);
+                  
+                  // Only apply the first matching rule (highest priority)
+                  break;
+                } else {
+                  console.log(`No valid landing cost found for ${item.itemCode}, applying margin to original rate instead`);
+                  // Apply margin to original rate if no landing cost found
+                  // const marginAmount = (originalRate * rule.margin_rate_or_amount) / 100;
+                  // updatedItem.rate = originalRate + marginAmount;
+                  updatedItem.appliedPricingRule = rule.name;
+                  
+                  // console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with original rate + margin:`);
+                  // console.log(`  Original Rate: ₹${originalRate}`);
+                  // console.log(`  Margin: ${rule.margin_rate_or_amount}%`);
+                  // console.log(`  Margin Amount: ₹${marginAmount}`);
+                  // console.log(`  New Rate: ₹${updatedItem.rate}`);
+                  
+                  // Only apply the first matching rule (highest priority)
+                  break;
+                }
               } else {
-                console.log(`No valid landing cost found for ${item.itemCode}, falling back to original rate`);
-                // Fall back to original rate logic if no landing cost found
-                const discountAmount = (originalRate * rule.discount_percentage) / 100;
-                updatedItem.rate = originalRate - discountAmount;
-                updatedItem.appliedPricingRule = rule.name;
-                
-                console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} (fallback to original rate):`);
-                console.log(`  Original Rate: ₹${originalRate}`);
-                console.log(`  Discount: ${rule.discount_percentage}%`);
-                console.log(`  New Rate: ₹${updatedItem.rate}`);
-                
-                // Only apply the first matching rule (highest priority)
-                break;
+                console.log(`Pricing rule ${rule.name} has landing cost applicable but no margin rate (margin_rate_or_amount: ${rule.margin_rate_or_amount}), skipping`);
               }
-            } else {
-              // Standard pricing rule logic (not landing cost applicable)
+            } else if (rule.discount_percentage && rule.discount_percentage > 0) {
+              // Standard pricing rule logic (discount based)
               const discountAmount = (originalRate * rule.discount_percentage) / 100;
               updatedItem.rate = originalRate - discountAmount;
               updatedItem.appliedPricingRule = rule.name;
@@ -2805,6 +2879,45 @@ export default function NewBill() {
     return isHighAlert;
   };
 
+  // Helper function to check for critical categories
+  const checkCriticalCategories = (item: Item): { isCritical: boolean; categories: string[] } => {
+    const criticalFields = [
+      { field: 'custom_is_hazardous', label: 'Hazardous' },
+      { field: 'custom_reserved_antibiotic', label: 'Reserved Antibiotic' },
+      { field: 'custom_stent', label: 'Stent' },
+      { field: 'custom_consignment_items', label: 'Consignment Items' },
+      { field: 'custom_narcotic_drug', label: 'Narcotic Drug' },
+      { field: 'custom_tb_drug', label: 'TB Drug' },
+      { field: 'custom_lasa', label: 'LASA' },
+      { field: 'custom_emergency_drug', label: 'Emergency Drug' },
+      { field: 'custom_ndps', label: 'NDPS' },
+      { field: 'custom_controled_drug', label: 'Controlled Drug' },
+      { field: 'custom_high_risk_drug', label: 'High Risk Drug' },
+      { field: 'custom_banned_drug', label: 'Banned Drug' },
+      { field: 'custom_edrug', label: 'E-Drug' },
+      { field: 'custom_is_prescribed', label: 'Prescribed Drug' }
+    ];
+
+    const activeCategories: string[] = [];
+    
+    criticalFields.forEach(({ field, label }) => {
+      if (item[field as keyof Item] === 1) {
+        activeCategories.push(label);
+      }
+    });
+
+    const isCritical = activeCategories.length > 0;
+    
+    console.log('Checking critical categories:', {
+      itemCode: item.itemCode,
+      itemName: item.itemName,
+      isCritical,
+      categories: activeCategories
+    });
+
+    return { isCritical, categories: activeCategories };
+  };
+
   const handleAddItemToDetails = async (item: Item) => {
     console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
@@ -2826,6 +2939,17 @@ export default function NewBill() {
         const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
         showAlert("danger", "Duplicate Item", `Item ${item.itemName} with batch ${item.batchNo} already exists in grid at row number ${rowNum}.`);
         return; // Don't add the duplicate item
+      }
+
+      // Check for critical categories and show confirmation dialog
+      const { isCritical, categories } = checkCriticalCategories(item);
+      if (isCritical && !item._skipHighAlertCheck) {
+        setCriticalCategoryDialog({
+          show: true,
+          item: item,
+          categories: categories
+        });
+        return; // Wait for user confirmation
       }
 
       const taxDetails = await fetchTaxDetails(item.itemCode, item.rate || 0, 1, item.uom);
@@ -5674,6 +5798,8 @@ export default function NewBill() {
                   selectedClassification={selectedSaleType}
                   isGeneric={isGeneric}
                   isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
+                  criticalCategoryDialog={criticalCategoryDialog}
+                  setCriticalCategoryDialog={setCriticalCategoryDialog}
                   className="pt-2"// Pass getBatchQty as a prop
                 />
 
@@ -6206,8 +6332,15 @@ export default function NewBill() {
   <SelectInvoiceModal
     isOpen={showSelectInvoiceModal}
     onClose={() => setShowSelectInvoiceModal(false)}
-    onSelect={async (invoice) => {  // Make the handler async
+    onSelect={async (invoices: any[]) => {  // Handle array of invoices
       try {
+        // Take the first invoice for return processing
+        const invoice = invoices[0];
+        if (!invoice) {
+          showAlert('warning', 'No Invoice', 'No invoice data received');
+          return;
+        }
+
         // Load invoice data into the new_bill page for return processing
         setIsReturn(true);
         setIsReturnInvoice(true);
@@ -6408,6 +6541,48 @@ export default function NewBill() {
               onClick={handleHighAlertSaveConfirm}
             >
               Proceed with {pendingSaveAction === 'draft' ? 'Save' : 'Submit'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Critical Category Confirmation Dialog */}
+      <Dialog open={criticalCategoryDialog.show} onOpenChange={(open) => !open && handleCriticalCategoryCancel()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-orange-600">Critical Category Alert</DialogTitle>
+            <DialogDescription>
+              The following item belongs to critical categories and requires special handling.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+              <p className="text-sm font-medium text-orange-800 mb-2">Critical Categories:</p>
+              <p className="text-sm text-gray-700 mb-2">
+                {criticalCategoryDialog.categories?.join(', ')}
+              </p>
+              <p className="text-sm text-gray-700">
+                <strong>Item:</strong> {criticalCategoryDialog.item?.itemName} ({criticalCategoryDialog.item?.itemCode})
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 mt-3">
+              This item requires special handling. Do you want to proceed?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              type="secondary-button"
+              size="button-medium"
+              onClick={handleCriticalCategoryCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="primary-button"
+              size="button-medium"
+              onClick={handleCriticalCategoryConfirm}
+            >
+              Proceed
             </Button>
           </DialogFooter>
         </DialogContent>
