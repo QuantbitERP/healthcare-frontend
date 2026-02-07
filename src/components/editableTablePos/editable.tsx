@@ -57,6 +57,22 @@ interface Item {
   hasStock?: boolean; // Add hasStock field to track if item has stock
   max_discount?: number; // Add max_discount field for discount validation
   saleBillNo?: string; // Add saleBillNo field to track source invoice
+  // Critical category fields
+  custom_is_hazardous?: number;
+  custom_reserved_antibiotic?: number;
+  custom_stent?: number;
+  custom_consignment_items?: number;
+  custom_narcotic_drug?: number;
+  custom_tb_drug?: number;
+  custom_lasa?: number;
+  custom_emergency_drug?: number;
+  custom_ndps?: number;
+  custom_controled_drug?: number;
+  custom_high_risk_drug?: number;
+  custom_banned_drug?: number;
+  custom_edrug?: number;
+  custom_is_prescribed?: number;
+  _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
 }
 
 // Helper function to truncate to 2 decimal places (not round)
