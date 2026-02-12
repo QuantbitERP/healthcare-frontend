@@ -20,6 +20,8 @@ interface ViewPosInvoicesModalProps {
   posProfile: string | null;
   showAlert: (variant: AlertState['variant'], heading: string, content: string) => void;
   onLoadInvoice?: (invoice: Invoice) => void;
+  isIPDPage?: boolean; // Add prop to determine if this is for IPD page
+  excludeIPDInvoices?: boolean; // Add prop to exclude IPD invoices
 }
 
 interface Invoice {
@@ -39,7 +41,7 @@ interface Invoice {
   company: string;
 }
 
-const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice }) => {
+const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
@@ -62,6 +64,16 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     setLoading(true);
     try {
       const filters: any[] = [['pos_profile', '=', posProfile]];
+
+      // Add IPD filter only if this is for IPD page
+      if (isIPDPage) {
+        filters.push(['custom_is_ipd_invoice', '=', 1]);
+      }
+      
+      // Exclude IPD invoices if excludeIPDInvoices is true
+      if (excludeIPDInvoices) {
+        filters.push(['custom_is_ipd_invoice', '!=', 1]);
+      }
 
       if (searchTerm) {
         filters.push(['name', 'like', `%${searchTerm}%`]);
@@ -117,7 +129,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       setDateRange(initialDateRange);
       fetchInvoices(invoiceSearchTerm, initialDateRange);
     }
-  }, [isOpen, posProfile]);
+  }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices]);
 
   useEffect(() => {
     if (isOpen) {
