@@ -33,22 +33,36 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictInfo, setConflictInfo] = useState<{ entryName: string; userName: string } | null>(null);
-  const { isAuthenticated, apiKey, apiSecret, currentUser, setPosProfile } =
+  const { isAuthenticated, apiKey, apiSecret, currentUser, setPosProfile, csrfToken } =
     useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isOpen && isAuthenticated && apiKey && apiSecret && currentUser) {
+    // Only fetch if authenticated (either via keys or session)aries.
+    if (isOpen && isAuthenticated && currentUser) {
       const fetchPOSProfiles = async () => {
         try {
           console.log("Fetching POS Profiles for user:", currentUser);
           const url = `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
+
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          };
+
+          const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
+          if (apiKey && apiSecret && !isMasked(apiSecret)) {
+            headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+          }
+
+          if (csrfToken) {
+            headers["X-Frappe-CSRF-Token"] = csrfToken;
+          }
+
           const response = await fetch(url, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
+            headers: headers,
+            credentials: "include", // Ensure session cookies are sent
             body: JSON.stringify({ user: currentUser }),
           });
 
@@ -71,8 +85,8 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
           } else {
             console.error("Failed to fetch POS profiles. Status:", response.status);
             setError(responseData._error_message || "Failed to load POS profiles.");
-            if (response.status === 401) {
-              setError("Invalid API credentials. Please log in again.");
+            if (response.status === 401 && !apiKey) {
+              // If we have no keys and session failed, redirect
               router.push("/login");
             }
           }
@@ -88,21 +102,34 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       setError("Please log in to access POS profiles.");
       router.push("/login");
     }
-  }, [isOpen, isAuthenticated, apiKey, apiSecret, currentUser, router]);
+  }, [isOpen, isAuthenticated, apiKey, apiSecret, currentUser, csrfToken, router]);
 
   const handleSelect = async () => {
     if (selectedProfile && currentUser) {
       // First check for conflicts using backend API
       try {
         console.log("Checking for POS conflicts before proceeding...");
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        };
+
+        const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
+        if (apiKey && apiSecret && !isMasked(apiSecret)) {
+          headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+        }
+
+        if (csrfToken) {
+          headers["X-Frappe-CSRF-Token"] = csrfToken;
+        }
+
         const response = await fetch(
           `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
+            headers: headers,
+            credentials: "include",
             body: JSON.stringify({
               pos_profile: selectedProfile,
               current_user: currentUser

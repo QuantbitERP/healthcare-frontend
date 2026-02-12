@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { X, Search } from "lucide-react";
 import Button from "@/components/buttons/Button";
 import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders } from '@/utils/sessionAuth';
 import DataTableComponent, { TableCellComponents } from '../DataTable';
 
 interface AlertState {
@@ -70,11 +71,14 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
         filters.push(['posting_date', '<=', dates.to.toISOString().split('T')[0]]);
       }
 
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const filterStr = JSON.stringify(filters);
       const url = `${API_BASE_URL}/IPD%20BIll?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","items","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
@@ -150,16 +154,15 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
   };
 
   const handleSubmitInvoice = async (invoice: Invoice) => {
-    if (!apiKey || !apiSecret) {
-      showAlert("danger", "Error", "API credentials are not available.");
-      return;
-    }
-
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Submit the draft invoice
       const response = await fetch(`https://192.168.7.221:4422/api/resource/IPD%20BIll/${invoice.name}`, {

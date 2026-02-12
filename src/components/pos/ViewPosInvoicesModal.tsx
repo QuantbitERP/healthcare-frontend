@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { X, Search, Eye } from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { getAuthHeaders } from '../../utils/sessionAuth';
 import Button from "@/components/buttons/Button";
-import { useAuth } from '@/context/AuthContext';
 import DataTableComponent, { TableCellComponents } from '../DataTable';
+import { Eye, Search, X } from 'lucide-react';
 
 interface AlertState {
   show: boolean;
@@ -48,13 +49,13 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const [showItemsModal, setShowItemsModal] = useState(false);
   const [itemsForModal, setItemsForModal] = useState<any[]>([]);
 
-  const { apiKey, apiSecret } = useAuth();
+  const { } = useAuth();
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchInvoices = async (searchTerm: string, dates: { from: Date | null, to: Date | null }) => {
-    if (!posProfile || !apiKey || !apiSecret) {
-      showAlert("danger", "Error", "POS Profile or API credentials are missing.");
+    if (!posProfile) {
+      showAlert("danger", "Error", "POS Profile is missing.");
       return;
     }
 
@@ -72,11 +73,14 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         filters.push(['posting_date', '<=', dates.to.toISOString().split('T')[0]]);
       }
 
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const filterStr = JSON.stringify(filters);
       const url = `${API_BASE_URL}/POS%20Invoice?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
@@ -137,13 +141,21 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     // Fetch the full invoice document to get items
     try {
       const invoiceUrl = `${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}`;
+      
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+      
+      console.log('Fetching invoice with headers:', headers);
+      
       const invoiceResponse = await fetch(invoiceUrl, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        },
+        headers,
         credentials: 'include',
       });
       
@@ -181,16 +193,15 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   };
 
   const handleSubmitInvoice = async (invoice: Invoice) => {
-    if (!apiKey || !apiSecret) {
-      showAlert("danger", "Error", "API credentials are not available.");
-      return;
-    }
-
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Submit the draft invoice
       const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${invoice.name}`, {

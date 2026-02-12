@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import Button from "@/components/buttons/Button";
 import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders } from '@/utils/sessionAuth';
 
 interface ClosingEntryModalProps {
   isOpen: boolean;
@@ -89,7 +90,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
   const [closingEntryData, setClosingEntryData] = useState<POSClosingEntry | null>(null);
   const [showClosingDetails, setShowClosingDetails] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { apiKey, apiSecret } = useAuth();
+  const {  } = useAuth();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   const API_METHOD_URL = 'https://192.168.7.221:4422/api/method';
@@ -103,10 +104,14 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
   const fetchOpenPOSOpeningEntries = async (profile: string) => {
     setLoadingEntries(true);
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const filters = encodeURIComponent(JSON.stringify([
         ["pos_profile", "=", profile],
@@ -149,10 +154,14 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
 
     setPreviewLoading(true);
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(
         `${API_METHOD_URL}/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_closing_entry_preview`,
@@ -190,10 +199,14 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
 
     setSubmitting(true);
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(
         `${API_METHOD_URL}/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`,
