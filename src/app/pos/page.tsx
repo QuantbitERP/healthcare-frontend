@@ -8,6 +8,9 @@ import SelectInput from "@/components/form/Select";
 import PageHeader from "@/components/billbreakdown/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import POSProfileSelector from "@/components/pos/POSProfileSelector";
+import { redirectToFrappeLogin } from "@/utils/sessionAuth";
+import { authenticatedFetch } from "@/utils/apiHelper";
+import { FRAPPE_BASE_URL } from "@/config/frappe";
 
 export default function POS() {
   const API_BASE_URL = "https://192.168.7.221:4422/api/resource";
@@ -18,6 +21,7 @@ export default function POS() {
   ];
   const [searchValue, setSearchValue] = useState<string>("");
   const [showPosProfileSelector, setShowPosProfileSelector] = useState(false);
+  const [_forceShowProfileSelector, setForceShowProfileSelector] = useState(false);
 
   const [salesInvoices, setSalesInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +32,7 @@ export default function POS() {
   const [page, setPage] = useState(0); // For pagination
   const [hasFetchedInitialInvoices, setHasFetchedInitialInvoices] = useState(false);
 
-  const { logout, isAuthenticated, posProfile, currentUser, setPosProfile, apiKey, apiSecret } = useAuth();
+  const { logout, isAuthenticated, posProfile, currentUser, setPosProfile, apiKey, apiSecret, csrfToken, checkAnyOpenPOS } = useAuth();
   const router = useRouter();
 
   const fetchSalesInvoices = useCallback(async (currentPage: number) => {
@@ -36,14 +40,16 @@ export default function POS() {
     setError(null);
     try {
       const offset = currentPage * 20; // 20 items per page
-      // Filter to show only POS invoices (invoices with pos_profile)
-      const response = await fetch(`${API_BASE_URL}/Sales Invoice?filters=[["pos_profile","!=",null]]&limit=20&offset=${offset}`, {
+      // Filter to show only POS invoices (invoices with pos_profile)aries.
+      const url = `${FRAPPE_BASE_URL}/api/resource/Sales Invoice?filters=[["pos_profile","!=",null]]&limit=20&offset=${offset}`;
+
+      const response = await authenticatedFetch(url, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${apiKey}:${apiSecret}`,
-        },
+        apiKey,
+        apiSecret,
+        csrfToken,
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -58,24 +64,70 @@ export default function POS() {
   }, [API_BASE_URL, apiKey, apiSecret]); // Dependencies for useCallback
 
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      router.push("/login");
-    } else if (!posProfile) {
-      setShowPosProfileSelector(true);
-    } else if (!hasFetchedInitialInvoices) {
-      fetchSalesInvoices(0);
-      setHasFetchedInitialInvoices(true);
-    }
-  }, [isAuthenticated, posProfile, currentUser, router, fetchSalesInvoices, hasFetchedInitialInvoices]);
+    const checkOpeningEntryAndShowSelector = async () => {
+      if (!isAuthenticated || !currentUser) {
+        // Redirect to Frappe login with current URL as return address
+        redirectToFrappeLogin();
+        return;
+      }
 
-  const handlePOSProfileSelect = (profile: string) => {
+      // If we have a POS profile, check if there's an opening entry
+      if (posProfile) {
+        try {
+          const openEntry = await checkAnyOpenPOS(posProfile);
+          if (openEntry && openEntry.isOpen) {
+            // Opening entry exists, don't show selector
+            setShowPosProfileSelector(false);
+            setForceShowProfileSelector(false);
+            if (!hasFetchedInitialInvoices) {
+              fetchSalesInvoices(0);
+              setHasFetchedInitialInvoices(true);
+            }
+          } else {
+            // No opening entry, show selector
+            setForceShowProfileSelector(true);
+            setShowPosProfileSelector(true);
+          }
+        } catch (error) {
+          console.error("Error checking opening entry:", error);
+          // On error, show selector to be safe
+          setForceShowProfileSelector(true);
+          setShowPosProfileSelector(true);
+        }
+      } else {
+        // No POS profile selected, show selector
+        setForceShowProfileSelector(true);
+        setShowPosProfileSelector(true);
+      }
+    };
+
+    checkOpeningEntryAndShowSelector();
+  }, [isAuthenticated, posProfile, currentUser, router, fetchSalesInvoices, hasFetchedInitialInvoices, checkAnyOpenPOS]);
+
+  const handlePOSProfileSelect = async (profile: string) => {
     setPosProfile(profile); // Handled in POSProfileSelector, kept for consistency
-    setShowPosProfileSelector(false);
-    // Reset invoices and pagination when profile changes
-    setSalesInvoices([]);
-    setFilteredInvoices([]);
-    setPage(0);
-    setHasFetchedInitialInvoices(false);
+    
+    // Check if there's an opening entry for the selected profile
+    try {
+      const openEntry = await checkAnyOpenPOS(profile);
+      if (openEntry && openEntry.isOpen) {
+        // Opening entry exists, hide selector
+        setShowPosProfileSelector(false);
+        setForceShowProfileSelector(false);
+        // Reset invoices and pagination when profile changes
+        setSalesInvoices([]);
+        setFilteredInvoices([]);
+        setPage(0);
+        setHasFetchedInitialInvoices(false);
+      } else {
+        // No opening entry, redirect to opening page
+        window.location.href = '/opening';
+      }
+    } catch (error) {
+      console.error("Error checking opening entry:", error);
+      // On error, redirect to opening page to be safe
+      window.location.href = '/opening';
+    }
   };
 
   const handleSearch = () => {
@@ -117,7 +169,7 @@ export default function POS() {
               <Button
                 type="primary-button"
                 size="button-medium"
-                onClick={() => handleClick("/ipd_bill")}
+                onClick={() => handleClick("/ipd-bill")}
               > + New IPD Bill
               </Button>
 

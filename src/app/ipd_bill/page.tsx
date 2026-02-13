@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Button from "@/components/buttons/Button";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/context/AuthContext';
+import { redirectToFrappeLogin } from "@/utils/sessionAuth";
 import {
   Card,
   CardContent,
@@ -96,6 +97,22 @@ export interface Item {
   _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
   custom_business_category?: string; // Add custom_business_category field for filtering by company
   max_discount?: number; // Add max_discount field for discount validation
+  appliedPricingRule?: string; // Add field to track which pricing rule was applied
+  // Critical category fields
+  custom_is_hazardous?: number;
+  custom_reserved_antibiotic?: number;
+  custom_stent?: number;
+  custom_consignment_items?: number;
+  custom_narcotic_drug?: number;
+  custom_tb_drug?: number;
+  custom_lasa?: number;
+  custom_emergency_drug?: number;
+  custom_ndps?: number;
+  custom_controled_drug?: number;
+  custom_high_risk_drug?: number;
+  custom_banned_drug?: number;
+  custom_edrug?: number;
+  custom_is_prescribed?: number;
 }
 
 interface ItemSearchProps {
@@ -184,7 +201,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       if (selectedClassification) {
         filters.push(["custom_classification", "=", selectedClassification]);
       }
-      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category", "max_discount"]; // Add any fields you need
+      const fields = ["name", "item_name", "item_code", "custom_generic_name", "custom_allow_sale_days", "custom_classification", "custom_business_category", "max_discount",
+        "custom_is_hazardous", "custom_reserved_antibiotic", "custom_stent", "custom_consignment_items", "custom_narcotic_drug", "custom_tb_drug", "custom_lasa",
+        "custom_emergency_drug", "custom_ndps", "custom_controled_drug", "custom_high_risk_drug", "custom_banned_drug", "custom_edrug", "custom_is_prescribed"]; // Add any fields you need
 
 
       const response = await fetch(
@@ -237,6 +256,21 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           custom_classification: item.custom_classification || '', // Map custom_classification from API
           custom_business_category: item.custom_business_category || '', // Map custom_business_category from API
           max_discount: item.max_discount || 0, // Map max_discount from API
+          // Map critical category fields
+          custom_is_hazardous: item.custom_is_hazardous || 0,
+          custom_reserved_antibiotic: item.custom_reserved_antibiotic || 0,
+          custom_stent: item.custom_stent || 0,
+          custom_consignment_items: item.custom_consignment_items || 0,
+          custom_narcotic_drug: item.custom_narcotic_drug || 0,
+          custom_tb_drug: item.custom_tb_drug || 0,
+          custom_lasa: item.custom_lasa || 0,
+          custom_emergency_drug: item.custom_emergency_drug || 0,
+          custom_ndps: item.custom_ndps || 0,
+          custom_controled_drug: item.custom_controled_drug || 0,
+          custom_high_risk_drug: item.custom_high_risk_drug || 0,
+          custom_banned_drug: item.custom_banned_drug || 0,
+          custom_edrug: item.custom_edrug || 0,
+          custom_is_prescribed: item.custom_is_prescribed || 0,
         }));
 
         // Filter items by business category if company is selected
@@ -624,8 +658,8 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           placeholder={isDisabled ? "Items loaded from requisition/prescription" : (isGeneric ? "Search Generic Name" : placeholder)}
           disabled={isDisabled}
           className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDisabled
-              ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-              : "border-gray-300 focus:border-blue-500"
+            ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+            : "border-gray-300 focus:border-blue-500"
             }`}
           autoComplete="off"
         />
@@ -939,6 +973,13 @@ export default function NewBill() {
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
   // --- END: Added state for file upload ---
 
+  // Critical category dialog state
+  // const [criticalCategoryDialog, setCriticalCategoryDialog] = useState<{
+  //   show: boolean;
+  //   item: Item | null;
+  //   categories: string[];
+  // }>({ show: false, item: null, categories: [] });
+
   const router = useRouter();
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
@@ -1211,6 +1252,177 @@ export default function NewBill() {
   const [_toLocation, setToLocation] = useState('');
   const [barcode, setBarcode] = useState('');
   const [isComplete, setIsComplete] = useState(false);
+
+  // Handle barcode scanning
+  const handleBarcodeScan = async (scannedBarcode: string) => {
+    try {
+      console.log('Scanning barcode:', scannedBarcode);
+      console.log('Selected warehouse:', selectedWarehouse);
+
+      // Fetch batch details using the barcode
+      const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcode(''); // Clear barcode input
+        return;
+      }
+
+      const batchData = await response.json();
+      const batch = batchData.data;
+
+      if (!batch) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcode('');
+        return;
+      }
+
+      console.log('Batch data:', batch);
+
+      // Check if batch has stock in selected warehouse
+      let stockQty = 0;
+      if (selectedWarehouse) {
+        try {
+          const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${apiKey}:${apiSecret}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              item_code: batch.item,
+              warehouse: selectedWarehouse,
+              batch_no: batch.name,
+            }),
+          });
+
+          if (batchQtyResponse.ok) {
+            const stockData = await batchQtyResponse.json();
+            console.log('Stock balance response:', stockData);
+            // The response structure is {message: number} not {message: [{actual_qty: number}]}
+            stockQty = stockData.message || 0;
+          } else {
+            console.log('Stock balance API failed:', batchQtyResponse.status);
+          }
+        } catch (error) {
+          console.error('Error checking stock balance:', error);
+        }
+      } else {
+        console.log('No warehouse selected, using batch quantity as fallback');
+        stockQty = batch.batch_qty || 0;
+      }
+
+      console.log('Final stock quantity:', stockQty);
+
+      // Only show stock warning if we have a warehouse selected and stock is 0
+      if (selectedWarehouse && stockQty <= 0) {
+        showAlert('warning', 'Warning', `Item ${batch.item_name} has no stock in warehouse ${selectedWarehouse}. Adding anyway.`);
+        // Don't return, continue to add the item
+      }
+
+      // Fetch item details
+      const itemResponse = await fetch(`${API_BASE_URL}/Item/${batch.item}`, {
+        headers: {
+          'Authorization': `token ${apiKey}:${apiSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!itemResponse.ok) {
+        showAlert('danger', 'Error', `Item not found: ${batch.item}`);
+        setBarcode('');
+        return;
+      }
+
+      const itemData = await itemResponse.json();
+      const item = itemData.data;
+
+      console.log('Item data:', item);
+
+      // Check if item already exists in the table with the same batch
+      const existingItemIndex = items.findIndex(
+        (item) => item.itemCode === batch.item && item.batchNo === batch.name
+      );
+
+      if (existingItemIndex !== -1) {
+        // Update existing item quantity
+        const updatedItems = [...items];
+        updatedItems[existingItemIndex].saleQty += 1;
+        updatedItems[existingItemIndex].stockQty = stockQty;
+
+        // Recalculate totals for the updated item
+        const recalculatedItem = calculateItemTaxAndTotals(updatedItems[existingItemIndex], item.included_in_print_rate || false);
+        updatedItems[existingItemIndex] = recalculatedItem;
+
+        setItems(updatedItems);
+        recalculateTotals?.(updatedItems);
+      } else {
+        // Create new item
+        const newItem: Item = {
+          id: Date.now().toString(),
+          alternateBatches: '',
+          substituteItem: '',
+          itemCode: batch.item,
+          itemName: batch.item_name || item.item_name,
+          uom: item.stock_uom || 'Nos',
+          stockQty: stockQty,
+          orderedQty: 0,
+          saleQty: 1,
+          batch: batch.name,
+          batchNo: batch.name,
+          expiryDate: batch.expiry_date || '',
+          batchStockQty: stockQty,
+          rate: batch.custom_mrp || 0, // Use custom_mrp from batch as Unit Sale Rate
+          taxTemplate: item.taxes_and_charges || '',
+          description: item.description || '',
+          itemAmount: 0,
+          discountPercent: 0,
+          discountAmt: 0,
+          cgstPercent: 0,
+          cgstAmt: 0,
+          sgstPercent: 0,
+          sgstAmt: 0,
+          igstPercent: 0,
+          igstAmt: 0,
+          totalAmt: 0,
+          kitName: '',
+          totalPckgAmt: 0,
+          packageName: '',
+          binLocation: '',
+          mrp: batch.custom_mrp, // Store MRP from batch
+          hasStock: stockQty > 0,
+        };
+
+        console.log('New item created:', newItem);
+
+        // Calculate tax and totals for the new item
+        const calculatedItem = calculateItemTaxAndTotals(newItem, item.included_in_print_rate || false);
+
+        const updatedItems = [...items, calculatedItem];
+        setItems(updatedItems);
+        recalculateTotals?.(updatedItems);
+      }
+
+      showAlert('success', 'Success', `Item ${batch.item_name} added to bill`);
+      setBarcode(''); // Clear barcode input after successful addition
+
+    } catch (error) {
+      console.error('Error processing barcode:', error);
+      showAlert('danger', 'Error', 'Failed to process barcode');
+      setBarcode('');
+    }
+  };
+
+  useEffect(() => {
+    if (barcode && barcode.trim()) {
+      handleBarcodeScan(barcode.trim());
+    }
+  }, [barcode]);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
@@ -2633,7 +2845,8 @@ export default function NewBill() {
     if (!isInitialized) return;
 
     if (!isAuthenticated) {
-      router.push('/login');
+      // Redirect to Frappe login with current URL as return address
+      redirectToFrappeLogin();
     } else if (!posProfile) {
       setShowPosProfileSelector(true);
     }
@@ -3519,7 +3732,7 @@ export default function NewBill() {
     }
 
     // Check if any items have max_discount restriction
-    const restrictedItems = items.filter(item => 
+    const restrictedItems = items.filter(item =>
       item.max_discount && globalDiscountPercent > item.max_discount
     );
 

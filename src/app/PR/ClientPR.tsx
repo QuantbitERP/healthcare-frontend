@@ -29,6 +29,7 @@ import RenderFormElement from "@/components/form/RenderFormElement";
 import PatientRequisitionCard from "@/components/patientRequisitionCard/PatientRequisitionCard";
 import { useFrappeApi } from "@/api/api";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 import { Search, X, Plus } from 'lucide-react';
 import { DataTable as EditableDataTable } from "@/components/EditableCellsTable/TableTry";
 import { ColumnDef, getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
@@ -76,6 +77,22 @@ interface Item {
   aadhaarNo?: string;
   custom_classification?: string; // Add custom_classification field for high-alert items
   custom_business_category?: string; // Add custom_business_category field for filtering by company
+  // Critical category fields
+  custom_is_hazardous?: number;
+  custom_reserved_antibiotic?: number;
+  custom_stent?: number;
+  custom_consignment_items?: number;
+  custom_narcotic_drug?: number;
+  custom_tb_drug?: number;
+  custom_lasa?: number;
+  custom_emergency_drug?: number;
+  custom_ndps?: number;
+  custom_controled_drug?: number;
+  custom_high_risk_drug?: number;
+  custom_banned_drug?: number;
+  custom_edrug?: number;
+  custom_is_prescribed?: number;
+  _skipHighAlertCheck?: boolean; // Add flag to bypass high-alert check in confirmation flow
 }
 
 interface ItemSearchProps {
@@ -112,16 +129,20 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
-  const { apiKey, apiSecret } = useAuth();
+  const { } = useAuth();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
 
   const searchItems = async (query: string = '', classification: string = '', generic: boolean = false, company: string = ''): Promise<Item[]> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -143,7 +164,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       }
 
       const response = await fetch(
-        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["name","item_name","stock_uom","custom_classification","custom_is_generic","custom_business_category"]`,
+        `${API_BASE_URL}/Item?filters=${encodeURIComponent(JSON.stringify(filters))}&fields=["name","item_name","stock_uom","custom_classification","custom_is_generic","custom_business_category","custom_is_hazardous","custom_reserved_antibiotic","custom_stent","custom_consignment_items","custom_narcotic_drug","custom_tb_drug","custom_lasa","custom_emergency_drug","custom_ndps","custom_controled_drug","custom_high_risk_drug","custom_banned_drug","custom_edrug","custom_is_prescribed"]`,
         {
           method: 'GET',
           headers,
@@ -172,6 +193,21 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
             expiryDate: item.end_of_life || '',
             custom_classification: item.custom_classification || '',
             custom_business_category: item.custom_business_category || '',
+            // Map critical category fields
+            custom_is_hazardous: item.custom_is_hazardous || 0,
+            custom_reserved_antibiotic: item.custom_reserved_antibiotic || 0,
+            custom_stent: item.custom_stent || 0,
+            custom_consignment_items: item.custom_consignment_items || 0,
+            custom_narcotic_drug: item.custom_narcotic_drug || 0,
+            custom_tb_drug: item.custom_tb_drug || 0,
+            custom_lasa: item.custom_lasa || 0,
+            custom_emergency_drug: item.custom_emergency_drug || 0,
+            custom_ndps: item.custom_ndps || 0,
+            custom_controled_drug: item.custom_controled_drug || 0,
+            custom_high_risk_drug: item.custom_high_risk_drug || 0,
+            custom_banned_drug: item.custom_banned_drug || 0,
+            custom_edrug: item.custom_edrug || 0,
+            custom_is_prescribed: item.custom_is_prescribed || 0,
           };
         });
 
@@ -431,10 +467,14 @@ const useStockQty = () => {
       if (!itemCode || !warehouse) return "0";
 
       try {
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-          Authorization: `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
         const csrf = localStorage.getItem("csrfToken");
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
 
@@ -490,6 +530,137 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const [selectedClassification, setSelectedClassification] = useState("");
   const [barcodeValue, setBarcodeValue] = useState("");
   const [isGeneric, setIsGeneric] = useState(false);
+
+  // Critical category dialog state
+  const [criticalCategoryDialog, setCriticalCategoryDialog] = useState<{
+    show: boolean;
+    item: Item | null;
+    categories: string[];
+  }>({ show: false, item: null, categories: [] });
+
+  // Handle barcode scanning
+  const handleBarcodeScan = async (scannedBarcode: string) => {
+    try {
+      // Fetch batch details using the barcode
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+      
+      const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcodeValue(''); // Clear barcode input
+        return;
+      }
+
+      const batchData = await response.json();
+      const batch = batchData.data;
+
+      if (!batch) {
+        showAlert('danger', 'Error', `Batch not found for barcode: ${scannedBarcode}`);
+        setBarcodeValue('');
+        return;
+      }
+
+      // Check if batch has stock in selected warehouse
+      // Use the same authentication logic as other functions
+      // const authHeaders = getAuthHeaders();
+      // // Convert HeadersInit to plain object for fetch compatibility
+      // const headers = typeof authHeaders === 'string' ? 
+      //   JSON.parse(authHeaders) : 
+      //   Array.isArray(authHeaders) ? 
+      //     Object.fromEntries(authHeaders) : 
+      //     authHeaders;
+      
+      const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          item_code: batch.item,
+          warehouse: warehouses[0]?.name || '', // Use first available warehouse
+          batch_no: batch.name,
+        }),
+      });
+
+      let stockQty = 0;
+      if (batchQtyResponse.ok) {
+        const stockData = await batchQtyResponse.json();
+        stockQty = stockData.message?.[0]?.actual_qty || 0;
+      }
+
+      // Fetch item details
+      const itemResponse = await fetch(`${API_BASE_URL}/Item/${batch.item}`, {
+        headers,
+        credentials: 'include',
+      });
+
+      if (!itemResponse.ok) {
+        showAlert('danger', 'Error', `Item not found: ${batch.item}`);
+        setBarcodeValue('');
+        return;
+      }
+
+      const itemData = await itemResponse.json();
+      const item = itemData.data;
+
+      // Check if item already exists in the table
+      const existingItemIndex = items.findIndex(
+        (item) => item.itemCode === batch.item
+      );
+
+      if (existingItemIndex !== -1) {
+        // Update existing item quantity
+        const updatedItems = [...items];
+        const currentQty = parseInt(updatedItems[existingItemIndex].reqQty) || 0;
+        updatedItems[existingItemIndex].reqQty = (currentQty + 1).toString();
+        updatedItems[existingItemIndex].stockQty = stockQty.toString();
+        
+        setItems(updatedItems);
+      } else {
+        // Create new item
+        const newItem: Item = {
+          id: Date.now().toString(),
+          itemCode: batch.item,
+          itemName: batch.item_name || item.item_name,
+          unit: item.stock_uom || 'Nos',
+          stockQty: stockQty.toString(),
+          reqQty: '1',
+          kit: '',
+          remark: '',
+          expiryDate: batch.expiry_date || '',
+          custom_classification: item.custom_classification,
+          custom_business_category: item.custom_business_category,
+        };
+
+        const updatedItems = [...items, newItem];
+        setItems(updatedItems);
+      }
+
+      showAlert('success', 'Success', `Item ${batch.item_name} added to requisition`);
+      setBarcodeValue(''); // Clear barcode input after successful addition
+
+    } catch (error) {
+      console.error('Error processing barcode:', error);
+      showAlert('danger', 'Error', 'Failed to process barcode');
+      setBarcodeValue('');
+    }
+  };
+
+  useEffect(() => {
+    if (barcodeValue && barcodeValue.trim()) {
+      handleBarcodeScan(barcodeValue.trim());
+    }
+  }, [barcodeValue]);
   const [patientRemark, setPatientRemark] = useState("");
   const [docstatus, setDocstatus] = useState<number>(0); // 0=Draft, 1=Submitted, 2=Cancelled
   const [_isAmendMode, setIsAmendMode] = useState(false); // Track if in amend mode
@@ -563,10 +734,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   // Fetch default department
   const fetchDefaultDepartment = async (): Promise<string | null> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -605,10 +780,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   // Fetch default branch
   const fetchDefaultBranch = async (): Promise<string | null> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -710,6 +889,59 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     return isHighAlert;
   };
 
+  // Helper function to check for critical categories
+  const checkCriticalCategories = (item: Item): { isCritical: boolean; categories: string[] } => {
+    const criticalFields = [
+      { field: 'custom_is_hazardous', label: 'Hazardous' },
+      { field: 'custom_reserved_antibiotic', label: 'Reserved Antibiotic' },
+      { field: 'custom_stent', label: 'Stent' },
+      { field: 'custom_consignment_items', label: 'Consignment Items' },
+      { field: 'custom_narcotic_drug', label: 'Narcotic Drug' },
+      { field: 'custom_tb_drug', label: 'TB Drug' },
+      { field: 'custom_lasa', label: 'LASA' },
+      { field: 'custom_emergency_drug', label: 'Emergency Drug' },
+      { field: 'custom_ndps', label: 'NDPS' },
+      { field: 'custom_controled_drug', label: 'Controlled Drug' },
+      { field: 'custom_high_risk_drug', label: 'High Risk Drug' },
+      { field: 'custom_banned_drug', label: 'Banned Drug' },
+      { field: 'custom_edrug', label: 'E-Drug' },
+      { field: 'custom_is_prescribed', label: 'Prescribed Drug' }
+    ];
+
+    const activeCategories: string[] = [];
+
+    criticalFields.forEach(({ field, label }) => {
+      if (item[field as keyof Item] === 1) {
+        activeCategories.push(label);
+      }
+    });
+
+    const isCritical = activeCategories.length > 0;
+
+    console.log('Checking critical categories:', {
+      itemCode: item.itemCode,
+      itemName: item.itemName,
+      isCritical,
+      categories: activeCategories
+    });
+
+    return { isCritical, categories: activeCategories };
+  };
+
+  // Handler functions for critical category dialog
+  const handleCriticalCategoryConfirm = async () => {
+    if (criticalCategoryDialog.item) {
+      // Add the _skipHighAlertCheck flag to bypass the check on retry
+      const itemToAdd = { ...criticalCategoryDialog.item, _skipHighAlertCheck: true };
+      await upsertItemWithStock(itemToAdd, 1);
+    }
+    setCriticalCategoryDialog({ show: false, item: null, categories: [] });
+  };
+
+  const handleCriticalCategoryCancel = () => {
+    setCriticalCategoryDialog({ show: false, item: null, categories: [] });
+  };
+
   const upsertItemWithStock = async (baseItem: Item, qtyIncrement: number = 1) => {
     console.log('upsertItemWithStock called:', { baseItem, qtyIncrement, isLoadingRequisition });
 
@@ -720,6 +952,17 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setPendingQtyIncrement(qtyIncrement);
       setHighAlertItem(baseItem);
       setShowHighAlertDialog(true);
+      return; // Wait for user confirmation
+    }
+
+    // Check for critical categories and show confirmation dialog
+    const { isCritical, categories } = checkCriticalCategories(baseItem);
+    if (isCritical && !baseItem._skipHighAlertCheck) {
+      setCriticalCategoryDialog({
+        show: true,
+        item: baseItem,
+        categories: categories
+      });
       return; // Wait for user confirmation
     }
 
@@ -896,10 +1139,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
       setIsLoadingRequisition(true);
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -1040,10 +1287,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     setIsSaving(true);
 
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -1427,11 +1678,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       console.log('Kit useEffect proceeding to fetch kit items');
       const fetchKitItems = async () => {
         try {
-          const headers = {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `token ${apiKey}:${apiSecret}`,
-          };
+          // Use the same authentication logic as other functions
+          const authHeaders = getAuthHeaders();
+          // Convert HeadersInit to plain object for fetch compatibility
+          const headers = typeof authHeaders === 'string' ? 
+            JSON.parse(authHeaders) : 
+            Array.isArray(authHeaders) ? 
+              Object.fromEntries(authHeaders) : 
+              authHeaders;
 
           const bundleResponse = await fetch(
             `${FRAPPE_API_BASE_URL}/Product%20Bundle/${encodeURIComponent(selectedKit)}`,
@@ -1587,10 +1841,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     if (!barcode) return;
 
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -1687,10 +1945,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   // Function to check if sale exists for requisition
   const checkSaleExistsForRequisition = async (reqNo: string): Promise<boolean> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(
         `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
@@ -1772,10 +2034,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
     try {
       setIsSaving(true);
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -1937,10 +2203,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
     try {
       setIsSaving(true);
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
@@ -2423,6 +2693,48 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
               type="primary-button"
               size="button-medium"
               onClick={handleHighAlertConfirm}
+            >
+              Proceed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Critical Category Confirmation Dialog */}
+      <Dialog open={criticalCategoryDialog.show} onOpenChange={(open) => !open && handleCriticalCategoryCancel()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-orange-600">Critical Category Alert</DialogTitle>
+            <DialogDescription>
+              The following item belongs to critical categories and requires special handling.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+              <p className="text-sm font-medium text-orange-800 mb-2">Critical Categories:</p>
+              <p className="text-sm text-gray-700 mb-2">
+                {criticalCategoryDialog.categories?.join(', ')}
+              </p>
+              <p className="text-sm text-gray-700">
+                <strong>Item:</strong> {criticalCategoryDialog.item?.itemName} ({criticalCategoryDialog.item?.itemCode})
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 mt-3">
+              This item requires special handling. Do you want to proceed?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              type="secondary-button"
+              size="button-medium"
+              onClick={handleCriticalCategoryCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="primary-button"
+              size="button-medium"
+              onClick={handleCriticalCategoryConfirm}
             >
               Proceed
             </Button>

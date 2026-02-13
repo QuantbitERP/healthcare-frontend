@@ -16,6 +16,7 @@ import { X, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp } from "luci
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 
 // Tooltip component
 const StatusTooltip: React.FC<{
@@ -133,7 +134,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const [showCompleted, setShowCompleted] = useState(false);
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(true); // Default collapsed
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Default open
-  const { apiKey, apiSecret } = useAuth();
+  const { isAuthenticated, isInitialized, currentUser } = useAuth();
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -155,6 +156,28 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
 
 
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {
+    // Check if authentication is initialized
+    if (!isInitialized) {
+      console.log("Authentication not initialized yet, skipping fetch");
+      setLoading(false);
+      return;
+    }
+    
+    // Check if user is authenticated
+    if (!isAuthenticated || !currentUser) {
+      console.log("User not authenticated, skipping fetch");
+      setLoading(false);
+      return;
+    }
+
+    // Force session-based authentication if no API keys are available
+    const apiKey = localStorage.getItem("apiKey");
+    const apiSecret = localStorage.getItem("apiSecret");
+    if (!apiKey || !apiSecret) {
+      console.log("No API keys found, enabling session-based authentication");
+      localStorage.setItem("useSessionAuth", "true");
+    }
+
     setLoading(true);
     try {
       // Build query parameters
@@ -207,14 +230,17 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
         params.filters = JSON.stringify(filters);
       }
 
-      const headers = {
-        'Content-Type': 'application/json',
-        Authorization: `token ${apiKey}:${apiSecret}`,
-      };
+      const headers = getAuthHeaders();
+      // Convert HeadersInit to plain object for Axios compatibility
+      const axiosHeaders = typeof headers === 'string' ? 
+        JSON.parse(headers) : 
+        Array.isArray(headers) ? 
+          Object.fromEntries(headers) : 
+          headers;
 
       const response = await axios.get(`${API_BASE_URL}/Patient Requisition`, {
         params,
-        headers,
+        headers: axiosHeaders,
         withCredentials: true,
       });
 
@@ -227,7 +253,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
             try {
               const fullReqResponse = await axios.get(
                 `${API_BASE_URL}/Patient Requisition/${req.name}?fields=["name","patient_requisition_item_details"]`,
-                { headers, withCredentials: true }
+                { headers: axiosHeaders, withCredentials: true }
               );
 
               if (fullReqResponse.data?.data) {
@@ -255,7 +281,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               console.log("Searching for invoices with custom_req_no =", req.name);
               const invoiceResponse = await axios.get(
                 `${API_BASE_URL}/POS Invoice?filters=[["custom_req_no","=","${req.name}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
-                { headers, withCredentials: true }
+                { headers: axiosHeaders, withCredentials: true }
               );
 
               console.log("Invoice query response:", invoiceResponse.data);
@@ -271,7 +297,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                 try {
                   const fullInvoiceResponse = await axios.get(
                     `${API_BASE_URL}/POS Invoice/${invoice.name}?fields=["name","items"]`,
-                    { headers, withCredentials: true }
+                    { headers: axiosHeaders, withCredentials: true }
                   );
 
                   const fullInvoice = fullInvoiceResponse.data?.data;
@@ -281,8 +307,13 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                     invoicedQty += invoiceQty;
                     console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
                   }
-                } catch (error) {
-                  console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+                } catch (error: any) {
+                  if (error.response?.status === 403) {
+                    console.log(`Access forbidden (403) - User lacks permission for POS Invoice ${invoice.name}`);
+                    // Continue processing other requisitions even if we can't access invoice details
+                  } else {
+                    console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
+                  }
                 }
               }
 
@@ -304,14 +335,25 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                 total_qty: totalQty,
                 invoiced_qty: invoicedQty,
               };
-            } catch (error) {
-              console.error(`Error calculating status for requisition ${req.name}:`, error);
-              return {
-                ...req,
-                requisition_status: "Pending",
-                total_qty: totalQty,
-                invoiced_qty: 0,
-              };
+            } catch (error: any) {
+              if (error.response?.status === 403) {
+                console.log(`Access forbidden (403) - User lacks permission for POS Invoice data when processing requisition ${req.name}`);
+                // Return default status when we can't access invoice data
+                return {
+                  ...req,
+                  requisition_status: "Pending",
+                  total_qty: totalQty,
+                  invoiced_qty: 0,
+                };
+              } else {
+                console.error(`Error calculating status for requisition ${req.name}:`, error);
+                return {
+                  ...req,
+                  requisition_status: "Pending",
+                  total_qty: totalQty,
+                  invoiced_qty: 0,
+                };
+              }
             }
           })
         );
@@ -378,14 +420,22 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
 
         setRequisitions(transformedData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch patient requisitions:", error);
+      
+      // Handle 403 FORBIDDEN errors gracefully
+      if (error.response?.status === 403) {
+        console.log("Access forbidden (403) - User lacks permission for Patient Requisition or POS Invoice data");
+        // You could show a user-friendly message here if needed
+        // For now, we'll just clear the data and let the user see an empty list
+      }
+      
       setRequisitions([]);
       setAllRequisitions([]);
     } finally {
       setLoading(false);
     }
-  }, [ipNo, isExpired, isStat, isDischarge, isRoutine, isASAP, showCompleted, apiKey, apiSecret]);
+  }, [ipNo, isExpired, isStat, isDischarge, isRoutine, isASAP, showCompleted, isInitialized, isAuthenticated, currentUser]);
 
   // Debounced search implementation
   const debouncedFetch = useCallback((search: string, dateRange?: DateRange) => {
@@ -411,12 +461,12 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
     debouncedFetch(searchTerm, newDateRange);
   }, [debouncedFetch, searchTerm]);
 
-  // Initial load when component opens
+  // Initial load when component opens or authentication is ready
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isInitialized && isAuthenticated) {
       fetchRequisitions();
     }
-  }, [isOpen, fetchRequisitions]);
+  }, [isOpen, isInitialized, isAuthenticated, fetchRequisitions]);
 
   // Trigger fetch when status filters change
   useEffect(() => {

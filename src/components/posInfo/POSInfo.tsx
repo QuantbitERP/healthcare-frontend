@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 
 interface POSInfoProps {
   posProfile?: string;
@@ -15,20 +16,26 @@ function POSInfo({ posProfile, warehouse, className = "" }: POSInfoProps) {
   // Fetch warehouse name if warehouse code is provided
   useEffect(() => {
     const fetchWarehouseName = async () => {
-      if (!warehouse || !apiKey || !apiSecret) {
-        setWarehouseName(warehouse || "");
+      if (!warehouse) {
+        setWarehouseName("");
         return;
       }
 
       try {
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+        
         const response = await fetch(
           `https://192.168.7.221:4422/api/resource/Warehouse/${warehouse}`,
           {
             method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
+            headers,
             credentials: "include",
           }
         );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import UserProfile from "@/components/userProfile/UserProfile";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 
 interface PageHeaderProps {
   title: string;
@@ -23,7 +24,7 @@ interface SearchSuggestion {
 function PageHeader(props: PageHeaderProps) {
   const { title, icon, rightButtons } = props;
   const router = useRouter();
-  const { apiKey, apiSecret, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -46,7 +47,7 @@ function PageHeader(props: PageHeaderProps) {
 
   // Search Frappe for pages and documents
   const searchFrappe = async (query: string): Promise<SearchSuggestion[]> => {
-    if (!isAuthenticated || !apiKey || !apiSecret) {
+    if (!isAuthenticated) {
       return [];
     }
 
@@ -55,14 +56,20 @@ function PageHeader(props: PageHeaderProps) {
 
       // Search for Frappe pages/modules
       try {
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+        
         const response = await fetch(
           `https://192.168.7.221:4422/api/method/frappe.client.get_list?doctype=Page&filters=[["name","like","%${query}%"]]&fields=["name","title"]&limit_page_length=5`,
           {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `token ${apiKey}:${apiSecret}`,
-            },
+            headers,
             credentials: 'include',
           }
         );
@@ -89,14 +96,20 @@ function PageHeader(props: PageHeaderProps) {
 
       for (const doctype of doctypes) {
         try {
+          // Use the same authentication logic as other functions
+          const authHeaders = getAuthHeaders();
+          // Convert HeadersInit to plain object for fetch compatibility
+          const headers = typeof authHeaders === 'string' ? 
+            JSON.parse(authHeaders) : 
+            Array.isArray(authHeaders) ? 
+              Object.fromEntries(authHeaders) : 
+              authHeaders;
+          
           const response = await fetch(
             `https://192.168.7.221:4422/api/method/frappe.client.get_list?doctype=${doctype}&filters=[["name","like","%${query}%"]]&fields=["name"]&limit_page_length=3`,
             {
               method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `token ${apiKey}:${apiSecret}`,
-              },
+              headers,
               credentials: 'include',
             }
           );

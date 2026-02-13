@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ interface POSOpeningEntry {
 }
 
 const POSOpeningEntry: React.FC = () => {
-  const { posProfile, currentUser, apiKey, apiSecret } = useAuth();
+  const { posProfile, currentUser, isAuthenticated } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
   const [formData, setFormData] = useState<POSOpeningEntry>({
@@ -56,30 +57,34 @@ const POSOpeningEntry: React.FC = () => {
 
   // Check for open POS Opening Entry and redirect if necessary
   useEffect(() => {
-    if (!apiKey || !apiSecret || !posProfile || !currentUser) {
+    if (!isAuthenticated || !posProfile || !currentUser) {
       router.push("/login");
       return;
     }
 
     // Since conflict checking now happens in POSProfileSelector on /pos page,
     // we can proceed directly with the opening entry form
-  }, [apiKey, apiSecret, posProfile, currentUser, router]);
+  }, [isAuthenticated, posProfile, currentUser, router]);
 
   // Fetch Companies, POS Profiles, and Modes of Payment
   useEffect(() => {
-    if (!apiKey || !apiSecret) return;
-
     const fetchData = async () => {
       try {
         // Fetch Companies
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+        
         const companyRes = await fetch(
           "https://192.168.7.221:4422/api/resource/Company?fields=[\"name\"]",
           {
             method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
+            headers,
           }
         );
         if (companyRes.ok) {
@@ -95,10 +100,7 @@ const POSOpeningEntry: React.FC = () => {
           "https://192.168.7.221:4422/api/resource/POS Profile?fields=[\"name\"]",
           {
             method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
+            headers,
           }
         );
         if (posRes.ok) {
@@ -114,10 +116,7 @@ const POSOpeningEntry: React.FC = () => {
           "https://192.168.7.221:4422/api/resource/Mode of Payment?fields=[\"name\"]",
           {
             method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
+            headers,
           }
         );
         if (mopRes.ok) {
@@ -134,7 +133,7 @@ const POSOpeningEntry: React.FC = () => {
     };
 
     fetchData();
-  }, [apiKey, apiSecret]);
+  }, [isAuthenticated]);
 
   const handleInputChange = (field: keyof POSOpeningEntry, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -197,14 +196,20 @@ const POSOpeningEntry: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+      
       const response = await fetch(
         "https://192.168.7.221:4422/api/resource/POS Opening Entry",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `token ${apiKey}:${apiSecret}`,
-          },
+          headers,
           body: JSON.stringify({
             ...formData,
             docstatus: 1, // Submit on creation

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext"; // Adjust the import path as needed
 
-const FRAPPE_BASE_URL = "https://192.168.7.221:4422";
+import { FRAPPE_CONFIG } from "@/config/frappe";
+
+const FRAPPE_BASE_URL = FRAPPE_CONFIG.BASE_URL;
 
 // Cache keys for localStorage
 const CACHE_KEYS = {
@@ -62,18 +64,40 @@ const buildFrappeApiUrl = (resource: string, fields: string[], filters?: any[]) 
   }
   return `${baseUrl}?${params.toString()}`;
 };
-
-const makeFrappeApiCall = async (url: string, resourceName: string, apiKey: string, apiSecret: string) => {
+const makeFrappeApiCall = async (
+  url: string,
+  resourceName: string,
+  apiKey: string,
+  apiSecret: string,
+  csrfToken?: string | null
+) => {
   try {
-    console.log(`Fetching ${resourceName} with API key authentication...`);
-    const authHeader = `token ${apiKey}:${apiSecret}`;
+    console.log(`Fetching ${resourceName}...`);
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    if (csrfToken) {
+      headers["X-Frappe-CSRF-Token"] = csrfToken;
+    }
+
+    // Only add Authorization header if we have valid-looking keys
+    // If the secret contains '*', it's likely masked by Frappe and invalid for autharies.
+    const isMasked = (secret: string) => secret && secret.includes('***');
+
+    if (apiKey && apiSecret && !isMasked(apiSecret)) {
+      console.log(`Using API key authentication for ${resourceName}`);
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    } else {
+      console.log(`Using session-based authentication for ${resourceName}`);
+    }
+
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: authHeader,
-      },
+      headers: headers,
+      credentials: "include", // Crucial: send session cookies
       mode: "cors",
       cache: "no-cache",
     });
@@ -107,8 +131,9 @@ const makeFrappeApiCall = async (url: string, resourceName: string, apiKey: stri
 
 // Custom hook to handle Frappe API calls with auth context and caching
 export const useFrappeApi = () => {
-  const { apiKey, apiSecret, isInitialized } = useAuth();
-  const isAuthenticated = !!apiKey && !!apiSecret && isInitialized;
+  const { apiKey, apiSecret, currentUser, isInitialized, csrfToken } = useAuth();
+  // We consider users authenticated if they have API keys OR if they have an active session (currentUser is set)aries.
+  const isAuthenticated = isInitialized && (!!currentUser || (!!apiKey && !!apiSecret));
 
   // State to cache API results
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -146,7 +171,7 @@ export const useFrappeApi = () => {
     const WAREHOUSE_API_URL = `${FRAPPE_BASE_URL}/api/resource/Warehouse?fields=["name","warehouse_name"]&limit_page_length=10000`;
 
     try {
-      const data = await makeFrappeApiCall(WAREHOUSE_API_URL, "Warehouses", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(WAREHOUSE_API_URL, "Warehouses", apiKey!, apiSecret!, csrfToken);
       const warehouseData = data.map((warehouse: any) => ({
         name: warehouse.name,
         warehouse_name: warehouse.warehouse_name || warehouse.name,
@@ -201,7 +226,7 @@ export const useFrappeApi = () => {
     const BRANCH_API_URL = `${FRAPPE_BASE_URL}/api/resource/Branch?fields=["name"]&limit_page_length=10000`;
 
     try {
-      const data = await makeFrappeApiCall(BRANCH_API_URL, "Branches", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(BRANCH_API_URL, "Branches", apiKey!, apiSecret!, csrfToken);
       const branchData = data.map((branch: any) => ({
         name: branch.name,
         label: branch.name,
@@ -246,7 +271,7 @@ export const useFrappeApi = () => {
     const PRODUCT_BUNDLE_API_URL = `${FRAPPE_BASE_URL}/api/resource/Product Bundle?fields=["name","new_item_code","disabled"]&filters=[["disabled","!=",1]]`;
 
     try {
-      const data = await makeFrappeApiCall(PRODUCT_BUNDLE_API_URL, "Product Bundles", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(PRODUCT_BUNDLE_API_URL, "Product Bundles", apiKey!, apiSecret!, csrfToken);
       const kitData = data.map((kit: any) => ({
         name: kit.name,
         new_item_code: kit.new_item_code || kit.name,
@@ -291,7 +316,7 @@ export const useFrappeApi = () => {
     const CLASSIFICATION_API_URL = buildFrappeApiUrl("Classification", ["name"]);
 
     try {
-      const data = await makeFrappeApiCall(CLASSIFICATION_API_URL, "Classifications", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(CLASSIFICATION_API_URL, "Classifications", apiKey!, apiSecret!, csrfToken);
       const classificationData = data.map((classification: any) => ({
         name: classification.name,
         label: classification.name,
@@ -335,7 +360,7 @@ export const useFrappeApi = () => {
     const CUSTOMER_API_URL = buildFrappeApiUrl("Customer", ["name", "custom_is_self_paid"]);
 
     try {
-      const data = await makeFrappeApiCall(CUSTOMER_API_URL, "Customer", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(CUSTOMER_API_URL, "Customer", apiKey!, apiSecret!, csrfToken);
       const customerData = data.map((customer: any) => ({
         name: customer.name,
         label: customer.name,
@@ -380,7 +405,7 @@ export const useFrappeApi = () => {
     const COMPANY_API_URL = buildFrappeApiUrl("Company", ["name"]);
 
     try {
-      const data = await makeFrappeApiCall(COMPANY_API_URL, "Company", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(COMPANY_API_URL, "Company", apiKey!, apiSecret!, csrfToken);
       const companyData = data.map((company: any) => ({
         name: company.name,
         label: company.name,
@@ -421,7 +446,7 @@ export const useFrappeApi = () => {
     const BRANCH_API_URL = buildFrappeApiUrl("Branch", ["name"]);
 
     try {
-      const data = await makeFrappeApiCall(BRANCH_API_URL, "Branch", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(BRANCH_API_URL, "Branch", apiKey!, apiSecret!, csrfToken);
       const branchData = data.map((branch: any) => ({
         name: branch.name,
         label: branch.name,
@@ -465,7 +490,7 @@ export const useFrappeApi = () => {
     const DEPARTMENT_API_URL = `${FRAPPE_BASE_URL}/api/resource/Department?fields=["name"]&filters=[["custom_is_store","=",1]]`;
 
     try {
-      const data = await makeFrappeApiCall(DEPARTMENT_API_URL, "Departments", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(DEPARTMENT_API_URL, "Departments", apiKey!, apiSecret!, csrfToken);
       const departmentData = data.map((department: any) => ({
         name: department.name,
         department_name: department.name,
@@ -510,7 +535,7 @@ export const useFrappeApi = () => {
     const SUB_DEPARTMENT_API_URL = buildFrappeApiUrl("Department", ["name"]);
 
     try {
-      const data = await makeFrappeApiCall(SUB_DEPARTMENT_API_URL, "Sub Department", apiKey!, apiSecret!);
+      const data = await makeFrappeApiCall(SUB_DEPARTMENT_API_URL, "Sub Department", apiKey!, apiSecret!, csrfToken);
       const subdepartmentData = data.map((subDepartment: any) => ({
         name: subDepartment.name,
         label: subDepartment.name,
@@ -550,14 +575,24 @@ export const useFrappeApi = () => {
 
     try {
       console.log("Fetching user default company...");
-      const authHeader = `token ${apiKey}:${apiSecret}`;
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+
+      if (csrfToken) {
+        headers['X-Frappe-CSRF-Token'] = csrfToken;
+      }
+
+      const isMasked = (secret: string) => secret && secret.includes('***');
+      if (apiKey && apiSecret && !isMasked(apiSecret)) {
+        headers['Authorization'] = `token ${apiKey}:${apiSecret}`;
+      }
+
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
+        headers: headers,
         credentials: 'include'
       });
 
@@ -584,14 +619,20 @@ export const useFrappeApi = () => {
 
     try {
       console.log(`Fetching warehouse for sub-department: ${subDepartment}...`);
-      const authHeader = `token ${apiKey}:${apiSecret}`;
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+
+      const isMasked = (secret: string) => secret && secret.includes('***');
+      if (apiKey && apiSecret && !isMasked(apiSecret)) {
+        headers['Authorization'] = `token ${apiKey}:${apiSecret}`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
+        headers: headers,
         credentials: 'include',
         body: JSON.stringify({ sub_department: subDepartment }),
       });
@@ -621,20 +662,35 @@ export const useFrappeApi = () => {
       return [];
     }
 
+    // Check if the branch parameter looks like a department name (contains "Department")
+    // If so, we need to handle it differently or extract hospital ID from patient data
+    let actualBranch = branch;
+    if (branch.includes("Department")) {
+      console.warn("Department name passed instead of hospital ID. This may cause API errors.");
+      // For now, we'll try to use it as-is, but this might need to be fixed on backend
+      actualBranch = branch; // Keep the original value for now
+    }
+
     const url = `${FRAPPE_BASE_URL}/api/method/quantbit_hims_integration.quantbit_hims_integration.doctor_api.get_doctor_list`;
 
     try {
-      console.log(`Fetching doctors for branch: ${branch}...`);
-      const authHeader = `token ${apiKey}:${apiSecret}`;
+      console.log(`Fetching doctors for branch/hospital: ${actualBranch}...`);
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+
+      const isMasked = (secret: string) => secret && secret.includes('***');
+      if (apiKey && apiSecret && !isMasked(apiSecret)) {
+        headers['Authorization'] = `token ${apiKey}:${apiSecret}`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
+        headers: headers,
         credentials: 'include',
-        body: JSON.stringify({ branch: branch }),
+        body: JSON.stringify({ branch: actualBranch }),
       });
 
       if (!response.ok) {
@@ -645,13 +701,13 @@ export const useFrappeApi = () => {
       const doctorData = data.message.data.items.map((doctor: any) => ({
         name: doctor.value,
         label: doctor.value,
-        value: doctor.key, // Assuming 'name' is the unique identifier for the doctor
+        value: doctor.value, // Use doctor.value for both label and value
       }));
       console.log("Doctors loaded successfully:", doctorData);
       setDoctors(doctorData);
       return doctorData;
     } catch (error) {
-      console.error(`Error fetching doctors for branch ${branch}:`, error);
+      console.error(`Error fetching doctors for branch ${actualBranch}:`, error);
       setDoctors([]);
       return [];
     }

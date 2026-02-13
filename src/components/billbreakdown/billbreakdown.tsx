@@ -4,6 +4,7 @@ import Dropdown from '../dropdownForPatientCard/Dropdown';
 import RecordPaymentModal from './RecordPaymentModal';
 import TotalBreakdownModal from './TotalBreakdownModal';
 import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders } from '@/utils/sessionAuth';
 
 interface BillBreakdownProps {
   totalBillAmount: number;
@@ -75,10 +76,15 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
   useEffect(() => {
     const fetchConcessionTypes = async () => {
       try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+        
         const response = await fetch(`${FRAPPE_BASE_URL}/api/resource/Concession Type?fields=["name"]&limit_page_length=1000`, {
           method: 'GET',
           headers,
@@ -97,18 +103,21 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
       }
     };
 
-    if (apiKey && apiSecret) {
-      fetchConcessionTypes();
-    }
-  }, [apiKey, apiSecret]);
+    fetchConcessionTypes();
+  }, []);
 
   useEffect(() => {
     const fetchConcessionUsers = async () => {
       try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+        
         const roleResponse = await fetch(`${FRAPPE_BASE_URL}/api/resource/User?fields=["name","full_name"]&filters=[["Has Role","role","=","concession"]]&limit_page_length=1000`, {
           method: 'GET',
           headers,

@@ -11,9 +11,10 @@ interface SelectInvoiceModalProps {
   onClose: () => void;
   onSelect: (invoices: any[]) => void;
   patientName?: string; // Add patientName prop for default filtering
+  isIPDPage?: boolean; // Add prop to determine if this is for IPD page
 }
 
-const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose, onSelect, patientName }) => {
+const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose, onSelect, patientName, isIPDPage = false }) => {
   const { apiKey, apiSecret } = useAuth();
   const { showAlert } = useAlert();
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -49,7 +50,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       fetchInvoices();
       fetchSaleReturnAllowDays();
     }
-  }, [isOpen, patientName]); // Add patientName to dependency array
+  }, [isOpen, patientName, isIPDPage]); // Add isIPDPage to dependency array
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -314,6 +315,11 @@ const fetchInvoiceItems = async (invoiceName: string) => {
     setLoading(true);
     try {
       let apiFilters: any[] = [['docstatus', '=', 1]];
+      
+      // Add IPD filter only if this is for IPD page
+      if (isIPDPage) {
+        apiFilters.push(['custom_is_ipd_invoice', '=', 1]);
+      }
       
       // Multi-field search: Invoice No, Patient Name, Doctor Name (only if search term is provided)
       if (search) {

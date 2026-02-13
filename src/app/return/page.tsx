@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Button from "@/components/buttons/Button";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/context/AuthContext';
+import { redirectToFrappeLogin, getAuthHeaders } from "@/utils/sessionAuth";
 import {
   Card,
   CardContent,
@@ -262,7 +263,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       return [];
     }
   };
-  const { posProfile, apiKey, apiSecret } = useAuth();
+  const { posProfile } = useAuth();
 
   // Create network printer instance with credentials
   // const networkPrinter: (NetworkPrinter | null) = apiKey && apiSecret ? createNetworkPrinter(apiKey, apiSecret) : null;
@@ -398,12 +399,18 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   // Function to fetch batch MRP
   const fetchBatchMRP = async (batchName: string): Promise<number> => {
     try {
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+      
       const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        },
+        headers,
         credentials: 'include',
       });
 
@@ -626,8 +633,8 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           placeholder={isDisabled ? "Items loaded from requisition/prescription" : (isGeneric ? "Search Generic Name" : placeholder)}
           disabled={isDisabled}
           className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDisabled
-              ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-              : "border-gray-300 focus:border-blue-500"
+            ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+            : "border-gray-300 focus:border-blue-500"
             }`}
           autoComplete="off"
         />
@@ -945,7 +952,7 @@ export default function Return() {
   // --- END: Added state for file upload ---
 
   const router = useRouter();
-  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole } = useAuth();
+  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized,checkUserRole } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
@@ -965,10 +972,14 @@ export default function Return() {
         return [];
       }
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Call the new API method that filters by warehouse and company
       const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
@@ -1011,10 +1022,14 @@ export default function Return() {
         return [];
       }
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Call the new API method that filters by warehouse and company
       const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
@@ -1051,10 +1066,14 @@ export default function Return() {
   const getBatchQty = async (itemCode: string, batchNo: string, warehouse: string) => {
     if (!batchNo || !warehouse) return 0;
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
@@ -1076,10 +1095,14 @@ export default function Return() {
     let rate: number | null = null;
     // Try to fetch from Item Price doctype first
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const filters = [
         ["item_code", "=", itemCode],
         ["price_list", "=", priceList]
@@ -1121,10 +1144,14 @@ export default function Return() {
     // If not found in Price List or not valid, try to fetch custom_mrp from Batch
     if (batchNo) {
       try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
         const response = await fetch(`${API_BASE_URL}/Batch?filters=[["item", "=", "${itemCode}"], ["name", "=", "${batchNo}"]]&fields=["custom_mrp"]&limit=1`, {
           method: 'GET',
           headers,
@@ -1148,10 +1175,14 @@ export default function Return() {
   // Function to fetch bin_location from Item doctype's custom_item_consumption_details
   const fetchBinLocationFromItem = async (itemCode: string) => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       console.log(`[BinLocation] Fetching item: ${itemCode}`);
 
@@ -1224,13 +1255,21 @@ export default function Return() {
     try {
       console.log('Scanning barcode:', scannedBarcode);
       console.log('Selected warehouse:', selectedWarehouse);
-      
+
       // Fetch batch details using the barcode
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+      
       const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
-        headers: {
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-          'Content-Type': 'application/json',
-        },
+        method: 'GET',
+        headers,
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -1254,12 +1293,19 @@ export default function Return() {
       let stockQty = 0;
       if (selectedWarehouse) {
         try {
+          // Use the same authentication logic as other functions
+          const authHeaders = getAuthHeaders();
+          // Convert HeadersInit to plain object for fetch compatibility
+          const headers = typeof authHeaders === 'string' ? 
+            JSON.parse(authHeaders) : 
+            Array.isArray(authHeaders) ? 
+              Object.fromEntries(authHeaders) : 
+              authHeaders;
+          
           const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
             method: 'POST',
-            headers: {
-              'Authorization': `token ${apiKey}:${apiSecret}`,
-              'Content-Type': 'application/json',
-            },
+            headers,
+            credentials: 'include',
             body: JSON.stringify({
               item_code: batch.item,
               warehouse: selectedWarehouse,
@@ -1292,11 +1338,13 @@ export default function Return() {
       }
 
       // Fetch item details
+      // Use the same authentication logic as other functions
+      
+      
       const itemResponse = await fetch(`${API_BASE_URL}/Item/${batch.item}`, {
-        headers: {
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-          'Content-Type': 'application/json',
-        },
+        method: 'GET',
+        headers,
+        credentials: 'include',
       });
 
       if (!itemResponse.ok) {
@@ -1320,11 +1368,11 @@ export default function Return() {
         const updatedItems = [...items];
         updatedItems[existingItemIndex].saleQty += 1;
         updatedItems[existingItemIndex].stockQty = stockQty;
-        
+
         // Recalculate totals for the updated item
         const recalculatedItem = calculateItemTaxAndTotals(updatedItems[existingItemIndex], item.included_in_print_rate || false);
         updatedItems[existingItemIndex] = recalculatedItem;
-        
+
         setItems(updatedItems);
         recalculateTotals?.(updatedItems);
       } else {
@@ -1368,7 +1416,7 @@ export default function Return() {
 
         // Calculate tax and totals for the new item
         const calculatedItem = calculateItemTaxAndTotals(newItem, item.included_in_print_rate || false);
-        
+
         const updatedItems = [...items, calculatedItem];
         setItems(updatedItems);
         recalculateTotals?.(updatedItems);
@@ -1506,14 +1554,14 @@ export default function Return() {
   // Handle direct return checkbox changes
   useEffect(() => {
     console.log('Direct return useEffect triggered:', { isReturn, isReturnInvoice, isDirectReturn, itemsLength: items.length });
-    
+
     if (isReturn && !isReturnInvoice) {
       // Direct return mode enabled (checkbox checked without loading invoice)
       console.log('Setting direct return mode - Sale Qty column will be hidden');
       // Set isReturnInvoice to true and isDirectReturn to true
       setIsReturnInvoice(true);
       setIsDirectReturn(true);
-      
+
       // No need to set saleQty to 0 since the column will be hidden
     } else if (!isReturn && isReturnInvoice) {
       // Return mode disabled, reset all return states
@@ -1554,10 +1602,14 @@ export default function Return() {
   // Function to get total and invoiced quantities for a requisition
   const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Get total quantity from requisition items
       const reqResponse = await fetch(
@@ -1650,10 +1702,14 @@ export default function Return() {
   // Function to get invoiced quantity for a specific item from a requisition
   const getItemInvoicedQuantity = async (reqNo: string, itemCode: string): Promise<number> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
 
@@ -1726,10 +1782,14 @@ export default function Return() {
   // Function to get invoiced quantity for a specific item from a prescription
   const getItemInvoicedQuantityFromPrescription = async (prescriptionNo: string, itemCode: string): Promise<number> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Get all invoices for this prescription
       const invoiceResponse = await fetch(
@@ -1796,10 +1856,14 @@ export default function Return() {
   // Function to update requisition status
   const updateRequisitionStatus = async (reqNo: string, forceComplete: boolean = false): Promise<void> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       let status = "Pending";
 
@@ -1875,8 +1939,9 @@ export default function Return() {
 
   // --- START: File upload function ---
   const uploadFile = async (file: File, invoiceName?: string): Promise<string | null> => {
-    if (!apiKey || !apiSecret) {
-      showAlert("danger", "Error", "API credentials are not available.");
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      showAlert("danger", "Error", "User is not authenticated.");
       return null;
     }
 
@@ -1886,11 +1951,18 @@ export default function Return() {
       formData.append('file', file);
       formData.append('is_private', '0'); // Make file public
 
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+
       const response = await fetch('https://192.168.7.221:4422/api/method/upload_file', {
         method: 'POST',
-        headers: {
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        },
+        headers,
         credentials: 'include',
         body: formData,
       });
@@ -1912,12 +1984,18 @@ export default function Return() {
         // If invoice name is provided, create a File document linked to the invoice
         if (invoiceName) {
           try {
+            // Use the same authentication logic as other functions
+            const authHeaders = getAuthHeaders();
+            // Convert HeadersInit to plain object for fetch compatibility
+            const headers = typeof authHeaders === 'string' ? 
+              JSON.parse(authHeaders) : 
+              Array.isArray(authHeaders) ? 
+                Object.fromEntries(authHeaders) : 
+                authHeaders;
+
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `token ${apiKey}:${apiSecret}`,
-              },
+              headers,
               credentials: 'include',
               body: JSON.stringify({
                 doctype: 'File',
@@ -2109,11 +2187,14 @@ export default function Return() {
   useEffect(() => {
     const fetchKitOptions = async () => {
       try {
-        const headers: HeadersInit = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/Product Bundle?fields=["name"]&limit_page_length=1000000`, {
           method: 'GET',
@@ -2140,10 +2221,10 @@ export default function Return() {
       }
     };
 
-    if (apiKey && apiSecret) {
+    if (isAuthenticated) {
       fetchKitOptions();
     }
-  }, [apiKey, apiSecret]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const setDefaultCompany = async () => {
@@ -2162,18 +2243,21 @@ export default function Return() {
   // useEffect to fetch tax template and tax accounts
   useEffect(() => {
     const fetchTaxData = async () => {
-      if (!selectedCompany || !apiKey || !apiSecret) return;
+      if (!selectedCompany || !isAuthenticated) return;
 
       try {
         // Fetch Tax Template
-        const taxTemplateHeaders: HeadersInit = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
         const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
-          headers: taxTemplateHeaders,
+          headers,
           credentials: 'include',
           body: JSON.stringify({ company: selectedCompany, customer: selectedCustomer || '' }),
         });
@@ -2188,14 +2272,17 @@ export default function Return() {
         }
 
         // Fetch Tax Accounts
-        const taxAccountsHeaders: HeadersInit = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        // const authHeaders = getAuthHeaders();
+        // // Convert HeadersInit to plain object for fetch compatibility
+        // const headers = typeof authHeaders === 'string' ? 
+        //   JSON.parse(authHeaders) : 
+        //   Array.isArray(authHeaders) ? 
+        //     Object.fromEntries(authHeaders) : 
+        //     authHeaders;
         const taxAccountsResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
           method: 'POST',
-          headers: taxAccountsHeaders,
+          headers,
           credentials: 'include',
           body: JSON.stringify({ company: selectedCompany }),
         });
@@ -2217,19 +2304,22 @@ export default function Return() {
     };
 
     fetchTaxData();
-  }, [selectedCompany, selectedCustomer, apiKey, apiSecret]);
+  }, [selectedCompany, selectedCustomer, isAuthenticated]);
 
   // useEffect to fetch GST Category for the selected company
   useEffect(() => {
     const fetchGstCategory = async () => {
-      if (!selectedCompany || !apiKey || !apiSecret) return;
+      if (!selectedCompany || !isAuthenticated) return;
 
       try {
-        const headers: HeadersInit = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
 
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
           method: 'POST',
@@ -2254,23 +2344,26 @@ export default function Return() {
     };
 
     fetchGstCategory();
-  }, [selectedCompany, apiKey, apiSecret]);
+  }, [selectedCompany, isAuthenticated]);
 
 
   useEffect(() => {
     const fetchCompanyAddress = async () => {
-      if (!selectedCustomer || !apiKey || !apiSecret) {
-        console.log('Missing required parameters:', { selectedCustomer, apiKey, apiSecret });
+      if (!selectedCustomer || !isAuthenticated) {
+        console.log('Missing required parameters:', { selectedCustomer, isAuthenticated });
         setCompanyAddress(null);
         return;
       }
 
       try {
-        const headers = {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
 
         const response = await fetch(
           'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
@@ -2307,7 +2400,7 @@ export default function Return() {
     };
 
     fetchCompanyAddress();
-  }, [selectedCustomer, apiKey, apiSecret]);
+  }, [selectedCustomer, isAuthenticated]);
 
   const handleClassificationChange = (value: string) => {
     if (value === "CLEAR") {
@@ -2329,11 +2422,14 @@ export default function Return() {
     }
 
     try {
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
         method: 'POST',
@@ -2465,19 +2561,19 @@ export default function Return() {
           setItems(prevItems => {
             const updatedItems = [...prevItems];
             const existingItem = updatedItems[existingItemIndex];
-            
+
             // Update return quantity and sale quantity
             existingItem.returnQty = (existingItem.returnQty || 0) + (item.returnQty || item.saleQty || 0);
             existingItem.saleQty = existingItem.returnQty;
-            
+
             console.log("Updated item with new quantities:", existingItem);
-            
+
             // Recalculate totals for the updated item
             const calculatedItem = calculateItemTaxAndTotals(existingItem, true);
             updatedItems[existingItemIndex] = calculatedItem;
-            
+
             console.log("Calculated item after tax and totals:", calculatedItem);
-            
+
             // Recalculate totals for all items
             const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
 
@@ -2543,7 +2639,7 @@ export default function Return() {
       setItems(prevItems => {
         console.log("Adding new item to grid. Previous items count:", prevItems.length);
         console.log("Previous items:", prevItems);
-        
+
         // Always add as a new item, as each batch-specific item has a unique ID now
         const newItemWithCalculations = calculateItemTaxAndTotals({
           ...item,
@@ -2566,7 +2662,7 @@ export default function Return() {
           const updatedItems = [...prevItems, newItemWithCalculations];
           console.log("Updated items array after adding new item:", updatedItems);
           console.log("New items count:", updatedItems.length);
-          
+
           // Recalculate totals for all items
           const allCalculatedItems = updatedItems.map(itm => calculateItemTaxAndTotals(itm, true));
           console.log("Final calculated items array:", allCalculatedItems);
@@ -2961,12 +3057,18 @@ export default function Return() {
         console.log("Updating existing draft invoice:", loadedInvoiceName);
         // Add docstatus: 0 to ensure Frappe recalculates totals
 
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+
         const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `token ${apiKey}:${apiSecret}`,
-          },
+          headers,
           credentials: 'include',
           body: JSON.stringify(finalPayload),
         });
@@ -2983,12 +3085,18 @@ export default function Return() {
         }
       } else {
         // Create new draft invoice using POST request
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `token ${apiKey}:${apiSecret}`,
-          },
+          headers,
           credentials: 'include',
           body: JSON.stringify(finalPayload),
         });
@@ -3013,12 +3121,18 @@ export default function Return() {
               console.log("Linking file to invoice:", invoiceName);
 
               try {
+                // Use the same authentication logic as other functions
+                const authHeaders = getAuthHeaders();
+                // Convert HeadersInit to plain object for fetch compatibility
+                const headers = typeof authHeaders === 'string' ? 
+                  JSON.parse(authHeaders) : 
+                  Array.isArray(authHeaders) ? 
+                    Object.fromEntries(authHeaders) : 
+                    authHeaders;
+
                 const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `token ${apiKey}:${apiSecret}`,
-                  },
+                  headers,
                   credentials: 'include',
                   body: JSON.stringify({
                     doctype: 'File',
@@ -3075,7 +3189,8 @@ export default function Return() {
     if (!isInitialized) return;
 
     if (!isAuthenticated) {
-      router.push('/login');
+      // Redirect to Frappe login with current URL as return address
+      redirectToFrappeLogin();
     } else if (!posProfile) {
       setShowPosProfileSelector(true);
     }
@@ -3084,13 +3199,17 @@ export default function Return() {
   // Automatically set warehouse based on selected POS Profile
   useEffect(() => {
     const fetchPosProfileWarehouse = async () => {
-      if (!posProfile || !apiKey || !apiSecret) return;
+      if (!posProfile || !isAuthenticated) return;
 
       try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/POS%20Profile/${posProfile}`, {
           method: 'GET',
@@ -3116,7 +3235,7 @@ export default function Return() {
     };
 
     fetchPosProfileWarehouse();
-  }, [posProfile, apiKey, apiSecret]);
+  }, [posProfile, isAuthenticated]);
 
   const handlePOSProfileSelect = (profile: string) => {
     setPosProfile(profile);
@@ -3165,10 +3284,14 @@ export default function Return() {
     // Fetch the full requisition document to ensure child tables are available
     let fullRequisitionData = requisition;
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${requisition.name}`, {
         method: 'GET',
         headers,
@@ -3412,7 +3535,7 @@ export default function Return() {
     console.log("Selected return requisition:", requisition);
     console.log("Current warehouse:", selectedWarehouse);
     console.log("Current company:", selectedCompany);
-    
+
     // Set source document information
     setSourceDocumentName(requisition.name);
     setSourceDocumentType('return_requisition');
@@ -3495,12 +3618,12 @@ export default function Return() {
         const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
         console.log(`Batches found for ${itemCode}:`, batches);
         console.log(`Looking for batch_no: ${reqItem.batch_no}`);
-        
+
         if (!batches || !Array.isArray(batches)) {
           console.error(`Invalid batches response for ${itemCode}:`, batches);
           continue;
         }
-        
+
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
         console.log(`Sorted batches for ${itemCode}:`, sortedBatches);
 
@@ -3510,26 +3633,26 @@ export default function Return() {
         }
 
         // Find the matching batch
-        console.log(`Looking for batch_no: ${reqItem.batch_no} in batches:`, sortedBatches.map(b => ({ 
-          batch_no: b.batch_no, 
+        console.log(`Looking for batch_no: ${reqItem.batch_no} in batches:`, sortedBatches.map(b => ({
+          batch_no: b.batch_no,
           item_code: b.item_code,
           name: b.name,
           batch_qty: b.batch_qty,
           actual_qty: b.actual_qty
         })));
-        
+
         const matchingBatch = sortedBatches.find(batch => {
           // Try multiple possible field names for batch number
           const batchNumber = batch.batch_no || batch.name || batch.batch_id || batch.batch;
           console.log(`Comparing "${reqItem.batch_no}" with "${batchNumber}"`);
           return batchNumber === reqItem.batch_no;
         });
-        
+
         let selectedBatch = matchingBatch;
-        
+
         if (!matchingBatch) {
           console.warn(`Batch ${reqItem.batch_no} not found for item ${itemCode}. Available batches:`, sortedBatches.map(b => ({ batch_no: b.batch_no, item_code: b.item_code })));
-          
+
           // Instead of skipping, use the first available batch with FEFO logic
           if (sortedBatches.length > 0) {
             selectedBatch = sortedBatches[0]; // Use first batch (already sorted by expiry date)
@@ -3621,10 +3744,14 @@ export default function Return() {
     // Fetch the full prescription document to ensure child tables are available
     let fullPrescriptionData = prescription;
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${prescription.prescription_number}`, {
         method: 'GET',
         headers,
@@ -3862,11 +3989,14 @@ export default function Return() {
   const fetchSubstituteItems = async (itemCode: string) => {
     if (!itemCode) return [];
     try {
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const filters1 = encodeURIComponent(JSON.stringify([["item_code", "=", itemCode]]));
       const url1 = `${API_BASE_URL}/Item%20Alternative?fields=["alternative_item_code","alternative_item_name"]&filters=${filters1}`;
 
@@ -3907,11 +4037,14 @@ export default function Return() {
 
   const fetchAlternativeItemsWithBatches = async (itemCode: string) => {
     try {
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
       const itemInfoResponse = await fetch(`${API_BASE_URL}/Item/${encodeURIComponent(itemCode)}?fields=["item_name","stock_uom"]`, {
         method: 'GET',
         headers,
@@ -3954,11 +4087,14 @@ export default function Return() {
     };
 
     try {
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(ITEM_DETAILS_API_URL, {
         method: 'POST',
@@ -4168,7 +4304,7 @@ export default function Return() {
     }
 
     // Check if any items have max_discount restriction
-    const restrictedItems = items.filter(item => 
+    const restrictedItems = items.filter(item =>
       item.max_discount && globalDiscountPercent > item.max_discount
     );
 
@@ -4205,10 +4341,14 @@ export default function Return() {
   // Helper function to fetch req_qty from requisition/prescription
   const fetchReqQtyForItem = async (sourceDocName: string, itemCode: string): Promise<number> => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       // Fetch the requisition/prescription document
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${sourceDocName}?fields=["name","patient_requisition_item_details"]`, {
@@ -4254,18 +4394,24 @@ export default function Return() {
 
   // --- START: Function to load attachments for an invoice ---
   const loadInvoiceAttachments = async (invoiceName: string) => {
-    if (!apiKey || !apiSecret) {
-      console.error("API credentials not available for loading attachments");
+    if (!isAuthenticated) {
+      console.error("User is not authenticated for loading attachments");
       return;
     }
 
     try {
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+
       const response = await fetch('https://192.168.7.221:4422/api/method/frappe.client.get_list', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           doctype: 'File',
@@ -4314,10 +4460,14 @@ export default function Return() {
       setIsLoadingFromPosInvoice(true);
 
       // Fetch full invoice details including all child tables
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoice.name}`, {
         method: 'GET',
@@ -4592,10 +4742,14 @@ export default function Return() {
     // If a draft invoice is loaded, submit it
     if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
       try {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        };
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
 
         // Submit the draft invoice
         const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
@@ -4650,7 +4804,7 @@ export default function Return() {
       if (isReturn) {
         // Filter items with return quantity > 0
         const itemsToReturn = items.filter(item => (item.returnQty || 0) > 0);
-        
+
         if (itemsToReturn.length === 0) {
           showAlert("danger", "Error", "Please enter return quantities for at least one item.");
           return;
@@ -4658,9 +4812,9 @@ export default function Return() {
 
         try {
           // Filter items by their source invoice and create separate returns for each
-          const invoicesToProcess = selectedInvoicesForReturn.length > 0 ? selectedInvoicesForReturn : 
-                                  (returnAgainstInvoice ? [returnAgainstInvoice] : []);
-          
+          const invoicesToProcess = selectedInvoicesForReturn.length > 0 ? selectedInvoicesForReturn :
+            (returnAgainstInvoice ? [returnAgainstInvoice] : []);
+
           if (invoicesToProcess.length === 0) {
             showAlert("danger", "Error", "No source invoices found for return.");
             return;
@@ -4674,7 +4828,7 @@ export default function Return() {
           for (const sourceInvoice of invoicesToProcess) {
             // Filter items that belong to this specific invoice
             const itemsForThisInvoice = itemsToReturn.filter(item => item.saleBillNo === sourceInvoice);
-            
+
             if (itemsForThisInvoice.length === 0) {
               console.log(`No items to return for invoice ${sourceInvoice}`);
               continue;
@@ -4684,20 +4838,20 @@ export default function Return() {
 
             // Prepare the three required arguments for the API
             const originalInvoice = sourceInvoice;
-            
+
             const returnItems = itemsForThisInvoice.map(item => {
-            const returnQty = item.returnQty || 0;
-            const discountPercent = item.discountPercent || 0;
-              
+              const returnQty = item.returnQty || 0;
+              const discountPercent = item.discountPercent || 0;
+
               // Rate per unit (MRP with GST included)
               const ratePerUnit = item.rate || 0;
-              
+
               // For GST-inclusive calculations with discount:
               // If discount is applied, we need to send the rate AFTER discount
               // Backend will handle the GST extraction
               const discountAmount = ratePerUnit * (discountPercent / 100);
               const rateAfterDiscount = ratePerUnit - discountAmount;
-              
+
               return {
                 item_code: item.itemCode,
                 item_name: item.itemName,
@@ -4744,23 +4898,30 @@ export default function Return() {
             console.log(`Return API Payload for ${originalInvoice}:`, payload);
 
             try {
+              // Use the same authentication logic as other functions
+              const authHeaders = getAuthHeaders();
+              // Convert HeadersInit to plain object for fetch compatibility
+              const headers = typeof authHeaders === 'string' ? 
+                JSON.parse(authHeaders) : 
+                Array.isArray(authHeaders) ? 
+                  Object.fromEntries(authHeaders) : 
+                  authHeaders;
+
               const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `token ${apiKey}:${apiSecret}`,
-                },
+                headers,
+                credentials: 'include',
                 body: JSON.stringify(payload),
               });
 
               const result = await response.json();
               console.log(`Return API Response for ${originalInvoice}:`, result);
-              
+
               if (response.ok) {
                 const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
                 createdReturnInvoices.push(returnInvoiceName);
                 successCount++;
-                
+
                 // Print the return invoice
                 if (returnInvoiceName) {
                   const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
@@ -4778,16 +4939,16 @@ export default function Return() {
 
           // Show final result
           if (successCount > 0) {
-            const returnMessage = successCount === 1 ? 
+            const returnMessage = successCount === 1 ?
               `${successCount} return invoice created successfully: ${createdReturnInvoices.join(', ')}` :
               `${successCount} return invoices created successfully: ${createdReturnInvoices.join(', ')}`;
-            
+
             if (failedInvoices.length > 0) {
               showAlert('warning', 'Partial Success', `${returnMessage}\nFailed to create returns for: ${failedInvoices.join(', ')}`);
             } else {
               showAlert('success', 'Success', returnMessage);
             }
-            
+
             // Reset form only if all returns were successful
             if (failedInvoices.length === 0) {
               handleReset();
@@ -4800,12 +4961,12 @@ export default function Return() {
           } else {
             showAlert('danger', 'Error', 'Failed to create any return invoices.');
           }
-        
+
         } catch (error: any) {
           console.error('Return processing error:', error);
           showAlert('danger', 'Error', error.message || 'Failed to process return invoices.');
         }
-        
+
         return;
       }
 
@@ -5115,12 +5276,19 @@ export default function Return() {
         console.log("Final payload for creating submitted invoice:", finalPayload);
         console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
         console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
+        
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `token ${apiKey}:${apiSecret}`,
-          },
+          headers,
           credentials: 'include',
           body: JSON.stringify(finalPayload),
         });
@@ -5142,12 +5310,18 @@ export default function Return() {
         }
 
         // Now submit the created draft invoice
+        // Use the same authentication logic as other functions
+        // const authHeaders = getAuthHeaders();
+        // // Convert HeadersInit to plain object for fetch compatibility
+        // const headers = typeof authHeaders === 'string' ? 
+        //   JSON.parse(authHeaders) : 
+        //   Array.isArray(authHeaders) ? 
+        //     Object.fromEntries(authHeaders) : 
+        //     authHeaders;
+
         const submitResponse = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoiceName}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `token ${apiKey}:${apiSecret}`,
-          },
+          headers,
           credentials: 'include',
           body: JSON.stringify({ docstatus: 1 }),
         });
@@ -5167,12 +5341,18 @@ export default function Return() {
           console.log("Linking file to finalized invoice:", invoiceName);
 
           try {
+            // Use the same authentication logic as other functions
+            const authHeaders = getAuthHeaders();
+            // Convert HeadersInit to plain object for fetch compatibility
+            const headers = typeof authHeaders === 'string' ? 
+              JSON.parse(authHeaders) : 
+              Array.isArray(authHeaders) ? 
+                Object.fromEntries(authHeaders) : 
+                authHeaders;
+
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `token ${apiKey}:${apiSecret}`,
-              },
+              headers,
               credentials: 'include',
               body: JSON.stringify({
                 doctype: 'File',
@@ -5239,16 +5419,20 @@ export default function Return() {
       showAlert("danger", "Error", "Please select a POS profile first.");
       return;
     }
-    if (!apiKey || !apiSecret) {
-      showAlert("danger", "Error", "API credentials are not available.");
+    if (!isAuthenticated) {
+      showAlert("danger", "Error", "User is not authenticated.");
       return;
     }
 
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
         method: 'POST',
@@ -5807,8 +5991,8 @@ export default function Return() {
             payments={recordedPayments}
             setPayments={setRecordedPayments}
             posProfile={posProfile ?? undefined}
-            apiKey={apiKey ?? undefined}
-            apiSecret={apiSecret ?? undefined}
+            // apiKey={isAuthenticated ? "session" : undefined}
+            // apiSecret={isAuthenticated ? "session" : undefined}
             totalBillAmount={totalBillAmount}
             transactionType={transactionType}
             roundedGrandTotal={roundedGrandTotal}
@@ -5849,9 +6033,9 @@ export default function Return() {
               }}>
                 Cancel Return
               </Button>
-              <Button 
-                type="primary-outlined-button" 
-                size="button-medium" 
+              <Button
+                type="primary-outlined-button"
+                size="button-medium"
                 onClick={() => setShowSelectInvoiceModal(true)}
               >
                 Return Bill
@@ -5895,9 +6079,9 @@ export default function Return() {
               <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
                 Save as Draft
               </Button>
-              <Button 
-                type="primary-outlined-button" 
-                size="button-medium" 
+              <Button
+                type="primary-outlined-button"
+                size="button-medium"
                 onClick={() => setShowSelectInvoiceModal(true)}
                 disabled={isReturn}
               >
@@ -5990,163 +6174,181 @@ export default function Return() {
         posProfile={posProfile}
         showAlert={showAlert}
       />
-{showSelectInvoiceModal && (
-  <SelectInvoiceModal
-    isOpen={showSelectInvoiceModal}
-    onClose={() => setShowSelectInvoiceModal(false)}
-    patientName={patientData?.name} // Pass patient name for default filtering
-    onSelect={async (invoices: any[]) => {  // Update to handle array of invoices
-      try {
-        if (!invoices || invoices.length === 0) {
-          showAlert('danger', 'Error', 'No invoices selected');
-          return;
-        }
-
-        // Load invoice data into the new_bill page for return processing
-        setIsReturn(true);
-        setIsReturnInvoice(true);
-        setIsDirectReturn(false); // This is not a direct return
-
-        // Use the first invoice for customer/patient data (assuming they're the same)
-        const firstInvoice = invoices[0];
-        const selectedInvoiceNames = invoices.map(inv => inv.name);
-        
-        setReturnAgainstInvoice(invoices.length === 1 ? firstInvoice.name : `${invoices.length} Invoices`);
-        setSelectedInvoicesForReturn(selectedInvoiceNames); // Store actual invoice names
-
-        // Load customer and patient data
-        setSelectedCustomer(firstInvoice.customer || '');
-        if (firstInvoice.custom_patient_name) {
-          setPatientData({
-            name: firstInvoice.custom_patient_name || '',
-            age: firstInvoice.custom_age || '',
-            sex: firstInvoice.custom_sex || '',
-            phone: firstInvoice.custom_phone || '',
-            ABHAID: firstInvoice.custom_abha_id || '',
-            category: firstInvoice.custom_category || '',
-            doctor: firstInvoice.custom_doctor_name || '',
-            mrn: firstInvoice.custom_mrn || '',
-            displayNo: firstInvoice.custom_display_no || '',
-            dept: firstInvoice.custom_department || '',
-            visitType: firstInvoice.custom_visit_type || '',
-            company: firstInvoice.custom_company || '',
-            visitID: firstInvoice.custom_visit_id || '',
-            bed: firstInvoice.custom_bed || '',
-          });
-        }
-
-        // Load company, warehouse, and other settings
-        setSelectedCompany(firstInvoice.company || '');
-        setSelectedWarehouse(firstInvoice.set_warehouse || '');
-
-        // Process all invoices and merge their items
-        const allLoadedItems: Item[] = [];
-        
-        for (const invoice of invoices) {
-          // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
-          const loadedItems: Item[] = await Promise.all(
-            invoice.items.map(async (item: any, index: number) => {
-              let alreadyReturnedQty = 0;
-
-              try {
-                // Fetch return invoices against this invoice
-                const returnResponse = await fetch(
-                  `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
-                  {
-                    headers: {
-                      Authorization: `token ${apiKey}:${apiSecret}`,
-                    },
-                  }
-                );
-                const returnData = await returnResponse.json();
-
-                if (returnData.data && returnData.data.length > 0) {
-                  for (const returnInv of returnData.data) {
-                    const returnInvResponse = await fetch(
-                      `https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`,
-                      {
-                        headers: {
-                          Authorization: `token ${apiKey}:${apiSecret}`,
-                        },
-                      }
-                    );
-                    const returnInvData = await returnInvResponse.json();
-
-                    if (returnInvData.data?.items) {
-                      const returnedItem = returnInvData.data.items.find(
-                        (ri: any) => ri.item_code === item.item_code
-                      );
-                      if (returnedItem) {
-                        alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
-                      }
-                    }
-                  }
-                }
-              } catch (error) {
-                console.error('Failed to fetch already returned quantities:', error);
-                alreadyReturnedQty = 0;
+      {showSelectInvoiceModal && (
+        <SelectInvoiceModal
+          isOpen={showSelectInvoiceModal}
+          onClose={() => setShowSelectInvoiceModal(false)}
+          patientName={patientData?.name} // Pass patient name for default filtering
+          onSelect={async (invoices: any[]) => {  // Update to handle array of invoices
+            try {
+              if (!invoices || invoices.length === 0) {
+                showAlert('danger', 'Error', 'No invoices selected');
+                return;
               }
 
-              return {
-                id: `${item.item_code}-${item.batch_no || ''}-${invoice.name}-${index}`, // Include invoice name in ID for uniqueness
-                alternateBatches: '',
-                substituteItem: '',
-                itemCode: item.item_code,
-                itemName: item.item_name,
-                uom: item.uom,
-                stockQty: item.actual_qty || 0,
-                orderedQty: 0,
-                saleQty: item.qty,
-                returnQty: 0,
-                alreadyReturnedQty,
-                batch: item.batch_no || '',
-                batchNo: item.batch_no || '',
-                expiryDate: item.custom_expiry_date || '',
-                batchStockQty: item.actual_batch_qty || 0,
-                rate: item.rate,
-                taxTemplate: item.item_tax_template || '',
-                description: item.description || '',
-                itemAmount: item.base_amount || 0,
-                discountPercent: item.discount_percentage || 0,
-                discountAmt: item.discount_amount || 0,
-                cgstPercent: item.cgst_rate || 0,
-                cgstAmt: item.cgst_amount || 0,
-                sgstPercent: item.sgst_rate || 0,
-                sgstAmt: item.sgst_amount || 0,
-                igstPercent: item.igst_rate || 0,
-                igstAmt: item.igst_amount || 0,
-                totalAmt: item.amount || 0,
-                kitName: '',
-                totalPckgAmt: 0,
-                packageName: '',
-                binLocation: item.custom_bin_location || '',
-                warehouse: item.warehouse || '',
-                marginType: item.margin_type || '',
-                includedInPrintRate: true,
-                mrp: item.custom_mrp || 0,
-                saleBillNo: invoice.name, // Add the source invoice number
-              };
-            })
-          );
-          
-          allLoadedItems.push(...loadedItems);
-        }
+              // Load invoice data into the new_bill page for return processing
+              setIsReturn(true);
+              setIsReturnInvoice(true);
+              setIsDirectReturn(false); // This is not a direct return
 
-        setItems(allLoadedItems);
+              // Use the first invoice for customer/patient data (assuming they're the same)
+              const firstInvoice = invoices[0];
+              const selectedInvoiceNames = invoices.map(inv => inv.name);
 
-        // Close modal
-        setShowSelectInvoiceModal(false);
+              setReturnAgainstInvoice(invoices.length === 1 ? firstInvoice.name : `${invoices.length} Invoices`);
+              setSelectedInvoicesForReturn(selectedInvoiceNames); // Store actual invoice names
 
-        // Show success message
-        const invoiceNames = invoices.map(inv => inv.name).join(', ');
-        showAlert('success', 'Invoices Loaded', `${invoices.length} invoice(s) loaded for return: ${invoiceNames}. Enter return quantities and submit.`);
-      } catch (err) {
-        console.error('Error loading invoice for return:', err);
-        showAlert('danger', 'Error', 'Failed to load invoice data.');
-      }
-    }}
-  />
-)}
+              // Load customer and patient data
+              setSelectedCustomer(firstInvoice.customer || '');
+              if (firstInvoice.custom_patient_name) {
+                setPatientData({
+                  name: firstInvoice.custom_patient_name || '',
+                  age: firstInvoice.custom_age || '',
+                  sex: firstInvoice.custom_sex || '',
+                  phone: firstInvoice.custom_phone || '',
+                  ABHAID: firstInvoice.custom_abha_id || '',
+                  category: firstInvoice.custom_category || '',
+                  doctor: firstInvoice.custom_doctor_name || '',
+                  mrn: firstInvoice.custom_mrn || '',
+                  displayNo: firstInvoice.custom_display_no || '',
+                  dept: firstInvoice.custom_department || '',
+                  visitType: firstInvoice.custom_visit_type || '',
+                  company: firstInvoice.custom_company || '',
+                  visitID: firstInvoice.custom_visit_id || '',
+                  bed: firstInvoice.custom_bed || '',
+                });
+              }
+
+              // Load company, warehouse, and other settings
+              setSelectedCompany(firstInvoice.company || '');
+              setSelectedWarehouse(firstInvoice.set_warehouse || '');
+
+              // Process all invoices and merge their items
+              const allLoadedItems: Item[] = [];
+
+              for (const invoice of invoices) {
+                // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
+                const loadedItems: Item[] = await Promise.all(
+                  invoice.items.map(async (item: any, index: number) => {
+                    let alreadyReturnedQty = 0;
+
+                    try {
+                      // Fetch return invoices against this invoice
+                      // Use the same authentication logic as other functions
+                      const authHeaders = getAuthHeaders();
+                      // Convert HeadersInit to plain object for fetch compatibility
+                      const headers = typeof authHeaders === 'string' ? 
+                        JSON.parse(authHeaders) : 
+                        Array.isArray(authHeaders) ? 
+                          Object.fromEntries(authHeaders) : 
+                          authHeaders;
+
+                      const returnResponse = await fetch(
+                        `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                        {
+                          method: 'GET',
+                          headers,
+                          credentials: 'include',
+                        }
+                      );
+                      const returnData = await returnResponse.json();
+
+                      if (returnData.data && returnData.data.length > 0) {
+                        for (const returnInv of returnData.data) {
+                          // Use the same authentication logic as other functions
+                          const authHeaders = getAuthHeaders();
+                          // Convert HeadersInit to plain object for fetch compatibility
+                          const headers = typeof authHeaders === 'string' ? 
+                            JSON.parse(authHeaders) : 
+                            Array.isArray(authHeaders) ? 
+                              Object.fromEntries(authHeaders) : 
+                              authHeaders;
+
+                          const returnInvResponse = await fetch(
+                            `https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`,
+                            {
+                              method: 'GET',
+                              headers,
+                              credentials: 'include',
+                            }
+                          );
+                          const returnInvData = await returnInvResponse.json();
+
+                          if (returnInvData.data?.items) {
+                            const returnedItem = returnInvData.data.items.find(
+                              (ri: any) => ri.item_code === item.item_code
+                            );
+                            if (returnedItem) {
+                              alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                            }
+                          }
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Failed to fetch already returned quantities:', error);
+                      alreadyReturnedQty = 0;
+                    }
+
+                    return {
+                      id: `${item.item_code}-${item.batch_no || ''}-${invoice.name}-${index}`, // Include invoice name in ID for uniqueness
+                      alternateBatches: '',
+                      substituteItem: '',
+                      itemCode: item.item_code,
+                      itemName: item.item_name,
+                      uom: item.uom,
+                      stockQty: item.actual_qty || 0,
+                      orderedQty: 0,
+                      saleQty: item.qty,
+                      returnQty: 0,
+                      alreadyReturnedQty,
+                      batch: item.batch_no || '',
+                      batchNo: item.batch_no || '',
+                      expiryDate: item.custom_expiry_date || '',
+                      batchStockQty: item.actual_batch_qty || 0,
+                      rate: item.rate,
+                      taxTemplate: item.item_tax_template || '',
+                      description: item.description || '',
+                      itemAmount: item.base_amount || 0,
+                      discountPercent: item.discount_percentage || 0,
+                      discountAmt: item.discount_amount || 0,
+                      cgstPercent: item.cgst_rate || 0,
+                      cgstAmt: item.cgst_amount || 0,
+                      sgstPercent: item.sgst_rate || 0,
+                      sgstAmt: item.sgst_amount || 0,
+                      igstPercent: item.igst_rate || 0,
+                      igstAmt: item.igst_amount || 0,
+                      totalAmt: item.amount || 0,
+                      kitName: '',
+                      totalPckgAmt: 0,
+                      packageName: '',
+                      binLocation: item.custom_bin_location || '',
+                      warehouse: item.warehouse || '',
+                      marginType: item.margin_type || '',
+                      includedInPrintRate: true,
+                      mrp: item.custom_mrp || 0,
+                      saleBillNo: invoice.name, // Add the source invoice number
+                    };
+                  })
+                );
+
+                allLoadedItems.push(...loadedItems);
+              }
+
+              setItems(allLoadedItems);
+
+              // Close modal
+              setShowSelectInvoiceModal(false);
+
+              // Show success message
+              const invoiceNames = invoices.map(inv => inv.name).join(', ');
+              showAlert('success', 'Invoices Loaded', `${invoices.length} invoice(s) loaded for return: ${invoiceNames}. Enter return quantities and submit.`);
+            } catch (err) {
+              console.error('Error loading invoice for return:', err);
+              showAlert('danger', 'Error', 'Failed to load invoice data.');
+            }
+          }}
+        />
+      )}
 
       {/* High-Alert Confirmation Dialog */}
       <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>

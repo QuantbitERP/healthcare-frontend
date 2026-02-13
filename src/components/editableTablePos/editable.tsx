@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Button as UIButton } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 import BulkAction from "../bulkAction/BulkAction";
 import AlternativeItemsPopover from "../itemAlternative/ItemAlternative";
 
@@ -50,6 +50,9 @@ interface Item {
   totalPckgAmt: number;
   packageName: string;
   binLocation: string;
+  coPayPercentage?: number; // Add co-pay percentage field
+  patientAmount?: number; // Add patient amount field
+  payerAmount?: number; // Add payer amount field
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   mrp?: number; // Add MRP field for batch custom_mrp
@@ -181,7 +184,7 @@ const DEFAULT_COLUMN_ORDER = [
   'select', 'alternateBatches', 'substituteItem', 'itemCode', 'itemName', 'batchNo',
   'expiryDate', 'stockQty', 'orderedQty', 'saleQty', 'returnQty', 'alreadyGivenQty', 'rate', 'mrp', 'uom', 'itemAmount',
   'discountPercent', 'discountAmt', 'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt',
-  'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'kitName', 'totalPckgAmt',
+  'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'kitName', 'totalPckgAmt',
   'packageName', 'binLocation', 'actions'
 ];
 
@@ -218,6 +221,9 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     igstAmt: "IGST Amt.",
     taxableAmount: "Item Amt",
     totalAmt: "Total Amt.",
+    coPayPercentage: "Co-Pay %",
+    patientAmount: "Patient Amount",
+    payerAmount: "Payer Amount",
     kitName: "Kit Name",
     totalPckgAmt: "Total Pckg Amt.",
     packageName: "Package Name",
@@ -418,8 +424,8 @@ interface EditableTableProps {
   calculateItemTaxAndTotals?: (item: Item, includedInPrintRate: boolean) => Item;
   recalculateTotals?: (itemsList: Item[]) => void;
   fetchTaxDetails?: (itemCode: string, rate: number, qty: number, uom: string) => Promise<any>;
-  apiKey?: string;
-  apiSecret?: string;
+  // apiKey?: string;
+  // apiSecret?: string;
   showAlert?: (variant: "success" | "warning" | "danger" | "primary" | "secondary", heading: string, content: string) => void;
   barcode?: string;
   setBarcode?: (value: string) => void;
@@ -433,8 +439,11 @@ interface EditableTableProps {
   isReturnMode?: boolean; // Add prop to enable return mode
   isReturnInvoice?: boolean; // Add prop to track when invoice is loaded from return bill
   isDirectReturn?: boolean; // Add prop to distinguish direct returns (hide Sale Qty column)
+  hideTaxFields?: boolean; // Add prop to hide tax fields (CGST/SGST/IGST columns)
   applyPricingRules?: (items: Item[], customer: string) => Promise<Item[]>; // Add pricing rules function
   selectedCustomer?: string; // Add selected customer for pricing rules
+  hideInsuranceFields?: boolean; // Add prop to hide insurance related fields
+  showInsuranceFields?: boolean; // Add prop to show insurance related fields (for sales bill)
 }
 
 const EditableTable = ({
@@ -443,14 +452,14 @@ const EditableTable = ({
   fetchItemBatches,
   fetchSubstituteItems,
   fetchItemPrice,
-  getBatchQty,
+  
   fetchBinLocationFromItem,
-  selectedWarehouse,
+  
   calculateItemTaxAndTotals,
   recalculateTotals,
   fetchTaxDetails,
-  apiKey,
-  apiSecret,
+  // apiKey,
+  // apiSecret,
   showAlert, // Added showAlert callback
   barcode,
   setBarcode,
@@ -464,12 +473,15 @@ const EditableTable = ({
   isReturnMode = false, // Default to false (normal mode)
   isReturnInvoice = false, // Default to false (not loaded from return bill)
   isDirectReturn = false, // Default to false (not direct return)
+  hideTaxFields = false, // Default to false (show tax fields)
   applyPricingRules, // Pricing rules function
   selectedCustomer, // Selected customer for pricing rules
+  hideInsuranceFields = false, // Default to false (show insurance fields)
+  showInsuranceFields = false, // Default to false (hide insurance fields)
 }: EditableTableProps) => {
-  const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
-  const effectiveApiKey = apiKey || authApiKey;
-  const effectiveApiSecret = apiSecret || authApiSecret;
+  // const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
+  // const effectiveApiKey = apiKey || authApiKey;
+  // const effectiveApiSecret = apiSecret || authApiSecret;
 
   const [rowSelection, setRowSelection] = useState({});
   const [showRowActions, setShowRowActions] = useState(false);
@@ -532,8 +544,13 @@ const EditableTable = ({
           let parsedValue = value;
 
           if (['stockQty', 'orderedQty', 'saleQty', 'returnQty', 'rate', 'mrp', 'itemAmount', 'discountPercent', 'discountAmt',
-            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt'].includes(columnId)) {
+            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt', 'coPayPercentage', 'patientAmount', 'payerAmount'].includes(columnId)) {
             parsedValue = parseFloat(value) || 0;
+          }
+
+          // Validate co-pay percentage range (0-100)
+          if (columnId === 'coPayPercentage') {
+            parsedValue = Math.min(Math.max(parsedValue, 0), 100);
           }
 
           // Stock validation for saleQty
@@ -684,7 +701,7 @@ const EditableTable = ({
           }
 
           if (['rate', 'orderedQty', 'saleQty', 'returnQty', 'discountPercent', 'discountAmt',
-            'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt'].includes(columnId)) {
+            'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt', 'coPayPercentage'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow, true);
             }
@@ -763,12 +780,18 @@ const EditableTable = ({
 
           const fetchBatchMRP = async (batchName: string) => {
             try {
+              // Use the same authentication logic as other functions
+              const authHeaders = getAuthHeaders();
+              // Convert HeadersInit to plain object for fetch compatibility
+              const headers = typeof authHeaders === 'string' ? 
+                JSON.parse(authHeaders) : 
+                Array.isArray(authHeaders) ? 
+                  Object.fromEntries(authHeaders) : 
+                  authHeaders;
+              
               const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
                 method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `token ${effectiveApiKey}:${effectiveApiSecret}`,
-                },
+                headers,
                 credentials: 'include',
               });
 
@@ -1092,12 +1115,18 @@ const EditableTable = ({
                 // Fetch MRP for the selected batch
                 let batchMRP = 0;
                 try {
+                  // Use the same authentication logic as other functions
+                  const authHeaders = getAuthHeaders();
+                  // Convert HeadersInit to plain object for fetch compatibility
+                  const headers = typeof authHeaders === 'string' ? 
+                    JSON.parse(authHeaders) : 
+                    Array.isArray(authHeaders) ? 
+                      Object.fromEntries(authHeaders) : 
+                      authHeaders;
+                  
                   const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
                     method: 'GET',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `token ${effectiveApiKey}:${effectiveApiSecret}`,
-                    },
+                    headers,
                     credentials: 'include',
                   });
 
@@ -1544,6 +1573,60 @@ const EditableTable = ({
         },
       },
       {
+        accessorKey: "coPayPercentage",
+        header: "Co-Pay %",
+        cell: ({ getValue, row, column, table }) => (
+          <EditableCell 
+            value={getValue()} 
+            row={row} 
+            column={column} 
+            table={table} 
+            type="number"
+          />
+        ),
+      },
+      {
+        accessorKey: "patientAmount",
+        header: "Patient Amount",
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+          const coPayPercent = item.coPayPercentage || 0;
+          const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
+          
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{truncateToTwoDecimals(patientAmount).toFixed(2)}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "payerAmount",
+        header: "Payer Amount",
+        cell: ({ row }) => {
+          const item = row.original as Item;
+          const rate = item.rate !== null ? item.rate : 0;
+          const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
+          const baseAmount = quantity * rate;
+          const discountAmount = baseAmount * (item.discountPercent / 100);
+          const itemAmountAfterDiscount = baseAmount - discountAmount;
+          const coPayPercent = item.coPayPercentage || 0;
+          const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
+          const payerAmount = itemAmountAfterDiscount - patientAmount;
+          
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center">
+              ₹{truncateToTwoDecimals(payerAmount).toFixed(2)}
+            </div>
+          );
+        },
+      },
+      {
         accessorKey: "kitName",
         header: "KIT Name",
         cell: ({ row }) => {
@@ -1607,9 +1690,27 @@ const EditableTable = ({
       },
     ];
 
+  // Filter out tax columns if hideTaxFields is true
+  // Filter out insurance columns if showInsuranceFields is false
+  const filteredColumns = dynamicColumns.filter(column => {
+    const columnKey = column.accessorKey as string;
+    
+    // Hide tax fields if hideTaxFields is true
+    if (hideTaxFields && ['cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt'].includes(columnKey)) {
+      return false;
+    }
+    
+    // Show insurance fields only if showInsuranceFields is true
+    if (!showInsuranceFields && ['coPayPercentage', 'patientAmount', 'payerAmount'].includes(columnKey)) {
+      return false;
+    }
+    
+    return true;
+  });
+
   const table = useReactTable<Item>({
     data: items,
-    columns: dynamicColumns,
+    columns: filteredColumns,
     state: {
       rowSelection,
       pagination,
