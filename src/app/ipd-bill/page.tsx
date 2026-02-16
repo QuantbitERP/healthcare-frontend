@@ -3261,6 +3261,7 @@ export default function IPDBill() {
       remarks: remarks,
       included_in_print_rate: 1, // Always consider included_in_print_rate as true
       custom_is_ipd_invoice: 1, // Mark as IPD invoice
+      custom_ipd_effect: isIpdEffect ? 1 : 0, // IPD Effect checkbox value
 
       // Add invoice-level discount fields
       // apply_discount_on: hasAnyDiscount ? "Grand Total" : "",
@@ -5407,6 +5408,7 @@ export default function IPDBill() {
         remarks: remarks,
         included_in_print_rate: 1, // Always consider included_in_print_rate as true
         custom_is_ipd_invoice: 1, // Mark as IPD invoice
+        custom_ipd_effect: isIpdEffect ? 1 : 0, // IPD Effect checkbox value
 
         // Add invoice-level discount fields
         // apply_discount_on: hasAnyDiscount ? "Grand Total" : "",
