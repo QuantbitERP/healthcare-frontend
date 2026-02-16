@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Loader, AlertTriangle, Eye, CheckSquare, Square } from 'lucide-react';
 import Button from '../buttons/Button';
-import { useAuth } from '@/context/AuthContext';
+// import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders } from '@/utils/sessionAuth';
 import DataTableComponent from '../DataTable';
 import { TableCellComponents } from '../DataTable';
 import { useAlert } from '@/components/AlertContext/AlertContext';
@@ -15,7 +16,7 @@ interface SelectInvoiceModalProps {
 }
 
 const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose, onSelect, patientName, isIPDPage = false }) => {
-  const { apiKey, apiSecret } = useAuth();
+  // const { isAuthenticated } = useAuth();
   const { showAlert } = useAlert();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -238,10 +239,19 @@ const fetchInvoiceItems = async (invoiceName: string) => {
     setLoadingItems(true);
     try {
       // Fetch invoice details with items
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+
       const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${invoiceName}`, {
-        headers: {
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        }
+        method: 'GET',
+        headers,
+        credentials: 'include',
       });
       const data = await response.json();
       
@@ -249,10 +259,19 @@ const fetchInvoiceItems = async (invoiceName: string) => {
         const items = data.data.items;
         
         // Fetch return invoices against this invoice to calculate already returned qty
+        // Use the same authentication logic as other functions
+        const returnAuthHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const returnHeaders = typeof returnAuthHeaders === 'string' ? 
+          JSON.parse(returnAuthHeaders) : 
+          Array.isArray(returnAuthHeaders) ? 
+            Object.fromEntries(returnAuthHeaders) : 
+            returnAuthHeaders;
+
         const returnResponse = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoiceName}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`, {
-          headers: {
-            'Authorization': `token ${apiKey}:${apiSecret}`,
-          }
+          method: 'GET',
+          headers: returnHeaders,
+          credentials: 'include',
         });
         const returnData = await returnResponse.json();
         
@@ -263,10 +282,19 @@ const fetchInvoiceItems = async (invoiceName: string) => {
           if (returnData.data && returnData.data.length > 0) {
             // Fetch items from all return invoices
             for (const returnInv of returnData.data) {
+              // Use the same authentication logic as other functions
+              const returnInvAuthHeaders = getAuthHeaders();
+              // Convert HeadersInit to plain object for fetch compatibility
+              const returnInvHeaders = typeof returnInvAuthHeaders === 'string' ? 
+                JSON.parse(returnInvAuthHeaders) : 
+                Array.isArray(returnInvAuthHeaders) ? 
+                  Object.fromEntries(returnInvAuthHeaders) : 
+                  returnInvAuthHeaders;
+
               const returnInvResponse = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`, {
-                headers: {
-                  'Authorization': `token ${apiKey}:${apiSecret}`,
-                }
+                method: 'GET',
+                headers: returnInvHeaders,
+                credentials: 'include',
               });
               const returnInvData = await returnInvResponse.json();
               
@@ -296,10 +324,19 @@ const fetchInvoiceItems = async (invoiceName: string) => {
 
   const fetchSaleReturnAllowDays = async () => {
     try {
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+
       const response = await fetch(`https://192.168.7.221:4422/api/resource/HIS%20Settings/HIS%20Settings`, {
-        headers: {
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        }
+        method: 'GET',
+        headers,
+        credentials: 'include',
       });
       const data = await response.json();
       if (data.data && data.data.sale_return_allow_days) {
@@ -359,10 +396,19 @@ const fetchInvoiceItems = async (invoiceName: string) => {
       console.log('Fetching invoices from URL:', fullUrl);
       console.log('Filters being used:', apiFilters);
 
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+
       const response = await fetch(fullUrl, {
-        headers: {
-          'Authorization': `token ${apiKey}:${apiSecret}`,
-        }
+        method: 'GET',
+        headers,
+        credentials: 'include',
       });
       const data = await response.json();
       // console.log('API Response:', data);
@@ -470,10 +516,19 @@ const fetchInvoiceItems = async (invoiceName: string) => {
                   const customers = new Set<string>();
                   
                   for (const invoiceName of selectedInvoices) {
+                    // Use the same authentication logic as other functions
+                    const authHeaders = getAuthHeaders();
+                    // Convert HeadersInit to plain object for fetch compatibility
+                    const headers = typeof authHeaders === 'string' ? 
+                      JSON.parse(authHeaders) : 
+                      Array.isArray(authHeaders) ? 
+                        Object.fromEntries(authHeaders) : 
+                        authHeaders;
+
                     const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${invoiceName}`, {
-                      headers: {
-                        'Authorization': `token ${apiKey}:${apiSecret}`,
-                      }
+                      method: 'GET',
+                      headers,
+                      credentials: 'include',
                     });
                     const data = await res.json();
                     selectedInvoiceData.push(data.data);

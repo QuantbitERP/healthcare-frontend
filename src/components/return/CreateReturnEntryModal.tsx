@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, FileText, User, Calendar, DollarSign, Package, AlertCircle, Search, ArrowLeft } from 'lucide-react';
 import Button from '../buttons/Button';
 import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders } from '@/utils/sessionAuth';
 
 interface CreateReturnEntryModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface CreateReturnEntryModalProps {
 }
 
 const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen, onClose, onSubmit, invoice, onBack }) => {
-  const { apiKey, apiSecret } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [returnItems, setReturnItems] = useState<any[]>([]);
   const [refundMode, setRefundMode] = useState('Cash');
   const [returnRemarks, setReturnRemarks] = useState('');
@@ -22,7 +23,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (invoice?.items && apiKey && apiSecret) {
+    if (invoice?.items && isAuthenticated) {
       setReturnItems(invoice.items.map((item: any) => ({ ...item, return_qty: 0, discount_percent: 0, discount_amount: 0 })));
       console.log('Invoice items:', invoice.items);
       // Log GST rates for debugging
@@ -37,7 +38,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
       });
       fetchAlreadyReturnedQty();
     }
-  }, [invoice, apiKey, apiSecret]);
+  }, [invoice, isAuthenticated]);
 
   const fetchAlreadyReturnedQty = async () => {
     try {
@@ -45,12 +46,21 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
       if (!invoice?.name) return;
 
       // Fetch all return invoices for this original invoice
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ? 
+        JSON.parse(authHeaders) : 
+        Array.isArray(authHeaders) ? 
+          Object.fromEntries(authHeaders) : 
+          authHeaders;
+
       const response = await fetch(
         `https://192.168.7.221:4422/api/resource/POS Invoice?filters=[["return_against","=","${invoice.name}"]]&fields=["name"]`,
         {
-          headers: {
-            'Authorization': `token ${apiKey}:${apiSecret}`,
-          }
+          method: 'GET',
+          headers,
+          credentials: 'include',
         }
       );
 
@@ -61,12 +71,21 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
         // For each return invoice, fetch its full details to get items
         for (const returnInvoice of data.data) {
           try {
+            // Use the same authentication logic as other functions
+            const authHeaders = getAuthHeaders();
+            // Convert HeadersInit to plain object for fetch compatibility
+            const headers = typeof authHeaders === 'string' ? 
+              JSON.parse(authHeaders) : 
+              Array.isArray(authHeaders) ? 
+                Object.fromEntries(authHeaders) : 
+                authHeaders;
+
             const detailResponse = await fetch(
               `https://192.168.7.221:4422/api/resource/POS Invoice/${returnInvoice.name}`,
               {
-                headers: {
-                  'Authorization': `token ${apiKey}:${apiSecret}`,
-                }
+                method: 'GET',
+                headers,
+                credentials: 'include',
               }
             );
 
