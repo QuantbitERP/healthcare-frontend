@@ -69,7 +69,6 @@ export interface Item {
   expiryDate: string; // Add expiryDate to Item interface
   batchStockQty: number; // Add batchStockQty to Item interface
   rate: number | null;
-  price_list_rate?: number; // Add price_list_rate field for original price list rate
   taxTemplate: string; // New field for tax template
   description: string;
   itemAmount: number;
@@ -4649,11 +4648,11 @@ export default function Return() {
             stockQty: currentStockQty, // Use fetched current stock quantity
             orderedQty: Math.abs(reqQty || 0),
             saleQty: Math.abs(invItem.qty || 0),
+            returnQty: Math.abs(invItem.qty || 0), // Set returnQty to original invoice quantity
             batch: invItem.batch_no || "",
             batchNo: invItem.batch_no || "",
             expiryDate: invItem.custom_expiry_date || "",
             batchStockQty: currentStockQty, // Use fetched current stock quantity for batch stock
-            price_list_rate: invItem.price_list_rate, // Add price_list_rate field
             rate: invItem.price_list_rate || invItem.rate || 0, // Use price_list_rate (MRP) if available, fallback to rate
             taxTemplate: taxDetails.taxTemplate,
             description: invItem.description || "",
@@ -6421,7 +6420,7 @@ export default function Return() {
                       batchNo: item.batch_no || '',
                       expiryDate: item.custom_expiry_date || '',
                       batchStockQty: item.actual_batch_qty || 0,
-                      rate: item.rate,
+                      rate: item.price_list_rate || item.rate || 0, // Use price_list_rate (MRP) if available, fallback to rate
                       taxTemplate: item.item_tax_template || '',
                       description: item.description || '',
                       itemAmount: item.base_amount || 0,
@@ -6441,7 +6440,7 @@ export default function Return() {
                       warehouse: item.warehouse || '',
                       marginType: item.margin_type || '',
                       includedInPrintRate: true,
-                      mrp: item.custom_mrp || 0,
+                      mrp: item.custom_mrp || item.price_list_rate || 0,
                       saleBillNo: invoice.name, // Add the source invoice number
                     };
                   })
