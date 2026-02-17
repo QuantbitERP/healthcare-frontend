@@ -297,14 +297,14 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
             name: item.itemName,
             business_category: item.custom_business_category
           })));
-          
+
           // Check if any items have matching business categories
           const itemsWithMatchingCategories = fetchedItems.filter(item => {
             if (!item.custom_business_category) return false;
             const categories = item.custom_business_category.split(',').map(cat => cat.trim());
             return categories.includes(selectedCompany);
           });
-          
+
           // If no items match exactly, show all items (fallback behavior)
           if (itemsWithMatchingCategories.length === 0) {
             console.log("No items match the selected company exactly. Showing all items.");
@@ -466,10 +466,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
@@ -1052,13 +1052,13 @@ export default function IPDBill() {
       }
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
-      
+
 
       // Get visit type from patient data, default to "IP" for OPD billing
       const visitType = patientData?.visitType || "IP";
@@ -1336,12 +1336,12 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const filters = [
         ["item_code", "=", itemCode],
         ["price_list", "=", priceList]
@@ -1398,10 +1398,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
@@ -1452,10 +1452,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
@@ -1499,12 +1499,12 @@ export default function IPDBill() {
     try {
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-     
+
       const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
@@ -1529,12 +1529,12 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const filters = [
         ["item_code", "=", itemCode],
         ["price_list", "=", priceList]
@@ -1577,12 +1577,12 @@ export default function IPDBill() {
     if (batchNo) {
       try {
         const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
-          authHeaders;
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
+            authHeaders;
         const response = await fetch(`${API_BASE_URL}/Batch?filters=[["item", "=", "${itemCode}"], ["name", "=", "${batchNo}"]]&fields=["custom_mrp"]&limit=1`, {
           method: 'GET',
           headers,
@@ -1609,10 +1609,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       console.log(`[BinLocation] Fetching item: ${itemCode}`);
@@ -1688,15 +1688,15 @@ export default function IPDBill() {
       console.log('Selected warehouse:', selectedWarehouse);
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Fetch batch details using the barcode
       const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
-        
+
         headers,
       });
 
@@ -2060,12 +2060,12 @@ export default function IPDBill() {
     try {
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
 
       // Get total quantity from requisition items
       const reqResponse = await fetch(
@@ -2160,12 +2160,12 @@ export default function IPDBill() {
     try {
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
 
       console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
 
@@ -2240,10 +2240,10 @@ export default function IPDBill() {
     try {
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Get all invoices for this prescription
@@ -2313,10 +2313,10 @@ export default function IPDBill() {
     try {
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       let status = "Pending";
@@ -2400,12 +2400,12 @@ export default function IPDBill() {
       formData.append('is_private', '0'); // Make file public
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       // Remove Content-Type header for FormData uploads to let browser set it with boundary
       delete headers['Content-Type'];
 
@@ -2434,12 +2434,12 @@ export default function IPDBill() {
         if (invoiceName) {
           try {
             const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
-            authHeaders;
+            // Convert HeadersInit to plain object for fetch compatibility
+            const headers = typeof authHeaders === 'string' ?
+              JSON.parse(authHeaders) :
+              Array.isArray(authHeaders) ?
+                Object.fromEntries(authHeaders) :
+                authHeaders;
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
               method: 'POST',
               headers,
@@ -2636,10 +2636,10 @@ export default function IPDBill() {
       try {
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/Product Bundle?fields=["name"]&limit_page_length=1000000`, {
@@ -2694,10 +2694,10 @@ export default function IPDBill() {
       try {
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
         // Fetch Tax Template
         // const taxTemplateHeaders: HeadersInit = {
@@ -2761,10 +2761,10 @@ export default function IPDBill() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
@@ -2805,10 +2805,10 @@ export default function IPDBill() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(
@@ -2871,10 +2871,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
@@ -3526,10 +3526,10 @@ export default function IPDBill() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
@@ -3554,10 +3554,10 @@ export default function IPDBill() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
@@ -3588,12 +3588,12 @@ export default function IPDBill() {
 
               try {
                 const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
-            authHeaders;
+                // Convert HeadersInit to plain object for fetch compatibility
+                const headers = typeof authHeaders === 'string' ?
+                  JSON.parse(authHeaders) :
+                  Array.isArray(authHeaders) ?
+                    Object.fromEntries(authHeaders) :
+                    authHeaders;
                 const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
                   method: 'POST',
                   headers,
@@ -3669,10 +3669,10 @@ export default function IPDBill() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/POS%20Profile/${posProfile}`, {
@@ -3714,16 +3714,16 @@ export default function IPDBill() {
 
     try {
       console.log("Checking for opening entries for POS profile:", posProfile, "and user:", currentUser);
-      
+
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const response = await fetch(
         `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
         {
@@ -3816,12 +3816,12 @@ export default function IPDBill() {
       // Use the same authentication logic as PatientRequisitionList
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${requisition.name}`, {
         method: 'GET',
         headers,
@@ -4124,12 +4124,12 @@ export default function IPDBill() {
     let fullPrescriptionData = prescription;
     try {
       const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
-            authHeaders;
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
+          authHeaders;
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${prescription.prescription_number}`, {
         method: 'GET',
         headers,
@@ -4398,12 +4398,12 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const filters1 = encodeURIComponent(JSON.stringify([["item_code", "=", itemCode]]));
       const url1 = `${API_BASE_URL}/Item%20Alternative?fields=["alternative_item_code","alternative_item_name"]&filters=${filters1}`;
 
@@ -4447,12 +4447,12 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const itemInfoResponse = await fetch(`${API_BASE_URL}/Item/${encodeURIComponent(itemCode)}?fields=["item_name","stock_uom"]`, {
         method: 'GET',
         headers,
@@ -4498,10 +4498,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(ITEM_DETAILS_API_URL, {
@@ -4752,10 +4752,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Fetch the requisition/prescription document
@@ -4806,12 +4806,12 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const response = await fetch('https://192.168.7.221:4422/api/method/frappe.client.get_list', {
         method: 'POST',
         headers,
@@ -4866,10 +4866,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoice.name}`, {
@@ -5173,10 +5173,10 @@ export default function IPDBill() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         // Submit the draft invoice
@@ -5296,12 +5296,12 @@ export default function IPDBill() {
           // Use the same authentication logic as other functions
           const authHeaders = getAuthHeaders();
           // Convert HeadersInit to plain object for fetch compatibility
-          const headers = typeof authHeaders === 'string' ? 
-            JSON.parse(authHeaders) : 
-            Array.isArray(authHeaders) ? 
-              Object.fromEntries(authHeaders) : 
+          const headers = typeof authHeaders === 'string' ?
+            JSON.parse(authHeaders) :
+            Array.isArray(authHeaders) ?
+              Object.fromEntries(authHeaders) :
               authHeaders;
-          
+
           const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
             method: 'POST',
             headers,
@@ -5660,16 +5660,16 @@ export default function IPDBill() {
         console.log("Final payload for creating submitted invoice:", finalPayload);
         console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
         console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-        
+
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
-        
+
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers,
@@ -5719,12 +5719,12 @@ export default function IPDBill() {
             // Use the same authentication logic as other functions
             const authHeaders = getAuthHeaders();
             // Convert HeadersInit to plain object for fetch compatibility
-            const headers = typeof authHeaders === 'string' ? 
-              JSON.parse(authHeaders) : 
-              Array.isArray(authHeaders) ? 
-                Object.fromEntries(authHeaders) : 
+            const headers = typeof authHeaders === 'string' ?
+              JSON.parse(authHeaders) :
+              Array.isArray(authHeaders) ?
+                Object.fromEntries(authHeaders) :
                 authHeaders;
-            
+
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
               method: 'POST',
               headers,
@@ -5799,10 +5799,10 @@ export default function IPDBill() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
@@ -6267,55 +6267,53 @@ export default function IPDBill() {
                   >
                     Apply Discount
                   </Button>
-
-
-                  {/* Transaction Type Toggle*/}
-                  <div className="flex items-center gap-2 ml-2">
-                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
-                    <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
-                      <button
-                        onClick={() => setTransactionType('cash')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
-                          ? 'bg-blue-500 text-white shadow-sm'
-                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        Cash
-                      </button>
-                      <button
-                        onClick={() => setTransactionType('credit')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
-                          ? 'bg-blue-500 text-white shadow-sm'
-                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        Credit
-                      </button>
-                    </div>
-                  </div>
-
-
-                  {/* IPD Effect Checkbox */}
-                  <div className="flex items-center gap-2 pl-2">
-                    <Checkbox
-                      id="ipd-effect"
-                      checked={isIpdEffect}
-                      disabled={transactionType === 'cash'}
-                      onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
-                      className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
-                    />
-                    <Label
-                      htmlFor="ipd-effect"
-                      className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
-                    >
-                      IPD Effect
-                    </Label>
-                  </div>
-
                 </div>
 
               </div>
+              <div className="flex flex-row items-center gap-2">
+                {/* Transaction Type Toggle*/}
+                <div className="flex items-center gap-2 ml-2">
+                  <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
+                  <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
+                    <button
+                      onClick={() => setTransactionType('cash')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
+                        ? 'bg-blue-500 text-white shadow-sm'
+                        : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      Cash
+                    </button>
+                    <button
+                      onClick={() => setTransactionType('credit')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
+                        ? 'bg-blue-500 text-white shadow-sm'
+                        : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      Credit
+                    </button>
+                  </div>
+                </div>
 
+
+                {/* IPD Effect Checkbox */}
+                <div className="flex items-center gap-2 pl-2">
+                  <Checkbox
+                    id="ipd-effect"
+                    checked={isIpdEffect}
+                    disabled={transactionType === 'cash'}
+                    onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
+                    className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
+                  />
+                  <Label
+                    htmlFor="ipd-effect"
+                    className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                  >
+                    IPD Effect
+                  </Label>
+                </div>
+              </div>
 
               <HorizontallyScrollableTable
                 items={items}
@@ -6581,12 +6579,12 @@ export default function IPDBill() {
                     // Use the same authentication logic as other functions
                     const authHeaders = getAuthHeaders();
                     // Convert HeadersInit to plain object for fetch compatibility
-                    const headers = typeof authHeaders === 'string' ? 
-                      JSON.parse(authHeaders) : 
-                      Array.isArray(authHeaders) ? 
-                        Object.fromEntries(authHeaders) : 
+                    const headers = typeof authHeaders === 'string' ?
+                      JSON.parse(authHeaders) :
+                      Array.isArray(authHeaders) ?
+                        Object.fromEntries(authHeaders) :
                         authHeaders;
-                    
+
                     const returnResponse = await fetch(
                       `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
                       {

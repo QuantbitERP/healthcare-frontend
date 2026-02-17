@@ -69,6 +69,7 @@ export interface Item {
   expiryDate: string; // Add expiryDate to Item interface
   batchStockQty: number; // Add batchStockQty to Item interface
   rate: number | null;
+  price_list_rate?: number; // Add price_list_rate field for original price list rate
   taxTemplate: string; // New field for tax template
   description: string;
   itemAmount: number;
@@ -402,12 +403,12 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
         method: 'GET',
         headers,
@@ -952,7 +953,7 @@ export default function Return() {
   // --- END: Added state for file upload ---
 
   const router = useRouter();
-  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized,checkUserRole } = useAuth();
+  const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, checkUserRole } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
@@ -975,10 +976,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
@@ -1025,10 +1026,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
@@ -1069,10 +1070,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
@@ -1098,10 +1099,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const filters = [
         ["item_code", "=", itemCode],
@@ -1147,10 +1148,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
         const response = await fetch(`${API_BASE_URL}/Batch?filters=[["item", "=", "${itemCode}"], ["name", "=", "${batchNo}"]]&fields=["custom_mrp"]&limit=1`, {
           method: 'GET',
@@ -1178,10 +1179,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       console.log(`[BinLocation] Fetching item: ${itemCode}`);
@@ -1260,12 +1261,12 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
         method: 'GET',
         headers,
@@ -1296,12 +1297,12 @@ export default function Return() {
           // Use the same authentication logic as other functions
           const authHeaders = getAuthHeaders();
           // Convert HeadersInit to plain object for fetch compatibility
-          const headers = typeof authHeaders === 'string' ? 
-            JSON.parse(authHeaders) : 
-            Array.isArray(authHeaders) ? 
-              Object.fromEntries(authHeaders) : 
+          const headers = typeof authHeaders === 'string' ?
+            JSON.parse(authHeaders) :
+            Array.isArray(authHeaders) ?
+              Object.fromEntries(authHeaders) :
               authHeaders;
-          
+
           const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
             method: 'POST',
             headers,
@@ -1339,8 +1340,8 @@ export default function Return() {
 
       // Fetch item details
       // Use the same authentication logic as other functions
-      
-      
+
+
       const itemResponse = await fetch(`${API_BASE_URL}/Item/${batch.item}`, {
         method: 'GET',
         headers,
@@ -1605,10 +1606,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Get total quantity from requisition items
@@ -1705,10 +1706,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
@@ -1785,10 +1786,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Get all invoices for this prescription
@@ -1859,10 +1860,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       let status = "Pending";
@@ -1954,10 +1955,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch('https://192.168.7.221:4422/api/method/upload_file', {
@@ -1987,10 +1988,10 @@ export default function Return() {
             // Use the same authentication logic as other functions
             const authHeaders = getAuthHeaders();
             // Convert HeadersInit to plain object for fetch compatibility
-            const headers = typeof authHeaders === 'string' ? 
-              JSON.parse(authHeaders) : 
-              Array.isArray(authHeaders) ? 
-                Object.fromEntries(authHeaders) : 
+            const headers = typeof authHeaders === 'string' ?
+              JSON.parse(authHeaders) :
+              Array.isArray(authHeaders) ?
+                Object.fromEntries(authHeaders) :
                 authHeaders;
 
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
@@ -2190,10 +2191,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/Product Bundle?fields=["name"]&limit_page_length=1000000`, {
@@ -2250,10 +2251,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
         const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
@@ -2315,10 +2316,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
@@ -2359,10 +2360,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(
@@ -2425,10 +2426,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
@@ -3060,10 +3061,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
@@ -3088,10 +3089,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
@@ -3124,10 +3125,10 @@ export default function Return() {
                 // Use the same authentication logic as other functions
                 const authHeaders = getAuthHeaders();
                 // Convert HeadersInit to plain object for fetch compatibility
-                const headers = typeof authHeaders === 'string' ? 
-                  JSON.parse(authHeaders) : 
-                  Array.isArray(authHeaders) ? 
-                    Object.fromEntries(authHeaders) : 
+                const headers = typeof authHeaders === 'string' ?
+                  JSON.parse(authHeaders) :
+                  Array.isArray(authHeaders) ?
+                    Object.fromEntries(authHeaders) :
                     authHeaders;
 
                 const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
@@ -3205,10 +3206,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`${API_BASE_URL}/POS%20Profile/${posProfile}`, {
@@ -3287,10 +3288,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${requisition.name}`, {
         method: 'GET',
@@ -3747,10 +3748,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${prescription.prescription_number}`, {
         method: 'GET',
@@ -3992,10 +3993,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const filters1 = encodeURIComponent(JSON.stringify([["item_code", "=", itemCode]]));
       const url1 = `${API_BASE_URL}/Item%20Alternative?fields=["alternative_item_code","alternative_item_name"]&filters=${filters1}`;
@@ -4040,10 +4041,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const itemInfoResponse = await fetch(`${API_BASE_URL}/Item/${encodeURIComponent(itemCode)}?fields=["item_name","stock_uom"]`, {
         method: 'GET',
@@ -4090,10 +4091,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(ITEM_DETAILS_API_URL, {
@@ -4344,10 +4345,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       // Fetch the requisition/prescription document
@@ -4403,10 +4404,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch('https://192.168.7.221:4422/api/method/frappe.client.get_list', {
@@ -4463,10 +4464,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoice.name}`, {
@@ -4652,6 +4653,7 @@ export default function Return() {
             batchNo: invItem.batch_no || "",
             expiryDate: invItem.custom_expiry_date || "",
             batchStockQty: currentStockQty, // Use fetched current stock quantity for batch stock
+            price_list_rate: invItem.price_list_rate, // Add price_list_rate field
             rate: invItem.price_list_rate || invItem.rate || 0, // Use price_list_rate (MRP) if available, fallback to rate
             taxTemplate: taxDetails.taxTemplate,
             description: invItem.description || "",
@@ -4745,10 +4747,10 @@ export default function Return() {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         // Submit the draft invoice
@@ -4819,7 +4821,7 @@ export default function Return() {
             if (isDirectReturn) {
               // Process as direct return without original invoice
               console.log('Processing direct return without original invoice');
-              
+
               const returnItems = itemsToReturn.map(item => {
                 const returnQty = item.returnQty || 0;
                 const discountPercent = item.discountPercent || 0;
@@ -4882,10 +4884,10 @@ export default function Return() {
                 // Use the same authentication logic as other functions
                 const authHeaders = getAuthHeaders();
                 // Convert HeadersInit to plain object for fetch compatibility
-                const headers = typeof authHeaders === 'string' ? 
-                  JSON.parse(authHeaders) : 
-                  Array.isArray(authHeaders) ? 
-                    Object.fromEntries(authHeaders) : 
+                const headers = typeof authHeaders === 'string' ?
+                  JSON.parse(authHeaders) :
+                  Array.isArray(authHeaders) ?
+                    Object.fromEntries(authHeaders) :
                     authHeaders;
 
                 const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
@@ -4900,7 +4902,7 @@ export default function Return() {
 
                 if (response.ok) {
                   const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
-                  
+
                   // Print the return invoice
                   if (returnInvoiceName) {
                     const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
@@ -5010,10 +5012,10 @@ export default function Return() {
               // Use the same authentication logic as other functions
               const authHeaders = getAuthHeaders();
               // Convert HeadersInit to plain object for fetch compatibility
-              const headers = typeof authHeaders === 'string' ? 
-                JSON.parse(authHeaders) : 
-                Array.isArray(authHeaders) ? 
-                  Object.fromEntries(authHeaders) : 
+              const headers = typeof authHeaders === 'string' ?
+                JSON.parse(authHeaders) :
+                Array.isArray(authHeaders) ?
+                  Object.fromEntries(authHeaders) :
                   authHeaders;
 
               const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
@@ -5385,14 +5387,14 @@ export default function Return() {
         console.log("Final payload for creating submitted invoice:", finalPayload);
         console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
         console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-        
+
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
 
         const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
@@ -5453,10 +5455,10 @@ export default function Return() {
             // Use the same authentication logic as other functions
             const authHeaders = getAuthHeaders();
             // Convert HeadersInit to plain object for fetch compatibility
-            const headers = typeof authHeaders === 'string' ? 
-              JSON.parse(authHeaders) : 
-              Array.isArray(authHeaders) ? 
-                Object.fromEntries(authHeaders) : 
+            const headers = typeof authHeaders === 'string' ?
+              JSON.parse(authHeaders) :
+              Array.isArray(authHeaders) ?
+                Object.fromEntries(authHeaders) :
                 authHeaders;
 
             const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
@@ -5537,10 +5539,10 @@ export default function Return() {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
@@ -6083,6 +6085,7 @@ export default function Return() {
                 setIsReqIdReadonly={setIsReqIdReadonly}
                 isComplete={isComplete}
                 setIsComplete={setIsComplete}
+                isLoadingFromPosInvoice={isLoadingFromPosInvoice}
               />
             </CardContent>
           </Card>
@@ -6296,6 +6299,9 @@ export default function Return() {
                 return;
               }
 
+              // Set flag to prevent recalculation during invoice loading
+              setIsLoadingFromPosInvoice(true);
+
               // Load invoice data into the new_bill page for return processing
               setIsReturn(true);
               setIsReturnInvoice(true);
@@ -6347,10 +6353,10 @@ export default function Return() {
                       // Use the same authentication logic as other functions
                       const authHeaders = getAuthHeaders();
                       // Convert HeadersInit to plain object for fetch compatibility
-                      const headers = typeof authHeaders === 'string' ? 
-                        JSON.parse(authHeaders) : 
-                        Array.isArray(authHeaders) ? 
-                          Object.fromEntries(authHeaders) : 
+                      const headers = typeof authHeaders === 'string' ?
+                        JSON.parse(authHeaders) :
+                        Array.isArray(authHeaders) ?
+                          Object.fromEntries(authHeaders) :
                           authHeaders;
 
                       const returnResponse = await fetch(
@@ -6368,10 +6374,10 @@ export default function Return() {
                           // Use the same authentication logic as other functions
                           const authHeaders = getAuthHeaders();
                           // Convert HeadersInit to plain object for fetch compatibility
-                          const headers = typeof authHeaders === 'string' ? 
-                            JSON.parse(authHeaders) : 
-                            Array.isArray(authHeaders) ? 
-                              Object.fromEntries(authHeaders) : 
+                          const headers = typeof authHeaders === 'string' ?
+                            JSON.parse(authHeaders) :
+                            Array.isArray(authHeaders) ?
+                              Object.fromEntries(authHeaders) :
                               authHeaders;
 
                           const returnInvResponse = await fetch(
@@ -6452,9 +6458,15 @@ export default function Return() {
               // Show success message
               const invoiceNames = invoices.map(inv => inv.name).join(', ');
               showAlert('success', 'Invoices Loaded', `${invoices.length} invoice(s) loaded for return: ${invoiceNames}. Enter return quantities and submit.`);
+              
+              // Reset flag after all data is loaded
+              setIsLoadingFromPosInvoice(false);
             } catch (err) {
               console.error('Error loading invoice for return:', err);
               showAlert('danger', 'Error', 'Failed to load invoice data.');
+              
+              // Reset flag on error
+              setIsLoadingFromPosInvoice(false);
             }
           }}
         />

@@ -32,17 +32,17 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   // Live search with debouncing
   const handleSearchChange = (term: string) => {
     setSearchTerm(term);
-    
+
     // Clear existing timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
-    
+
     // Set new timeout for debounced search
     const timeout = setTimeout(() => {
       fetchInvoices(term, dateRange);
     }, 300); // 300ms debounce
-    
+
     setSearchTimeout(timeout);
   };
 
@@ -85,7 +85,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
         const isAllowed = daysDifference <= saleReturnAllowDays;
         const isSelected = selectedInvoices.has(row.original.name);
-        
+
         return (
           <button
             onClick={() => {
@@ -93,7 +93,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
                 setRestrictedInvoice(row.original.name);
                 return;
               }
-              
+
               const newSelected = new Set(selectedInvoices);
               if (isSelected) {
                 newSelected.delete(row.original.name);
@@ -103,13 +103,12 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
               setSelectedInvoices(newSelected);
             }}
             disabled={!isAllowed}
-            className={`p-2 rounded transition-colors ${
-              isAllowed 
-                ? isSelected 
-                  ? 'text-blue-600 hover:bg-blue-50' 
-                  : 'text-gray-400 hover:bg-gray-50'
-                : 'text-gray-200 cursor-not-allowed'
-            }`}
+            className={`p-2 rounded transition-colors ${isAllowed
+              ? isSelected
+                ? 'text-blue-600 hover:bg-blue-50'
+                : 'text-gray-400 hover:bg-gray-50'
+              : 'text-gray-200 cursor-not-allowed'
+              }`}
           >
             {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
           </button>
@@ -150,14 +149,14 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
           const timeMatch = row.original.posting_time.match(/(\d{2}:\d{2}:\d{2})/);
           return timeMatch ? timeMatch[1] : row.original.posting_time;
         }
-        
+
         // Fallback: check if posting_date contains time information
         const dateStr = row.original.posting_date;
         const timeMatch = dateStr.match(/(\d{2}:\d{2}:\d{2})/);
         if (timeMatch) {
           return timeMatch[1];
         }
-        
+
         // If no time data available, show N/A
         return 'N/A';
       },
@@ -188,7 +187,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         const today = new Date();
         const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
         const isAllowed = daysDifference <= saleReturnAllowDays;
-        
+
         return (
           <span className={`px-2 py-1 rounded-full text-xs ${isAllowed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
             {row.original.status}
@@ -204,7 +203,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     //     const today = new Date();
     //     const daysDifference = Math.floor((today.getTime() - postingDate.getTime()) / (1000 * 60 * 60 * 24));
     //     const isAllowed = daysDifference <= saleReturnAllowDays;
-        
+
     //     return (
     //       <Button
     //         type={isAllowed ? 'primary-button' : 'secondary-button'}
@@ -213,7 +212,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     //             setRestrictedInvoice(row.original.name);
     //             return;
     //           }
-              
+
     //           setLoading(true);
     //           try {
     //             const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${row.original.name}`, {
@@ -235,17 +234,17 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     // },
   ];
 
-const fetchInvoiceItems = async (invoiceName: string) => {
+  const fetchInvoiceItems = async (invoiceName: string) => {
     setLoadingItems(true);
     try {
       // Fetch invoice details with items
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${invoiceName}`, {
@@ -254,18 +253,18 @@ const fetchInvoiceItems = async (invoiceName: string) => {
         credentials: 'include',
       });
       const data = await response.json();
-      
+
       if (data.data && data.data.items) {
         const items = data.data.items;
-        
+
         // Fetch return invoices against this invoice to calculate already returned qty
         // Use the same authentication logic as other functions
         const returnAuthHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const returnHeaders = typeof returnAuthHeaders === 'string' ? 
-          JSON.parse(returnAuthHeaders) : 
-          Array.isArray(returnAuthHeaders) ? 
-            Object.fromEntries(returnAuthHeaders) : 
+        const returnHeaders = typeof returnAuthHeaders === 'string' ?
+          JSON.parse(returnAuthHeaders) :
+          Array.isArray(returnAuthHeaders) ?
+            Object.fromEntries(returnAuthHeaders) :
             returnAuthHeaders;
 
         const returnResponse = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoiceName}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`, {
@@ -274,21 +273,21 @@ const fetchInvoiceItems = async (invoiceName: string) => {
           credentials: 'include',
         });
         const returnData = await returnResponse.json();
-        
+
         // Calculate already returned quantities for each item
         const itemsWithReturnQty = await Promise.all(items.map(async (item: any) => {
           let alreadyReturnedQty = 0;
-          
+
           if (returnData.data && returnData.data.length > 0) {
             // Fetch items from all return invoices
             for (const returnInv of returnData.data) {
               // Use the same authentication logic as other functions
               const returnInvAuthHeaders = getAuthHeaders();
               // Convert HeadersInit to plain object for fetch compatibility
-              const returnInvHeaders = typeof returnInvAuthHeaders === 'string' ? 
-                JSON.parse(returnInvAuthHeaders) : 
-                Array.isArray(returnInvAuthHeaders) ? 
-                  Object.fromEntries(returnInvAuthHeaders) : 
+              const returnInvHeaders = typeof returnInvAuthHeaders === 'string' ?
+                JSON.parse(returnInvAuthHeaders) :
+                Array.isArray(returnInvAuthHeaders) ?
+                  Object.fromEntries(returnInvAuthHeaders) :
                   returnInvAuthHeaders;
 
               const returnInvResponse = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`, {
@@ -297,7 +296,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
                 credentials: 'include',
               });
               const returnInvData = await returnInvResponse.json();
-              
+
               if (returnInvData.data && returnInvData.data.items) {
                 const returnedItem = returnInvData.data.items.find((ri: any) => ri.item_code === item.item_code);
                 if (returnedItem) {
@@ -306,13 +305,13 @@ const fetchInvoiceItems = async (invoiceName: string) => {
               }
             }
           }
-          
+
           return {
             ...item,
             already_returned_qty: alreadyReturnedQty
           };
         }));
-        
+
         setItemsPopup({ visible: true, items: itemsWithReturnQty, invoiceName });
       }
     } catch (error) {
@@ -327,10 +326,10 @@ const fetchInvoiceItems = async (invoiceName: string) => {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(`https://192.168.7.221:4422/api/resource/HIS%20Settings/HIS%20Settings`, {
@@ -352,12 +351,12 @@ const fetchInvoiceItems = async (invoiceName: string) => {
     setLoading(true);
     try {
       let apiFilters: any[] = [['docstatus', '=', 1]];
-      
+
       // Add IPD filter only if this is for IPD page
       if (isIPDPage) {
         apiFilters.push(['custom_is_ipd_invoice', '=', 1]);
       }
-      
+
       // Multi-field search: Invoice No, Patient Name, Doctor Name (only if search term is provided)
       if (search) {
         // const searchFilters = [
@@ -365,7 +364,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
         //   ['custom_patient_name', 'like', `%${search}%`],
         //   ['custom_doctor_name', 'like', `%${search}%`]
         // ];
-        
+
         if (patientName) {
           // When patient name is provided, combine patient filter with search using OR logic
           apiFilters = [
@@ -381,7 +380,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
         // When no search but patient name is provided, just use patient filter
         apiFilters.push(['custom_patient_name', '=', patientName]);
       }
-      
+
       // Temporarily comment out date filters for debugging
       if (dRange[0]) apiFilters.push(['posting_date', '>=', dRange[0].toISOString()]);
       if (dRange[1]) apiFilters.push(['posting_date', '<=', dRange[1].toISOString()]);
@@ -399,10 +398,10 @@ const fetchInvoiceItems = async (invoiceName: string) => {
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(fullUrl, {
@@ -503,26 +502,26 @@ const fetchInvoiceItems = async (invoiceName: string) => {
           </div>
           <div className="flex gap-3">
             <Button onClick={onClose} type='secondary-button' className="px-6 py-2.5">Close</Button>
-            <Button 
+            <Button
               onClick={async () => {
                 if (selectedInvoices.size === 0) {
                   showAlert('warning', 'No Selection', 'Please select at least one invoice');
                   return;
                 }
-                
+
                 setLoading(true);
                 try {
                   const selectedInvoiceData: any[] = [];
                   const customers = new Set<string>();
-                  
+
                   for (const invoiceName of selectedInvoices) {
                     // Use the same authentication logic as other functions
                     const authHeaders = getAuthHeaders();
                     // Convert HeadersInit to plain object for fetch compatibility
-                    const headers = typeof authHeaders === 'string' ? 
-                      JSON.parse(authHeaders) : 
-                      Array.isArray(authHeaders) ? 
-                        Object.fromEntries(authHeaders) : 
+                    const headers = typeof authHeaders === 'string' ?
+                      JSON.parse(authHeaders) :
+                      Array.isArray(authHeaders) ?
+                        Object.fromEntries(authHeaders) :
                         authHeaders;
 
                     const res = await fetch(`https://192.168.7.221:4422/api/resource/POS Invoice/${invoiceName}`, {
@@ -532,20 +531,20 @@ const fetchInvoiceItems = async (invoiceName: string) => {
                     });
                     const data = await res.json();
                     selectedInvoiceData.push(data.data);
-                    
+
                     // Add customer to set for validation
                     if (data.data.customer) {
                       customers.add(data.data.customer);
                     }
                   }
-                  
+
                   // Check if selected invoices have different customers
                   if (customers.size > 1) {
                     showAlert('danger', 'Validation Error', 'Sale bill transaction type is different so cannot add bill');
                     setLoading(false);
                     return;
                   }
-                  
+
                   onSelect(selectedInvoiceData);
                   setSelectedInvoices(new Set());
                   onClose();
@@ -554,7 +553,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
                 }
                 setLoading(false);
               }}
-              type='primary-button' 
+              type='primary-button'
               className="px-6 py-2.5"
               disabled={selectedInvoices.size === 0 || loading}
             >
@@ -574,7 +573,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
                   </div>
                   <h3 className="text-lg font-bold text-gray-900">Return Period Expired</h3>
                 </div>
-                
+
                 <div className="mb-6">
                   <p className="text-gray-600 mb-3">
                     Invoice <span className="font-semibold">{restrictedInvoice}</span> is older than {saleReturnAllowDays} days and cannot be returned.
@@ -607,7 +606,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
                   <h3 className="text-xl font-bold text-gray-900">Invoice Items</h3>
                   <p className="text-sm text-gray-600 mt-1">Invoice: {itemsPopup.invoiceName}</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setItemsPopup({ visible: false, items: [], invoiceName: '' })}
                   className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                 >
@@ -659,7 +658,7 @@ const fetchInvoiceItems = async (invoiceName: string) => {
               </div>
 
               <div className="flex items-center justify-end p-6 border-t border-gray-200 gap-3 bg-white">
-                <Button 
+                <Button
                   onClick={() => setItemsPopup({ visible: false, items: [], invoiceName: '' })}
                   type='secondary-button'
                   className="px-6 py-2.5"
