@@ -27,7 +27,7 @@ interface SearchSuggestion {
 function PageHeader(props: PageHeaderProps) {
   const { title, icon, rightButtons } = props;
   const router = useRouter();
-  const {  isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -62,12 +62,12 @@ function PageHeader(props: PageHeaderProps) {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
-        
+
         const response = await fetch(
           `https://192.168.7.221:4422/api/method/frappe.client.get_list?doctype=Page&filters=[["name","like","%${query}%"]]&fields=["name","title"]&limit_page_length=5`,
           {
@@ -102,12 +102,12 @@ function PageHeader(props: PageHeaderProps) {
           // Use the same authentication logic as other functions
           const authHeaders = getAuthHeaders();
           // Convert HeadersInit to plain object for fetch compatibility
-          const headers = typeof authHeaders === 'string' ? 
-            JSON.parse(authHeaders) : 
-            Array.isArray(authHeaders) ? 
-              Object.fromEntries(authHeaders) : 
+          const headers = typeof authHeaders === 'string' ?
+            JSON.parse(authHeaders) :
+            Array.isArray(authHeaders) ?
+              Object.fromEntries(authHeaders) :
               authHeaders;
-          
+
           const response = await fetch(
             `https://192.168.7.221:4422/api/method/frappe.client.get_list?doctype=${doctype}&filters=[["name","like","%${query}%"]]&fields=["name"]&limit_page_length=3`,
             {
@@ -258,21 +258,28 @@ function PageHeader(props: PageHeaderProps) {
   }, []);
 
   return (
-    <div style={{}} className="flex justify-between items-center p-md border-b border-[#D9D9E0] fixed top-0 right-0 bg-white w-full z-50 " >
+    <div style={{
+      zIndex: 100,
+      backgroundColor: 'transparent',
+      backgroundImage: 'url("/pos/assets/Header.svg")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }} className="flex justify-between items-center p-md border-b border-[#D9D9E0] fixed top-0 right-0 w-full z-50 " >
       <div className="flex space-x-2 items-center">
-        <Image src={icon} alt="Rupee icon" width={24} height={24} />
+        <Image src={icon} alt="Rupee" width={24} height={24} />
         {props.parentLink && props.parentTitle ? (
           <>
             <Link
               href={props.parentLink}
-              className="font-bold text-lg text-primary "
+              className="font-bold text-lg text-primary text-white"
             >
               {props.parentTitle}
             </Link>
             <span className="text-lg" >/</span>
           </>
         ) : null}
-        <span className="font-bold cappitalize  text-lg">{title}</span>
+        <span className="font-bold cappitalize  text-lg text-white">{title}</span>
         {(props.posProfile || props.warehouse) && (
           <>
             <span className="text-gray-300 mx-2">|</span>
@@ -283,7 +290,7 @@ function PageHeader(props: PageHeaderProps) {
       <div className="flex items-center gap-4">
         {/* Search Input */}
         <div className="relative">
-          <div className="relative flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div className="relative flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -327,8 +334,8 @@ function PageHeader(props: PageHeaderProps) {
                   key={`${suggestion.route}-${index}`}
                   onClick={() => handleSuggestionClick(suggestion.route)}
                   className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors ${index === selectedIndex
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'hover:bg-gray-50 text-gray-700'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'hover:bg-gray-50 text-gray-700'
                     } ${index !== suggestions.length - 1 ? 'border-b border-gray-100' : ''}`}
                 >
                   <span className="text-lg">{suggestion.icon}</span>
@@ -338,8 +345,8 @@ function PageHeader(props: PageHeaderProps) {
                       <span>{suggestion.route.substring(0, 50)}...</span>
                       {suggestion.type && (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${suggestion.type === 'page' ? 'bg-blue-100 text-blue-700' :
-                            suggestion.type === 'document' ? 'bg-green-100 text-green-700' :
-                              'bg-gray-100 text-gray-700'
+                          suggestion.type === 'document' ? 'bg-green-100 text-green-700' :
+                            'bg-gray-100 text-gray-700'
                           }`}>
                           {suggestion.type}
                         </span>

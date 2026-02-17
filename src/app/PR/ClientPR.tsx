@@ -138,10 +138,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -470,10 +470,10 @@ const useStockQty = () => {
         // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
-        const headers = typeof authHeaders === 'string' ? 
-          JSON.parse(authHeaders) : 
-          Array.isArray(authHeaders) ? 
-            Object.fromEntries(authHeaders) : 
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
             authHeaders;
         const csrf = localStorage.getItem("csrfToken");
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
@@ -545,12 +545,12 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
-      
+
       const response = await fetch(`${API_BASE_URL}/Batch/${scannedBarcode}`, {
         headers,
         credentials: 'include',
@@ -580,7 +580,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       //   Array.isArray(authHeaders) ? 
       //     Object.fromEntries(authHeaders) : 
       //     authHeaders;
-      
+
       const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
         method: 'POST',
         headers,
@@ -624,7 +624,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         const currentQty = parseInt(updatedItems[existingItemIndex].reqQty) || 0;
         updatedItems[existingItemIndex].reqQty = (currentQty + 1).toString();
         updatedItems[existingItemIndex].stockQty = stockQty.toString();
-        
+
         setItems(updatedItems);
       } else {
         // Create new item
@@ -737,10 +737,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -783,10 +783,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -1142,10 +1142,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -1290,10 +1290,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const storedCsrfToken = localStorage.getItem('csrfToken');
@@ -1681,10 +1681,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           // Use the same authentication logic as other functions
           const authHeaders = getAuthHeaders();
           // Convert HeadersInit to plain object for fetch compatibility
-          const headers = typeof authHeaders === 'string' ? 
-            JSON.parse(authHeaders) : 
-            Array.isArray(authHeaders) ? 
-              Object.fromEntries(authHeaders) : 
+          const headers = typeof authHeaders === 'string' ?
+            JSON.parse(authHeaders) :
+            Array.isArray(authHeaders) ?
+              Object.fromEntries(authHeaders) :
               authHeaders;
 
           const bundleResponse = await fetch(
@@ -1844,10 +1844,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -1948,10 +1948,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(
@@ -2037,10 +2037,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -2206,10 +2206,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
@@ -2268,20 +2268,19 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         </div>
       )}
 
-      <div className="my-16">
-        <PageHeader
-          parentTitle="Patient Requisition"
-          parentLink="/PatientRequistionList"
-          title={requisitionNo ? `Edit Requisition ${requisitionNo}` : "New Requisition"}
-          icon="../assets/icons/BriefcaseIcon.svg"
-          rightButtons={
-            <div className="flex flex-row space-x-2">
-            </div>
-          }
-        />
-      </div>
+      {/* Navbar Header */}
+      <PageHeader
+        parentTitle="Patient Requisition"
+        parentLink="/PatientRequistionList"
+        title={requisitionNo ? `Edit Requisition ${requisitionNo}` : "New Requisition"}
+        icon="../assets/icons/BriefcaseIcon.svg"
+        rightButtons={
+          <div className="flex flex-row space-x-2">
+          </div>
+        }
+      />
 
-      <div className="flex gap-3 p-1">
+      <div className="flex gap-3 p-1 mt-17">
         <div className="flex-shrink-0">
           {!patientData ? (
             <Card>
