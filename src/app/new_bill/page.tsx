@@ -3394,7 +3394,6 @@ export default function NewBill() {
       requisition_no: requisitionNo || "",
       requisition_from: requisitionFrom || "",
       requisition_to: requisitionTo || "",
-      // Custom patient and requisition details
       custom_patient_name: patientData?.name || "",
       custom_uhid: patientData?.mrn || "",
       custom_abha_id: patientData?.ABHAID || "",
@@ -3865,6 +3864,7 @@ export default function NewBill() {
       dept: fullRequisitionData.department || "N/A",
       visitType: fullRequisitionData.visit_type || "N/A",
       company: fullRequisitionData.patient_company || "N/A",
+      visitID: fullRequisitionData.visit_id || "N/A",
     };
     setPatientData(newPatientData);
 
@@ -4163,6 +4163,7 @@ export default function NewBill() {
       dept: fullPrescriptionData.department || "N/A",
       visitType: fullPrescriptionData.visit_type || "N/A",
       company: fullPrescriptionData.patient_company || "N/A",
+      visitID: fullPrescriptionData.visit_id || "N/A",
     };
     setPatientData(newPatientData);
 
@@ -6555,7 +6556,7 @@ export default function NewBill() {
                   dept: invoice.custom_department || '',
                   visitType: invoice.custom_visit_type || '',
                   company: invoice.custom_company || '',
-                  visitID: invoice.custom_visit_id || '',
+                  visitID: invoice.custom_visit_code || '',
                   bed: invoice.custom_bed || '',
                 });
               }

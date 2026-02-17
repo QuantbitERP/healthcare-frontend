@@ -4816,8 +4816,117 @@ export default function Return() {
             (returnAgainstInvoice ? [returnAgainstInvoice] : []);
 
           if (invoicesToProcess.length === 0) {
-            showAlert("danger", "Error", "No source invoices found for return.");
-            return;
+            if (isDirectReturn) {
+              // Process as direct return without original invoice
+              console.log('Processing direct return without original invoice');
+              
+              const returnItems = itemsToReturn.map(item => {
+                const returnQty = item.returnQty || 0;
+                const discountPercent = item.discountPercent || 0;
+
+                // Rate per unit (MRP with GST included)
+                const ratePerUnit = item.rate || 0;
+
+                // For GST-inclusive calculations with discount:
+                // If discount is applied, we need to send the rate AFTER discount
+                // Backend will handle the GST extraction
+                const discountAmount = ratePerUnit * (discountPercent / 100);
+                const rateAfterDiscount = ratePerUnit - discountAmount;
+
+                return {
+                  item_code: item.itemCode,
+                  item_name: item.itemName,
+                  return_qty: returnQty,
+                  margin_type: discountPercent > 0 ? "Percentage" : "", // Use Percentage only if discount applied
+                  margin_rate_or_amount: 0,
+                  discount_percentage: discountPercent, // Original discount percentage
+                  discount_amount: discountAmount * returnQty, // Total discount amount for return qty
+                  rate: rateAfterDiscount, // Rate after discount (GST still included)
+                  price_list_rate: ratePerUnit, // Original MRP before discount
+                  cgst_rate: item.cgstPercent || 0,
+                  sgst_rate: item.sgstPercent || 0,
+                  igst_rate: item.igstPercent || 0,
+                  batch_no: item.batchNo || '',
+                  custom_expiry_date: item.expiryDate || '',
+                  warehouse: item.warehouse || selectedWarehouse,
+                  item_tax_template: item.taxTemplate || '',
+                };
+              });
+              const refundMode = 'Cash';
+
+              const payload = {
+                original_invoice: '', // Empty for direct return
+                return_items: returnItems,
+                refund_mode: refundMode,
+                // Additional fields for complete invoice creation
+                included_in_print_rate: 1, // GST included in MRP - set at invoice level
+                customer: selectedCustomer || '',
+                company: selectedCompany || '',
+                pos_profile: posProfile || '',
+                // Custom fields
+                custom_patient_name: patientData?.name || '',
+                custom_uhid: patientData?.ABHAID || '',
+                custom_bed_no: patientData?.bed || '',
+                custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
+                custom_visit_code: patientData?.visitID || '',
+                custom_phone: patientData?.phone || '',
+                custom_doctor_name: patientData?.doctor || '',
+                custom_age: patientData?.age || '',
+                return_remarks: remarks || 'Direct return without original invoice',
+                taxes: []
+              };
+
+              console.log('Direct Return API Payload:', payload);
+
+              try {
+                // Use the same authentication logic as other functions
+                const authHeaders = getAuthHeaders();
+                // Convert HeadersInit to plain object for fetch compatibility
+                const headers = typeof authHeaders === 'string' ? 
+                  JSON.parse(authHeaders) : 
+                  Array.isArray(authHeaders) ? 
+                    Object.fromEntries(authHeaders) : 
+                    authHeaders;
+
+                const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+                  method: 'POST',
+                  headers,
+                  credentials: 'include',
+                  body: JSON.stringify(payload),
+                });
+
+                const result = await response.json();
+                console.log('Direct Return API Response:', result);
+
+                if (response.ok) {
+                  const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
+                  
+                  // Print the return invoice
+                  if (returnInvoiceName) {
+                    const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+                    window.open(printUrl, '_blank');
+                  }
+
+                  showAlert('success', 'Success', `Direct return invoice created successfully: ${returnInvoiceName}`);
+                  handleReset();
+                  setIsReturn(false);
+                  setIsReturnInvoice(false);
+                  setIsDirectReturn(false);
+                  setReturnAgainstInvoice('');
+                  setSelectedInvoicesForReturn([]);
+                } else {
+                  console.error('Direct Return API Error Response:', result);
+                  showAlert("danger", "Error", "Failed to create direct return invoice. Please try again.");
+                }
+              } catch (error: any) {
+                console.error('Direct Return API Error:', error);
+                showAlert("danger", "Error", "Failed to create direct return invoice. Please try again.");
+              }
+              return;
+            } else {
+              showAlert("danger", "Error", "No source invoices found for return.");
+              return;
+            }
           }
 
           let successCount = 0;
@@ -6155,6 +6264,7 @@ export default function Return() {
           posProfile={posProfile}
           showAlert={showAlert}
           onLoadInvoice={handleLoadInvoice}
+          showOnlyReturns={true}
         />
       )}
 
@@ -6214,7 +6324,7 @@ export default function Return() {
                   dept: firstInvoice.custom_department || '',
                   visitType: firstInvoice.custom_visit_type || '',
                   company: firstInvoice.custom_company || '',
-                  visitID: firstInvoice.custom_visit_id || '',
+                  visitID: firstInvoice.custom_visit_code || '',
                   bed: firstInvoice.custom_bed || '',
                 });
               }

@@ -22,6 +22,7 @@ interface ViewPosInvoicesModalProps {
   onLoadInvoice?: (invoice: Invoice) => void;
   isIPDPage?: boolean; // Add prop to determine if this is for IPD page
   excludeIPDInvoices?: boolean; // Add prop to exclude IPD invoices
+  showOnlyReturns?: boolean; // Add prop to show only return invoices
 }
 
 interface Invoice {
@@ -41,7 +42,7 @@ interface Invoice {
   company: string;
 }
 
-const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false }) => {
+const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
@@ -56,14 +57,20 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchInvoices = async (searchTerm: string, dates: { from: Date | null, to: Date | null }) => {
-    if (!posProfile) {
+    // Skip POS profile validation when showing only returns
+    if (!posProfile && !showOnlyReturns) {
       showAlert("danger", "Error", "POS Profile is missing.");
       return;
     }
 
     setLoading(true);
     try {
-      const filters: any[] = [['pos_profile', '=', posProfile]];
+      const filters: any[] = [];
+
+      // Add POS profile filter only if not showing returns
+      if (!showOnlyReturns) {
+        filters.push(['pos_profile', '=', posProfile]);
+      }
 
       // Add IPD filter only if this is for IPD page
       if (isIPDPage) {
@@ -73,6 +80,11 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       // Exclude IPD invoices if excludeIPDInvoices is true
       if (excludeIPDInvoices) {
         filters.push(['custom_is_ipd_invoice', '!=', 1]);
+      }
+
+      // Show only return invoices if showOnlyReturns is true
+      if (showOnlyReturns) {
+        filters.push(['is_return', '=', 1]);
       }
 
       if (searchTerm) {
@@ -95,7 +107,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       const filterStr = JSON.stringify(filters);
-      const url = `${API_BASE_URL}/POS%20Invoice?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
+      const url = `${API_BASE_URL}/POS%20Invoice?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -129,7 +141,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       setDateRange(initialDateRange);
       fetchInvoices(invoiceSearchTerm, initialDateRange);
     }
-  }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices]);
+  }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns]);
 
   useEffect(() => {
     if (isOpen) {

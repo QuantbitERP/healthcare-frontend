@@ -61,6 +61,7 @@ type SelectedPatient = {
     dept?: string;
     visitType?: string;
     company?: string;
+    visitID?: string;
 };
 
 const PATIENT_API_BASE_URL = "http://192.168.7.196:8085/masterdata/search-patient";
@@ -115,6 +116,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
         mrn: patientData?.mrn,
         displayNo: patientData?.displayNo,
         dept: patientData?.dept,
+        visitID: patientData?.visitID ?? '',
     });
 
     const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
@@ -171,6 +173,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 mrn: patientData.mrn,
                 displayNo: patientData.displayNo,
                 dept: patientData.dept,
+                visitID: patientData.visitID,
             });
             setSearchValue(`${patientData.name} (${patientData.mrn})`);
         } else {
@@ -178,6 +181,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
             setEditedPatient({
                 name: '', age: '', sex: '', phone: '', ABHAID: '',
                 category: '', doctor: '', company: '', visitType: '',
+                visitID: '',
             });
             setSearchValue('');
         }
@@ -305,6 +309,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
             visitType: patient.patientVisitType || "N/A",
             company: patient.patientCompany || "N/A",
             Bed: patient.bedName || "N/A",
+            visitID: patient.visitID || "N/A",
         };
         setEditedPatient(newPatientData);
         if (onPatientChange) {
@@ -670,6 +675,12 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
+                    />
+                    <InfoRow
+                        icon="assets/icons/Id.svg"
+                        label="Visit No"
+                        value={editedPatient.visitID || ''}
+                        disabled={true}
                     />
                     <InfoRow
                         icon="assets/icons/Id.svg"
