@@ -71,6 +71,8 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     posting_date: 'Date',
     posting_time: 'Time',
     grand_total: 'Amount',
+    ipd_effect_checkmark: 'IPD Effect',
+    ipd_bill_type: 'Bill Type',
     status: 'Status',
     action: 'Action',
   };
@@ -164,6 +166,42 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     {
       accessorKey: 'grand_total',
       header: 'Amount',
+    },
+    {
+      id: 'ipd_effect_checkmark',
+      header: 'IPD Effect',
+      cell: ({ row }: any) => {
+        const customIpdEffect = row.original.custom_ipd_effect;
+        
+        return (
+          <div className="flex items-center justify-center">
+            {customIpdEffect === 1 && (
+              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'ipd_bill_type',
+      header: 'Bill Type',
+      cell: ({ row }: any) => {
+        const customIsIpdInvoice = row.original.custom_is_ipd_invoice;
+        
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            customIsIpdInvoice === 1 
+              ? 'bg-blue-100 text-blue-700' 
+              : 'bg-gray-100 text-gray-700'
+          }`}>
+            {customIsIpdInvoice === 1 ? 'IPD Bill' : 'OPD Bill'}
+          </span>
+        );
+      },
     },
     {
       id: 'items',
@@ -386,7 +424,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       if (dRange[1]) apiFilters.push(['posting_date', '<=', dRange[1].toISOString()]);
 
       const queryParams = new URLSearchParams({
-        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status']),
+        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice']),
         filters: JSON.stringify(apiFilters),
         limit_page_length: '100'
       });

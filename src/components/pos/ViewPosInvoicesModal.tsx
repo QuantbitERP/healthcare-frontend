@@ -381,7 +381,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                   Submit Invoice
                 </Button>
               )}
-              {onLoadInvoice && selectedInvoice.status !== 'Return' && (
+              {onLoadInvoice && (
                 <Button
                   type="primary-button"
                   size="button-medium"

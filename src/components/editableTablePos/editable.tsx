@@ -34,7 +34,6 @@ interface Item {
   expiryDate: string;
   batchStockQty: number;
   rate: number | null;
-  price_list_rate?: number; // Add price_list_rate field for original price list rate
   taxTemplate: string;
   description: string;
   itemAmount: number;
@@ -1356,20 +1355,19 @@ const EditableTable = ({
       header: "Unit Sale Rate",
       cell: ({ getValue, row, column, table }) => {
         const item = row.original as Item;
-        // Display price_list_rate if available, otherwise fall back to rate
-        const displayRate = item.price_list_rate !== undefined ? item.price_list_rate : (item.rate !== null ? item.rate : 0);
+        const rate = item.rate !== null ? item.rate : 0;
 
         // If user has permission to change rate, make it editable
         if (canChangeRate) {
           return (
-            <EditableCell value={displayRate} row={row} column={column} table={table} type="number" />
+            <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
           );
         }
 
         // Otherwise, show as readonly
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(displayRate).toFixed(2)}
+            ₹{truncateToTwoDecimals(rate).toFixed(2)}
           </div>
         );
       },

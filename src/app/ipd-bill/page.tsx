@@ -1892,7 +1892,7 @@ export default function IPDBill() {
   // Global discount state
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
 
-  const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('cash');
+  const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('credit');
 
   const [isIpdEffect, setIsIpdEffect] = useState(true);
 
@@ -2527,7 +2527,7 @@ export default function IPDBill() {
     setLoadedInvoiceDocstatus(0);
     setIsLoadingFromPosInvoice(false);
     setGlobalDiscountPercent(0);
-    setTransactionType('cash');
+    setTransactionType('credit');
     setIsIpdEffect(true);
     setTaxTemplate('');
     setCgstAccounts([]);
@@ -3248,6 +3248,9 @@ export default function IPDBill() {
     //   hasAnyDiscount
     // });
 
+    console.log('DEBUG: isIpdEffect value when saving draft:', isIpdEffect);
+    console.log('DEBUG: isIpdEffect type:', typeof isIpdEffect);
+
     const payload = {
       doctype: "POS Invoice",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
@@ -3409,6 +3412,8 @@ export default function IPDBill() {
       custom_department: selectedDepartment || patientData?.dept || "",
       custom_hospital: selectedHospital || "",
     };
+
+    console.log('DEBUG: Payload being sent:', JSON.stringify(payload, null, 2));
 
     // Construct the taxes array dynamically
     const taxesPayload: any[] = [];
@@ -4927,7 +4932,7 @@ export default function IPDBill() {
       }
       setSelectedSaleType(fullInvoice.custom_sale_type || '');
       setIsReturn(fullInvoice.is_return === 1);
-      setIsIpdEffect(fullInvoice.included_in_print_rate === 1); // Set isIpdEffect from invoice
+      setIsIpdEffect(fullInvoice.custom_ipd_effect === 1); // Set isIpdEffect from invoice's custom_ipd_effect field
 
       // Extract tax rates from invoice taxes array
       const taxRatesFromInvoice: { [key: string]: { cgst: number, sgst: number, igst: number } } = {};
@@ -5184,7 +5189,10 @@ export default function IPDBill() {
           method: 'PUT',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ docstatus: 1 }),
+          body: JSON.stringify({ 
+          docstatus: 1,
+          custom_ipd_effect: isIpdEffect ? 1 : 0
+        }),
         });
 
         if (!response.ok) {
@@ -5394,6 +5402,9 @@ export default function IPDBill() {
 
       // Calculate total discount amount for invoice level
       const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
+
+      console.log('DEBUG: isIpdEffect value when finalizing:', isIpdEffect);
+      console.log('DEBUG: isIpdEffect type when finalizing:', typeof isIpdEffect);
 
       const payload = {
         doctype: "POS Invoice",
@@ -5698,7 +5709,10 @@ export default function IPDBill() {
           method: 'PUT',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ docstatus: 1 }),
+          body: JSON.stringify({ 
+          docstatus: 1,
+          custom_ipd_effect: isIpdEffect ? 1 : 0
+        }),
         });
 
         if (!submitResponse.ok) {

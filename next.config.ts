@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   images: {
     disableStaticImages: false, // enabled by default
   },
+  // Configure for deployment with base path
+  basePath: '/pos',
+  assetPrefix: '/pos',
+  // Configure port for deployment
+  port: 4430,
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

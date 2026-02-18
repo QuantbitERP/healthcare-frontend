@@ -15,6 +15,7 @@ import { X, CheckCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 
 // Tooltip component
 const PrescriptionStatusTooltip: React.FC<{
@@ -183,10 +184,13 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         params.filters = JSON.stringify(filters);
       }
 
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
+          authHeaders;
 
       const response = await axios.get(`${API_BASE_URL}/Patient Requisition`, {
         params,
@@ -242,6 +246,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     }
   }, [apiKey, apiSecret, showCompleted]);
 
+
+
+
+  
   // Debounced search implementation
   const debouncedFetch = useCallback((search: string, dateRange?: DateRange) => {
     if (timeoutRef.current) {

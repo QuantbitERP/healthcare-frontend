@@ -16,6 +16,7 @@ interface Requisition {
   requestedToDept: string;
   userName: string;
   docstatus: number;
+  isRequisition: boolean;
 }
 
 export default function PatientRequisitionList() {
@@ -43,7 +44,8 @@ export default function PatientRequisitionList() {
           "requisition_from",
           "requisition_to",
           "owner",
-          "docstatus"
+          "docstatus",
+          "is_requisition"
         ]),
         limit_page_length: "40",
         order_by: "creation desc"
@@ -85,6 +87,7 @@ export default function PatientRequisitionList() {
         requestedToDept: doc.requisition_to || "",
         userName: doc.owner || "",
         docstatus: doc.docstatus || 0,
+        isRequisition: doc.is_requisition || false,
       }));
 
       setRequisitions(transformedData);
@@ -179,6 +182,22 @@ export default function PatientRequisitionList() {
             { accessorKey: "requestedFromDept", header: "Requested From Dept./Ward" },
             { accessorKey: "requestedToDept", header: "Requested to Dept./Ward" },
             {
+              accessorKey: "isRequisition",
+              header: "Type",
+              cell: ({ getValue }: any) => {
+                const isRequisition = getValue();
+                return (
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    isRequisition 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {isRequisition ? 'Patient Requisition' : 'Prescription'}
+                  </span>
+                );
+              },
+            },
+            {
               accessorKey: "docstatus",
               header: "Status",
               cell: ({ getValue }: any) => {
@@ -217,6 +236,7 @@ export default function PatientRequisitionList() {
             requisitionDate: "Requisition Date",
             requestedFromDept: "Requested From Dept./Ward",
             requestedToDept: "Requested to Dept./Ward",
+            isRequisition: "Type",
             docstatus: "Status",
             userName: "Created By",
           }}

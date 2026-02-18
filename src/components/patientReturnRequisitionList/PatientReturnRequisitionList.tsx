@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import Button from "@/components/buttons/Button";
 import DataTableComponent, { TableCellComponents } from "@/components/DataTable";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 import { Button as UIButton } from "@/components/ui/button";
 import { X, Eye } from "lucide-react";
 import { format } from "date-fns";
@@ -120,10 +121,13 @@ const PatientReturnRequisitionList: React.FC<PatientReturnRequisitionListProps> 
         params.filters = JSON.stringify(filters);
       }
 
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `token ${apiKey}:${apiSecret}`,
-      };
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for fetch compatibility
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
+          authHeaders;
 
       const response = await axios.get(`${API_BASE_URL}/Patient Return Requisition`, {
         params,
