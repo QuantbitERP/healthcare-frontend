@@ -45,6 +45,7 @@ import ViewPosInvoicesModal from '@/components/pos/ViewPosInvoicesModal'; // New
 import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
+import SplashScreen from '@/components/SplashScreen/SplashScreen'; // New Import
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -302,6 +303,9 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
     return () => clearTimeout(delayedSearch);
   }, [searchTerm, selectedClassification, isGeneric, selectedCompany]);
+
+  // Handle initial loading state
+ 
 
   // useEffect for sub-search filtering
   useEffect(() => {
@@ -950,6 +954,7 @@ export default function Return() {
   const [hoveredAttachment, setHoveredAttachment] = useState<string | null>(null);
   const [_previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   // --- END: Added state for file upload ---
+  const [initialLoading, setInitialLoading] = useState(true); // New state for splash screen
 
   const router = useRouter();
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, checkUserRole } = useAuth();
@@ -958,7 +963,13 @@ export default function Return() {
   const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
   const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+ useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 7000); // Show splash screen for at least 7 seconds
 
+    return () => clearTimeout(timer);
+  }, []);
   // Function to fetch item batches filtered by warehouse and company
   const fetchItemBatches = async (itemCode: string) => {
     try {
@@ -1482,7 +1493,7 @@ export default function Return() {
 
   const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('cash');
 
-  const [isOpdEffect, setIsOpdEffect] = useState(false);
+  const [_isOpdEffect, setIsOpdEffect] = useState(false);
 
   // New state variables for tax details
   const [taxTemplate, setTaxTemplate] = useState<string>('');
@@ -5569,8 +5580,14 @@ export default function Return() {
   };
 
   return (
-
-    <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
+    <>
+      {/* Splash Screen */}
+      <SplashScreen 
+        show={initialLoading} 
+        message="Initializing Return Management System..." 
+      />
+      
+      <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
       {/* Alert Component */}
       {alert.show && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
@@ -6039,19 +6056,19 @@ export default function Return() {
 
                   {/* OPD Effect Checkbox */}
                   <div className="flex items-center gap-2 pl-2">
-                    <Checkbox
+                    {/* <Checkbox
                       id="Opd-effect"
                       checked={isOpdEffect}
                       disabled={transactionType === 'cash'}
                       onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
                       className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
-                    />
-                    <Label
+                    /> */}
+                    {/* <Label
                       htmlFor="Opd-effect"
                       className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
                     >
                       OPD Effect
-                    </Label>
+                    </Label> */}
                   </div>
 
                 </div>
@@ -6602,5 +6619,6 @@ export default function Return() {
         }
       `}</style>
     </div>
+    </>
   );
 }

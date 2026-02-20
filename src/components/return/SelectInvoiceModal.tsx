@@ -419,9 +419,15 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         apiFilters.push(['custom_patient_name', '=', patientName]);
       }
 
-      // Temporarily comment out date filters for debugging
-      if (dRange[0]) apiFilters.push(['posting_date', '>=', dRange[0].toISOString()]);
-      if (dRange[1]) apiFilters.push(['posting_date', '<=', dRange[1].toISOString()]);
+      // Date filters - use local date format to avoid timezone issues
+      if (dRange[0]) {
+        const startDate = dRange[0].toLocaleDateString('en-CA'); // YYYY-MM-DD format
+        apiFilters.push(['posting_date', '>=', startDate]);
+      }
+      if (dRange[1]) {
+        const endDate = dRange[1].toLocaleDateString('en-CA'); // YYYY-MM-DD format
+        apiFilters.push(['posting_date', '<=', endDate]);
+      }
 
       const queryParams = new URLSearchParams({
         fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice']),

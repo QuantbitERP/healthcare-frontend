@@ -44,6 +44,7 @@ import ViewPosInvoicesModal from '@/components/pos/ViewPosInvoicesModal'; // New
 import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
+import SplashScreen from '@/components/SplashScreen/SplashScreen'; // New Import
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -1675,6 +1676,8 @@ export default function IPDBill() {
   const [requisitionNo, setRequisitionNo] = useState('');
   const [requisitionFrom, setRequisitionFrom] = useState('');
   const [requisitionTo] = useState('');
+  const [initialLoading, setInitialLoading] = useState(true); // New state for splash screen
+
   const [_toLocation, setToLocation] = useState('');
   const [barcode, setBarcode] = useState('');
   const [reqId, setReqId] = useState('');
@@ -3664,6 +3667,15 @@ export default function IPDBill() {
       setShowPosProfileSelector(true);
     }
   }, [isAuthenticated, router, posProfile, isInitialized]);
+
+  // Handle initial loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 7000); // Show splash screen for at least 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, isInitialized, posProfile]);
 
   // Automatically set warehouse based on selected POS Profile
   useEffect(() => {
@@ -5844,8 +5856,14 @@ export default function IPDBill() {
   };
 
   return (
-
-    <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
+    <>
+      {/* Splash Screen */}
+      <SplashScreen 
+        show={initialLoading} 
+        message="Initializing IPD Billing System..." 
+      />
+      
+      <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
       {/* Alert Component */}
       {alert.show && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
@@ -6861,5 +6879,6 @@ export default function IPDBill() {
         }
       `}</style>
     </div>
+    </>
   );
 }

@@ -44,6 +44,7 @@ import ViewPosInvoicesModal from '@/components/pos/ViewPosInvoicesModal'; // New
 import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
+import SplashScreen from '@/components/SplashScreen/SplashScreen'; // New Import
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -3656,6 +3657,15 @@ export default function NewBill() {
     }
   }, [isAuthenticated, router, posProfile, isInitialized]);
 
+  // Handle initial loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 7000); // Show splash screen for at least 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, isInitialized, posProfile]);
+
   // Automatically set warehouse based on selected POS Profile
   useEffect(() => {
     const fetchPosProfileWarehouse = async () => {
@@ -4609,6 +4619,7 @@ export default function NewBill() {
   const [highAlertItem, setHighAlertItem] = useState<Item | null>(null);
   const [pendingItem, setPendingItem] = useState<Item | null>(null);
   const [_pendingQtyIncrement, setPendingQtyIncrement] = useState<number>(0);
+  const [initialLoading, setInitialLoading] = useState(true); // New state for splash screen
 
   // High-alert save dialog state
   const [showHighAlertSaveDialog, setShowHighAlertSaveDialog] = useState(false);
@@ -5825,8 +5836,14 @@ export default function NewBill() {
   };
 
   return (
-
-    <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
+    <>
+      {/* Splash Screen */}
+      <SplashScreen 
+        show={initialLoading} 
+        message="Initializing OPD Billing System..." 
+      />
+      
+      <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
       {/* Alert Component */}
       {alert.show && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
@@ -6840,5 +6857,6 @@ export default function NewBill() {
         }
       `}</style>
     </div>
+    </>
   );
 }

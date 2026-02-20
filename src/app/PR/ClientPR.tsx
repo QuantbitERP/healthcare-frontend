@@ -33,6 +33,7 @@ import { getAuthHeaders } from "@/utils/sessionAuth";
 import { Search, X, Plus } from 'lucide-react';
 import { DataTable as EditableDataTable } from "@/components/EditableCellsTable/TableTry";
 import { ColumnDef, getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import SplashScreen from '@/components/SplashScreen/SplashScreen'; // New Import
 
 // Define types (unchanged)
 type SelectOption = { label: string; value: string };
@@ -661,7 +662,18 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       handleBarcodeScan(barcodeValue.trim());
     }
   }, [barcodeValue]);
+
+  // Handle initial loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 7000); // Show splash screen for at least 7 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const [patientRemark, setPatientRemark] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true); // New state for splash screen
   const [docstatus, setDocstatus] = useState<number>(0); // 0=Draft, 1=Submitted, 2=Cancelled
   const [_isAmendMode, setIsAmendMode] = useState(false); // Track if in amend mode
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -2243,7 +2255,14 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen px-3 relative">
+    <>
+      {/* Splash Screen */}
+      <SplashScreen 
+        show={initialLoading} 
+        message="Initializing Purchase Requisition System..." 
+      />
+      
+      <div className="bg-gray-50 min-h-screen px-3 relative">
       {/* Debug: Show current user info */}
 
 
@@ -2807,5 +2826,6 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         }
       `}</style>
     </div>
+    </>
   );
 }
