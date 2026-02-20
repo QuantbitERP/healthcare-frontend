@@ -261,7 +261,7 @@ function PageHeader(props: PageHeaderProps) {
     <div style={{
       zIndex: 100,
       backgroundColor: 'transparent',
-      backgroundImage: 'url("/pos/assets/Header.svg")',
+      backgroundImage: 'url("/assets/images/Header.svg")',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat'
