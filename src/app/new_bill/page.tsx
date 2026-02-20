@@ -1047,8 +1047,8 @@ export default function NewBill() {
   // Function to fetch pricing rules for a specific customer
   const fetchPricingRules = async (customer: string): Promise<any[]> => {
     try {
-      if (!customer || !apiKey || !apiSecret) {
-        console.log('Missing required parameters for pricing rules:', { customer, apiKey, apiSecret });
+      if (!customer) {
+        console.log('Missing customer for pricing rules:', { customer });
         return [];
       }
       const authHeaders = getAuthHeaders();
@@ -1061,8 +1061,8 @@ export default function NewBill() {
 
 
 
-      // Get visit type from patient data, default to "IP" for OPD billing
-      const visitType = patientData?.visitType || "IP";
+      // Get visit type from patient data, default to "OPD" for OPD billing
+      const visitType = patientData?.visitType || "OPD";
       console.log('Fetching pricing rules for visit type:', visitType, 'customer:', customer, 'transaction type:', transactionType);
 
       // Fetch pricing rules for the customer with visit type and transaction type filters
@@ -1073,12 +1073,14 @@ export default function NewBill() {
         `["custom_visit_type","=","${visitType}"]`,
         `["disable","=",0]`
       ];
+      console.log('Base filters:', baseFilters);
 
       let allPricingRules: any[] = [];
 
       if (transactionType === 'cash') {
         // Fetch cash-specific rules
         const cashFilters = [...baseFilters, '["custom_cash","=",1]'];
+        console.log('Cash filters:', cashFilters);
         const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable","margin_rate_or_amount"]&order_by=modified desc`,
           {
             method: 'GET',
@@ -1089,9 +1091,12 @@ export default function NewBill() {
 
         if (cashResponse.ok) {
           const cashData = await cashResponse.json();
+          console.log('Cash pricing rules response:', cashData);
           if (cashData.data && Array.isArray(cashData.data)) {
             allPricingRules = allPricingRules.concat(cashData.data);
           }
+        } else {
+          console.log('Cash pricing rules request failed:', cashResponse.status, cashResponse.statusText);
         }
 
         // Fetch rules that apply to all transaction types
@@ -6448,16 +6453,16 @@ export default function NewBill() {
             <>
               <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
               <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
-                Save as Draft
+                {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Update' : 'Save as Draft'}
               </Button>
-              <Button
+              {/* <Button
                 type="primary-outlined-button"
                 size="button-medium"
                 onClick={() => setShowSelectInvoiceModal(true)}
                 disabled={isReturn}
               >
                 Return Bill
-              </Button>
+              </Button> */}
               <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
                 Closing Entry
               </Button>

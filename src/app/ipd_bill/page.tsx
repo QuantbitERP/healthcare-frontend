@@ -4950,7 +4950,7 @@ export default function NewBill() {
             <>
               <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
               <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
-                Save as Draft
+                {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Update' : 'Save as Draft'}
               </Button>
               <Button type="primary-outlined-button" size="button-medium" onClick={() => setShowSelectInvoiceModal(true)}>
                 Return Bill

@@ -6469,16 +6469,16 @@ export default function IPDBill() {
             <>
               <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
               <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
-                Save as Draft
+              {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Update' : 'Save as Draft'}
               </Button>
-              <Button
+              {/* <Button
                 type="primary-outlined-button"
                 size="button-medium"
                 onClick={() => setShowSelectInvoiceModal(true)}
                 disabled={isReturn}
               >
                 Return Bill
-              </Button>
+              </Button> */}
               <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
                 Closing Entry
               </Button>
