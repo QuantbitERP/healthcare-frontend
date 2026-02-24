@@ -1,18 +1,17 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 
 interface SplashScreenProps {
   show: boolean;
   message?: string;
-  progress?: number; // 0–100, optional controlled progress
+  progress?: number;
 }
 
 const STAGES = [
-  { label: "Verifying credentials…", icon: "🔐" },
-  { label: "Loading billing records…", icon: "📋" },
-  { label: "Fetching hospital details…", icon: "🏥" },
-  { label: "Preparing dashboard…", icon: "✅" },
+  { label: "Verifying credentials",     short: "AUTH",     },
+  { label: "Loading billing records",   short: "BILLING",  },
+  { label: "Fetching hospital details", short: "FACILITY", },
+  { label: "Preparing dashboard",       short: "READY",    },
 ];
 
 const SplashScreen: React.FC<SplashScreenProps> = ({
@@ -20,400 +19,470 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
   message,
   progress: controlledProgress,
 }) => {
-  const [progress, setProgress] = useState(0);
-  const [stageIndex, setStageIndex] = useState(0);
-  const [visible, setVisible] = useState(show);
-  const [fadeOut, setFadeOut] = useState(false);
-  const [tick, setTick] = useState(0);
-  const [companyName, setCompanyName] = useState<string>("");
-  const [branchName, setBranchName] = useState<string>("");
+  const [progress, setProgress]       = useState(0);
+  const [stageIndex, setStageIndex]   = useState(0);
+  const [visible, setVisible]         = useState(show);
+  const [fadeOut, setFadeOut]         = useState(false);
+  const [tick, setTick]               = useState(0);
+  const [mounted, setMounted]         = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [branchName, setBranchName]   = useState("");
 
-  // Animate progress bar when uncontrolled
   useEffect(() => {
     if (!show) return;
-    setProgress(0);
-    setStageIndex(0);
-    setFadeOut(false);
-    setVisible(true);
-
-    if (controlledProgress !== undefined) return; // controlled mode
-
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        const next = p + Math.random() * 3.5 + 0.5;
-        return next >= 100 ? 100 : next;
-      });
+    setProgress(0); setStageIndex(0); setFadeOut(false); setVisible(true);
+    setTimeout(() => setMounted(true), 30);
+    if (controlledProgress !== undefined) return;
+    const iv = setInterval(() => {
+      setProgress((p) => { const n = p + Math.random() * 3.5 + 0.5; return n >= 100 ? 100 : n; });
     }, 80);
-    return () => clearInterval(interval);
+    return () => clearInterval(iv);
   }, [show]);
 
-  // Use controlled progress if provided
-  useEffect(() => {
-    if (controlledProgress !== undefined) setProgress(controlledProgress);
-  }, [controlledProgress]);
+  useEffect(() => { if (controlledProgress !== undefined) setProgress(controlledProgress); }, [controlledProgress]);
 
-  // Advance stage based on progress
   useEffect(() => {
-    const idx = Math.min(
-      Math.floor((progress / 100) * STAGES.length),
-      STAGES.length - 1
-    );
-    setStageIndex(idx);
+    setStageIndex(Math.min(Math.floor((progress / 100) * STAGES.length), STAGES.length - 1));
   }, [progress]);
 
-  // Dot animation tick
   useEffect(() => {
-    const t = setInterval(() => setTick((v) => (v + 1) % 4), 500);
+    const t = setInterval(() => setTick((v) => (v + 1) % 4), 480);
     return () => clearInterval(t);
   }, []);
 
-  // Fade-out when !show
   useEffect(() => {
     if (!show) {
-      setFadeOut(true);
+      setMounted(false); setFadeOut(true);
       const t = setTimeout(() => setVisible(false), 600);
       return () => clearTimeout(t);
     }
   }, [show]);
 
-  // Fetch company and branch information
   useEffect(() => {
     if (!show) return;
-    
-    const fetchCompanyAndBranch = async () => {
+    (async () => {
       try {
-        // Fetch company
-        const companyResponse = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_company', {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (companyResponse.ok) {
-          const companyData = await companyResponse.json();
-          if (companyData.message) {
-            setCompanyName(companyData.message);
-          }
-        }
-
-        // Fetch branch
-        const branchResponse = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch', {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (branchResponse.ok) {
-          const branchData = await branchResponse.json();
-          if (branchData.message) {
-            setBranchName(branchData.message);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching company/branch:', error);
-      }
-    };
-
-    fetchCompanyAndBranch();
+        const [cr, br] = await Promise.all([
+          fetch("https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_company", { credentials: "include" }),
+          fetch("https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch",  { credentials: "include" }),
+        ]);
+        if (cr.ok) { const d = await cr.json(); if (d.message) setCompanyName(d.message); }
+        if (br.ok) { const d = await br.json(); if (d.message) setBranchName(d.message);  }
+      } catch (e) { console.error(e); }
+    })();
   }, [show]);
 
   if (!visible) return null;
 
-  const currentStage = STAGES[stageIndex];
-  const dots = ".".repeat(tick);
+  const pct = Math.round(progress);
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Source+Code+Pro:wght@400;500&display=swap');
 
-        .splash-root {
-          font-family: 'DM Sans', sans-serif;
+        .sp-overlay {
           position: fixed;
           inset: 0;
           z-index: 9999;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: transparent;
-          transition: opacity 0.6s ease;
-          opacity: ${fadeOut ? 0 : 1};
-          pointer-events: ${fadeOut ? "none" : "all"};
-          box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.7);
+          background: rgba(5, 12, 22, 0.80);
+          backdrop-filter: blur(24px) saturate(110%);
+          -webkit-backdrop-filter: blur(24px) saturate(110%);
+          font-family: 'Lato', sans-serif;
+          opacity: 0;
+          transition: opacity 0.5s ease;
         }
+        .sp-overlay.sp-in  { opacity: 1; }
+        .sp-overlay.sp-out { opacity: 0; }
 
-        /* Fine grid background */
-        .splash-root::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(14,99,198,0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(14,99,198,0.05) 1px, transparent 1px);
-          background-size: 32px 32px;
-        }
-
-        /* Ambient blobs */
-        .blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.35;
-          pointer-events: none;
-        }
-        .blob-1 {
-          width: 420px; height: 420px;
-          background: #bfdbfe;
-          top: -120px; left: -120px;
-          animation: drift 8s ease-in-out infinite alternate;
-        }
-        .blob-2 {
-          width: 320px; height: 320px;
-          background: #93c5fd;
-          bottom: -80px; right: -80px;
-          animation: drift 10s ease-in-out infinite alternate-reverse;
-        }
-
-        @keyframes drift {
-          from { transform: translate(0, 0) scale(1); }
-          to   { transform: translate(30px, 20px) scale(1.05); }
-        }
-
-        /* Card */
-        .splash-card {
-          position: relative;
-          background: rgba(255,255,255,0.85);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(14,99,198,0.12);
-          border-radius: 20px;
-          padding: 52px 56px 44px;
-          width: 440px;
+        .sp-card {
+          width: 100%;
+          max-width: 390px;
+          background: rgba(11, 20, 34, 0.92);
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          border-radius: 5px;
+          overflow: hidden;
           box-shadow:
-            0 0 0 1px rgba(14,99,198,0.06),
-            0 20px 60px rgba(14,99,198,0.10),
-            0 4px 16px rgba(0,0,0,0.04);
-          animation: cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+            0 0 0 1px rgba(255,255,255,0.025) inset,
+            0 40px 80px rgba(0, 0, 0, 0.65),
+            0 4px 16px rgba(0, 0, 0, 0.5);
+          transform: translateY(10px);
+          transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .sp-overlay.sp-in .sp-card { transform: translateY(0); }
+
+        /* ── Top rule bar ─────────────────────────────── */
+        .sp-topbar {
+          height: 2px;
+          background: #1e6fa8;
         }
 
-        @keyframes cardIn {
-          from { opacity: 0; transform: translateY(24px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0)   scale(1); }
+        /* ── Header ───────────────────────────────────── */
+        .sp-head {
+          padding: 26px 30px 20px;
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
-        /* Header bar */
-        .header-bar {
+        .sp-logo {
+          width: 42px;
+          height: 42px;
+          border-radius: 3px;
+          background: #0f2235;
+          border: 1px solid rgba(255,255,255,0.08);
           display: flex;
           align-items: center;
-          gap: 14px;
-          margin-bottom: 36px;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .sp-logo svg { width: 22px; height: 22px; }
+
+        .sp-head-text { flex: 1; min-width: 0; }
+
+        .sp-company {
+          font-size: 14.5px;
+          font-weight: 700;
+          color: #dde4ec;
+          letter-spacing: 0.005em;
+          line-height: 1.3;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .logo-mark {
-          width: 48px; height: 48px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 4px 14px rgba(29,78,216,0.35);
+        .sp-branch {
+          font-size: 11px;
+          font-weight: 400;
+          color: #5c7a94;
+          letter-spacing: 0.04em;
+          margin-top: 3px;
+          text-transform: uppercase;
+        }
+
+        .sp-tags {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 5px;
           flex-shrink: 0;
+        }
+
+        .sp-tag {
+          font-family: 'Source Code Pro', monospace;
+          font-size: 9px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          padding: 2px 7px;
+          border-radius: 2px;
+          border: 1px solid rgba(255,255,255,0.07);
+          color: #4a6478;
+          background: rgba(255,255,255,0.02);
+        }
+
+        .sp-tag.live {
+          color: #3a8f6e;
+          border-color: rgba(58,143,110,0.3);
+          background: rgba(58,143,110,0.08);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .sp-tag-dot {
+          width: 4px; height: 4px;
+          border-radius: 50%;
+          background: #3a8f6e;
+          animation: sp-blink 2s ease-in-out infinite;
+        }
+        @keyframes sp-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── Body ─────────────────────────────────────── */
+        .sp-body { padding: 22px 30px 20px; }
+
+        /* Stage rows */
+        .sp-stages { margin-bottom: 22px; }
+
+        .sp-stage {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          padding: 9px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .sp-stage:last-child { border-bottom: none; }
+
+        /* State indicator */
+        .sp-indicator {
+          width: 16px;
+          height: 16px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .sp-dot-pending {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          border: 1.5px solid rgba(255,255,255,0.12);
+        }
+
+        .sp-dot-active {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          border: 1.5px solid transparent;
+          border-top-color: #1e6fa8;
+          border-right-color: rgba(30,111,168,0.35);
+          animation: sp-spin 0.85s linear infinite;
+        }
+        @keyframes sp-spin { to { transform: rotate(360deg); } }
+
+        .sp-dot-done {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: #3a8f6e;
+        }
+
+        /* Stage label */
+        .sp-stage-name {
+          flex: 1;
+          font-size: 12px;
+          font-weight: 400;
+          letter-spacing: 0.01em;
+          line-height: 1;
+        }
+        .sp-stage.pending .sp-stage-name { color: #3a4f62; }
+        .sp-stage.active  .sp-stage-name { color: #c4cdd8; }
+        .sp-stage.done    .sp-stage-name { color: #4a6478; }
+
+        /* Animated dots */
+        .sp-ellipsis {
+          font-family: 'Source Code Pro', monospace;
+          font-size: 11px;
+          color: #1e6fa8;
+          width: 18px;
+          flex-shrink: 0;
+        }
+
+        /* Code tag */
+        .sp-code {
+          font-family: 'Source Code Pro', monospace;
+          font-size: 9px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          padding: 2px 6px;
+          border-radius: 2px;
+        }
+        .sp-stage.pending .sp-code {
+          color: #2d4255;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.04);
+        }
+        .sp-stage.active .sp-code {
+          color: #1e6fa8;
+          background: rgba(30,111,168,0.12);
+          border: 1px solid rgba(30,111,168,0.25);
+        }
+        .sp-stage.done .sp-code {
+          color: #3a8f6e;
+          background: rgba(58,143,110,0.1);
+          border: 1px solid rgba(58,143,110,0.2);
+        }
+
+        /* ── Progress ─────────────────────────────────── */
+        .sp-progress { margin-bottom: 0; }
+
+        .sp-prog-meta {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          margin-bottom: 7px;
+        }
+
+        .sp-prog-label {
+          font-size: 9.5px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #334758;
+        }
+
+        .sp-prog-pct {
+          font-family: 'Source Code Pro', monospace;
+          font-size: 11px;
+          font-weight: 500;
+          color: #1e6fa8;
+          letter-spacing: 0.05em;
+        }
+
+        .sp-prog-track {
+          height: 2px;
+          background: rgba(255,255,255,0.05);
+          border-radius: 1px;
           position: relative;
           overflow: hidden;
         }
-        .logo-mark::after {
+
+        .sp-prog-fill {
+          position: absolute;
+          left: 0; top: 0; height: 100%;
+          background: #1e6fa8;
+          border-radius: 1px;
+          transition: width 0.12s linear;
+        }
+
+        /* Subtle shimmer on fill */
+        .sp-prog-fill::after {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent);
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+          animation: sp-shimmer 1.8s ease-in-out infinite;
         }
-        .logo-mark svg {
-          width: 26px; height: 26px;
-          fill: white;
-          position: relative;
-          z-index: 1;
+        @keyframes sp-shimmer {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
         }
 
-        .brand-text {}
-        .brand-name {
-          font-family: 'DM Serif Display', serif;
-          font-size: 18px;
-          color: #0f172a;
-          line-height: 1.2;
-          letter-spacing: -0.3px;
+        .sp-prog-scale {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 5px;
         }
-        .brand-sub {
-          font-size: 11px;
-          font-weight: 500;
-          letter-spacing: 1.2px;
+        .sp-prog-mark {
+          font-family: 'Source Code Pro', monospace;
+          font-size: 8px;
+          color: #243444;
+          letter-spacing: 0;
+        }
+
+        /* ── Footer ───────────────────────────────────── */
+        .sp-foot {
+          padding: 12px 30px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .sp-foot-left {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .sp-foot-left svg {
+          width: 10px; height: 10px;
+          color: #334758;
+        }
+
+        .sp-foot-txt {
+          font-size: 9.5px;
+          letter-spacing: 0.05em;
           text-transform: uppercase;
-          color: #1d4ed8;
-          margin-top: 1px;
+          color: #334758;
         }
 
-        /* Divider */
-        .divider {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(14,99,198,0.18), transparent);
-          margin-bottom: 32px;
-        }
-
-        /* Stage area */
-        .stage-area {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 28px;
-          min-height: 44px;
-        }
-        .stage-icon {
-          font-size: 22px;
-          flex-shrink: 0;
-          animation: iconPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
-        }
-        @keyframes iconPop {
-          from { transform: scale(0.5); opacity: 0; }
-          to   { transform: scale(1);   opacity: 1; }
-        }
-        .stage-text {
-          font-size: 14px;
-          font-weight: 500;
-          color: #334155;
-          animation: textIn 0.3s ease both;
-        }
-        @keyframes textIn {
-          from { opacity: 0; transform: translateX(-6px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        .stage-dots {
-          font-size: 14px;
-          color: #1d4ed8;
-          font-weight: 600;
-          width: 20px;
-          display: inline-block;
-        }
-
-        /* Progress track */
-        .progress-track {
-          height: 6px;
-          background: #e2e8f0;
-          border-radius: 99px;
-          overflow: hidden;
-          margin-bottom: 10px;
-          position: relative;
-        }
-        .progress-fill {
-          height: 100%;
-          border-radius: 99px;
-          background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
-          transition: width 0.2s ease;
-          position: relative;
-        }
-        .progress-fill::after {
-          content: '';
-          position: absolute;
-          right: 0; top: 0; bottom: 0;
-          width: 40px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
-          border-radius: 99px;
-          animation: shimmer 1.2s ease-in-out infinite;
-        }
-        @keyframes shimmer {
-          0%,100% { opacity: 0; }
-          50% { opacity: 1; }
-        }
-
-        .progress-label {
-          display: flex;
-          justify-content: space-between;
-          font-size: 11px;
-          color: #94a3b8;
-          font-weight: 500;
-        }
-
-        /* Footer */
-        .splash-footer {
-          margin-top: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding-top: 20px;
-          border-top: 1px solid #f1f5f9;
-        }
-        .security-badge {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 10.5px;
-          font-weight: 500;
-          letter-spacing: 0.4px;
-          color: #64748b;
-        }
-        .security-badge svg {
-          width: 12px; height: 12px;
-          fill: #22c55e;
-          flex-shrink: 0;
-        }
-        .version-tag {
-          font-size: 10px;
-          color: #cbd5e1;
-          font-weight: 400;
-        }
-
-        /* Pulse ring on logo */
-        .pulse-ring {
-          position: absolute;
-          inset: -6px;
-          border-radius: 18px;
-          border: 2px solid rgba(29,78,216,0.3);
-          animation: ringPulse 2s ease-in-out infinite;
-        }
-        @keyframes ringPulse {
-          0%,100% { opacity: 0.4; transform: scale(1); }
-          50%      { opacity: 0;   transform: scale(1.25); }
+        .sp-foot-right {
+          font-family: 'Source Code Pro', monospace;
+          font-size: 9px;
+          color: #243444;
+          letter-spacing: 0.04em;
         }
       `}</style>
 
-      <div className="splash-root">
-        <div className="blob blob-1" />
-        <div className="blob blob-2" />
+      <div className={`sp-overlay${mounted ? " sp-in" : ""}${fadeOut ? " sp-out" : ""}`}>
+        <div className="sp-card">
 
-        <div className="splash-card">
+          {/* Top rule */}
+          <div className="sp-topbar" />
+
           {/* Header */}
-          <div className="header-bar">
-            <div className="logo-mark" style={{ position: "relative" }}>
-              <div className="pulse-ring" />
-              {/* Cross / medical icon */}
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 8h-4V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4h4a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z" />
+          <div className="sp-head">
+            <div className="sp-logo">
+              {/* Medical cross */}
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="9.5" y="2" width="5" height="20" rx="1" fill="#1e6fa8"/>
+                <rect x="2"   y="9.5" width="20" height="5" rx="1" fill="#1e6fa8"/>
               </svg>
             </div>
-            <div className="brand-text">
-              <div className="brand-name">{companyName || "Healthcare Billing"}</div>
-              <div className="brand-sub">{branchName ? `${branchName} Branch` : "Healthcare Billing Suite"}</div>
+
+            <div className="sp-head-text">
+              <div className="sp-company">{companyName || "Healthcare ERP System"}</div>
+              <div className="sp-branch">{branchName ? `${branchName} Branch` : "Integrated Hospital Information System"}</div>
+            </div>
+
+            <div className="sp-tags">
+              <div className="sp-tag live">
+                <div className="sp-tag-dot" />
+                Online
+              </div>
+              {/* <div className="sp-tag">v4.2.1</div> */}
             </div>
           </div>
 
-          <div className="divider" />
+          {/* Body */}
+          <div className="sp-body">
 
-          {/* Stage */}
-          <div className="stage-area" key={stageIndex}>
-            <span className="stage-icon">{currentStage.icon}</span>
-            <span className="stage-text">
-              {message ?? currentStage.label}
-              <span className="stage-dots">{dots}</span>
-            </span>
-          </div>
+            {/* Stage list */}
+            <div className="sp-stages">
+              {STAGES.map((s, i) => {
+                const state = i < stageIndex ? "done" : i === stageIndex ? "active" : "pending";
+                return (
+                  <div key={i} className={`sp-stage ${state}`}>
+                    <div className="sp-indicator">
+                      {state === "pending" && <div className="sp-dot-pending" />}
+                      {state === "active"  && <div className="sp-dot-active"  />}
+                      {state === "done"    && <div className="sp-dot-done"    />}
+                    </div>
+                    <span className="sp-stage-name">
+                      {state === "active" && message ? message : s.label}
+                    </span>
+                    {state === "active" && (
+                      <span className="sp-ellipsis">{".".repeat(tick)}</span>
+                    )}
+                    <span className="sp-code">{s.short}</span>
+                  </div>
+                );
+              })}
+            </div>
 
-          {/* Progress */}
-          <div className="progress-track">
-            <div
-              className="progress-fill"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="progress-label">
-            <span>Initializing system</span>
-            <span>{Math.round(progress)}%</span>
+            {/* Progress */}
+            <div className="sp-progress">
+              <div className="sp-prog-meta">
+                <span className="sp-prog-label">System Initialization</span>
+                <span className="sp-prog-pct">{pct}%</span>
+              </div>
+              <div className="sp-prog-track">
+                <div className="sp-prog-fill" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="sp-prog-scale">
+                {["0", "25", "50", "75", "100"].map((m) => (
+                  <span key={m} className="sp-prog-mark">{m}</span>
+                ))}
+              </div>
+            </div>
+
           </div>
 
           {/* Footer */}
-          
+          <div className="sp-foot">
+            <div className="sp-foot-left">
+              {/* Lock icon */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span className="sp-foot-txt">TLS 1.3 Encrypted</span>
+            </div>
+            {/* <span className="sp-foot-right">QuantBit HIMS · BUILD 2024.12</span> */}
+          </div>
+
         </div>
       </div>
     </>

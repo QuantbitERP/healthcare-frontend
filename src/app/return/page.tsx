@@ -1513,6 +1513,7 @@ export default function Return() {
   const [isDirectReturn, setIsDirectReturn] = useState(false);
   const [returnAgainstInvoice, setReturnAgainstInvoice] = useState<string>('');
   const [selectedInvoicesForReturn, setSelectedInvoicesForReturn] = useState<string[]>([]); // Store actual invoice names
+  const [selectedInvoicesData, setSelectedInvoicesData] = useState<any[]>([]); // Store full invoice data for IPD effects
   const [roundedGrandTotal, setRoundedGrandTotal] = useState<number>(0);
   // Payments captured from RecordPaymentModal
   const [recordedPayments, setRecordedPayments] = useState<Array<{
@@ -1532,6 +1533,9 @@ export default function Return() {
 
   // Permission state for rate changes
   const [canChangeRate, setCanChangeRate] = useState(false);
+
+  // Loading state for save/submit operations
+  const [isSaving, setIsSaving] = useState(false);
 
   // Auto-select default self-paid customer once data is available
   useEffect(() => {
@@ -2728,15 +2732,26 @@ export default function Return() {
   // Save as Draft functionality
   // Inside NewBill component
   const handleSaveAsDraft = async (skipHighAlertCheck: boolean = false) => {
+    // Prevent multiple submissions
+    if (isSaving) {
+      console.log('Save operation already in progress');
+      return;
+    }
+
     if (!patientData) {
       showAlert("danger", "Error", "Please select a patient before saving.");
+      setIsSaving(false);
       return;
     }
 
     if (items.length === 0) {
       showAlert("danger", "Error", "Please add at least one item to the invoice.");
+      setIsSaving(false);
       return;
     }
+
+    // Set loading state to true and freeze screen
+    setIsSaving(true);
 
     // Check for high-alert items and show confirmation if any exist (unless skipped)
     if (!skipHighAlertCheck) {
@@ -2749,6 +2764,7 @@ export default function Return() {
         setHighAlertItems(highAlertItems);
         setPendingSaveAction('draft');
         setShowHighAlertSaveDialog(true);
+        setIsSaving(false); // Reset loading state since we're waiting for user confirmation
         return; // Wait for user confirmation
       }
     }
@@ -2759,12 +2775,14 @@ export default function Return() {
     if (itemsWithZeroOrNegativeStock.length > 0) {
       const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
       showAlert("danger", "Error", `Cannot save invoice. The following items have zero or negative stock: ${itemNames}`);
+      setIsSaving(false);
       return;
     }
 
     if (!posProfile) {
       showAlert("danger", "Error", "Please select a POS profile.");
       setShowPosProfileSelector(true);
+      setIsSaving(false);
       return;
     }
 
@@ -2776,6 +2794,7 @@ export default function Return() {
 
       if (isFullyCompleted) {
         showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
+        setIsSaving(false);
         return;
       }
     }
@@ -3192,6 +3211,9 @@ export default function Return() {
     } catch (error) {
       console.error("Error saving draft:", error);
       showAlert("danger", "Error", "Error saving draft. Please try again.");
+    } finally {
+      // Reset loading state and unfreeze screen
+      setIsSaving(false);
     }
   };
 
@@ -4536,7 +4558,7 @@ export default function Return() {
       setSelectedSaleType(fullInvoice.custom_sale_type || '');
       setIsReturn(fullInvoice.is_return === 1);
       setIsOpdEffect(fullInvoice.included_in_print_rate === 1); // Set isOpdEffect from invoice
-
+      setIsOpdEffect(fullInvoice.custom_ipd_effect === 1);
       // Extract tax rates from invoice taxes array
       const taxRatesFromInvoice: { [key: string]: { cgst: number, sgst: number, igst: number } } = {};
       if (fullInvoice.taxes && Array.isArray(fullInvoice.taxes)) {
@@ -4751,6 +4773,15 @@ export default function Return() {
   };
 
   const handleFinalizeAndPrint = async (skipHighAlertCheck: boolean = false) => {
+    // Prevent multiple submissions
+    if (isSaving) {
+      console.log('Submit operation already in progress');
+      return;
+    }
+
+    // Set loading state to true and freeze screen
+    setIsSaving(true);
+
     // If a draft invoice is loaded, submit it
     if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
       try {
@@ -4799,12 +4830,16 @@ export default function Return() {
             // Fallback to browser print
             const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
+            // Close splash screen after redirecting to print
+            setIsSaving(false);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
           const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
+          // Close splash screen after redirecting to print
+          setIsSaving(false);
         }
 
       } catch (error) {
@@ -4819,6 +4854,7 @@ export default function Return() {
 
         if (itemsToReturn.length === 0) {
           showAlert("danger", "Error", "Please enter return quantities for at least one item.");
+          setIsSaving(false);
           return;
         }
 
@@ -4885,6 +4921,9 @@ export default function Return() {
                 custom_doctor_name: patientData?.doctor || '',
                 custom_age: patientData?.age || '',
                 return_remarks: remarks || 'Direct return without original invoice',
+                // IPD effect flags - use manual checkbox state for direct return
+                custom_ipd_effect: _isOpdEffect ? 1 : 0,
+                custom_is_ipd_invoice: _isOpdEffect ? 1 : 0,
                 taxes: []
               };
 
@@ -4917,11 +4956,12 @@ export default function Return() {
                   if (returnInvoiceName) {
                     const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
                     window.open(printUrl, '_blank');
+                    // Close splash screen after redirecting to print
+                    setIsSaving(false);
                   }
 
                   showAlert('success', 'Success', `Direct return invoice created successfully: ${returnInvoiceName}`);
                   handleReset();
-                  setIsReturn(false);
                   setIsReturnInvoice(false);
                   setIsDirectReturn(false);
                   setReturnAgainstInvoice('');
@@ -4929,10 +4969,12 @@ export default function Return() {
                 } else {
                   console.error('Direct Return API Error Response:', result);
                   showAlert("danger", "Error", "Failed to create direct return invoice. Please try again.");
+                  setIsSaving(false);
                 }
               } catch (error: any) {
                 console.error('Direct Return API Error:', error);
                 showAlert("danger", "Error", "Failed to create direct return invoice. Please try again.");
+                setIsSaving(false);
               }
               return;
             } else {
@@ -5013,6 +5055,9 @@ export default function Return() {
               custom_doctor_name: patientData?.doctor || '',
               custom_age: patientData?.age || '',
               return_remarks: remarks || `Return invoice against ${originalInvoice}`,
+              // IPD effect flags from selected invoices
+              custom_ipd_effect: selectedInvoicesData.some(inv => inv.custom_ipd_effect === 1) ? 1 : 0,
+              custom_is_ipd_invoice: selectedInvoicesData.some(inv => inv.custom_is_ipd_invoice === 1) ? 1 : 0,
               taxes: []
             };
 
@@ -5047,6 +5092,8 @@ export default function Return() {
                 if (returnInvoiceName) {
                   const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
                   window.open(printUrl, '_blank');
+                  // Close splash screen after redirecting to print
+                  setIsSaving(false);
                 }
               } else {
                 console.error(`API Error Response for ${originalInvoice}:`, result);
@@ -5073,19 +5120,23 @@ export default function Return() {
             // Reset form only if all returns were successful
             if (failedInvoices.length === 0) {
               handleReset();
-              setIsReturn(false);
               setIsReturnInvoice(false);
               setIsDirectReturn(false);
               setReturnAgainstInvoice('');
               setSelectedInvoicesForReturn([]);
+            } else {
+              // Reset loading state even if some returns failed
+              setIsSaving(false);
             }
           } else {
             showAlert('danger', 'Error', 'Failed to create any return invoices.');
+            setIsSaving(false);
           }
 
         } catch (error: any) {
           console.error('Return processing error:', error);
           showAlert('danger', 'Error', error.message || 'Failed to process return invoices.');
+          setIsSaving(false);
         }
 
         return;
@@ -5094,11 +5145,13 @@ export default function Return() {
       // Create new invoice and submit it directly
       if (!patientData) {
         showAlert("danger", "Error", "Please select a patient before finalizing.");
+        setIsSaving(false);
         return;
       }
 
       if (items.length === 0) {
         showAlert("danger", "Error", "Please add at least one item to the invoice.");
+        setIsSaving(false);
         return;
       }
 
@@ -5113,6 +5166,7 @@ export default function Return() {
           setHighAlertItems(highAlertItems);
           setPendingSaveAction('finalize');
           setShowHighAlertSaveDialog(true);
+          setIsSaving(false); // Reset loading state since we're waiting for user confirmation
           return; // Wait for user confirmation
         }
       }
@@ -5123,12 +5177,14 @@ export default function Return() {
       if (itemsWithZeroOrNegativeStock.length > 0) {
         const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
         showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
+        setIsSaving(false);
         return;
       }
 
       if (!posProfile) {
         showAlert("danger", "Error", "Please select a POS profile.");
         setShowPosProfileSelector(true);
+        setIsSaving(false);
         return;
       }
 
@@ -5140,6 +5196,7 @@ export default function Return() {
 
         if (isFullyCompleted) {
           showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
+          setIsSaving(false);
           return;
         }
       }
@@ -5526,11 +5583,16 @@ export default function Return() {
           console.warn('Network printer not available, using browser print');
           const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
+          // Close splash screen after redirecting to print
+          setIsSaving(false);
         }
 
       } catch (error) {
         console.error("Error creating invoice:", error);
         showAlert("danger", "Error", "Error creating invoice. Please try again.");
+      } finally {
+        // Reset loading state and unfreeze screen for entire function
+        setIsSaving(false);
       }
     }
   };
@@ -5585,6 +5647,12 @@ export default function Return() {
       <SplashScreen 
         show={initialLoading} 
         message="Initializing Return Management System..." 
+      />
+      
+      {/* Saving/Submitting Splash Screen */}
+      <SplashScreen 
+        show={isSaving} 
+        message={isReturn ? "Submitting Return... Please wait" : loadedInvoiceName && loadedInvoiceDocstatus === 0 ? "Submitting Invoice... Please wait" : "Saving Invoice... Please wait"} 
       />
       
       <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
@@ -6056,19 +6124,19 @@ export default function Return() {
 
                   {/* OPD Effect Checkbox */}
                   <div className="flex items-center gap-2 pl-2">
-                    {/* <Checkbox
+                    <Checkbox
                       id="Opd-effect"
-                      checked={isOpdEffect}
+                      checked={_isOpdEffect}
                       disabled={transactionType === 'cash'}
                       onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
                       className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
-                    /> */}
-                    {/* <Label
+                    />
+                    <Label
                       htmlFor="Opd-effect"
                       className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
                     >
-                      OPD Effect
-                    </Label> */}
+                      IPD Effect
+                    </Label>
                   </div>
 
                 </div>
@@ -6153,7 +6221,7 @@ export default function Return() {
           {isReturn ? (
             // Show Cancel Return and Return Bill buttons when in return mode
             <>
-              <Button type="danger-button" size="button-medium" onClick={() => {
+              <Button type="danger-button" size="button-medium" disabled={isSaving} onClick={() => {
                 setIsReturnInvoice(false);
                 setIsDirectReturn(false);
                 setReturnAgainstInvoice('');
@@ -6164,21 +6232,23 @@ export default function Return() {
               <Button
                 type="primary-outlined-button"
                 size="button-medium"
+                disabled={isSaving}
                 onClick={() => setShowSelectInvoiceModal(true)}
               >
                 Return Bill
               </Button>
-              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving || !!loadedInvoiceName} onClick={handleFinalizeAndPrint}>
                 Submit Return
               </Button>
             </>
           ) : loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
             // Show Print and Reset buttons for submitted invoices
             <>
-              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
+              <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
               <Button
                 type="primary-button"
                 size="button-medium"
+                disabled={isSaving}
                 onClick={async () => {
                   if (networkPrinter) {
                     try {
@@ -6189,11 +6259,15 @@ export default function Return() {
                       showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                       // Fallback to browser print
                       window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                      // Close splash screen after redirecting to print
+                      setIsSaving(false);
                     }
                   } else {
                     // Fallback to browser print if network printer not available
                     console.warn('Network printer not available, using browser print');
                     window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                    // Close splash screen after redirecting to print
+                    setIsSaving(false);
                   }
                 }}
               >
@@ -6203,22 +6277,23 @@ export default function Return() {
           ) : (
             // Show all buttons for new invoices or drafts
             <>
-              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-              <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
+              <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
+              <Button type="primary-outlined-button" size="button-medium" disabled={isSaving} onClick={handleSaveAsDraft}>
                 Save as Draft
               </Button>
               <Button
                 type="primary-outlined-button"
                 size="button-medium"
+                // disabled={isSaving}
                 onClick={() => setShowSelectInvoiceModal(true)}
                 disabled={isReturn}
               >
                 Return Bill
               </Button>
-              <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
                 Closing Entry
               </Button>
-              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving || (!!loadedInvoiceName && isReturn)} onClick={handleFinalizeAndPrint}>
                 {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
               </Button>
             </>
@@ -6329,6 +6404,7 @@ export default function Return() {
 
               setReturnAgainstInvoice(invoices.length === 1 ? firstInvoice.name : `${invoices.length} Invoices`);
               setSelectedInvoicesForReturn(selectedInvoiceNames); // Store actual invoice names
+              setSelectedInvoicesData(invoices); // Store full invoice data for IPD effects
 
               // Load customer and patient data
               setSelectedCustomer(firstInvoice.customer || '');
@@ -6354,6 +6430,10 @@ export default function Return() {
               // Load company, warehouse, and other settings
               setSelectedCompany(firstInvoice.company || '');
               setSelectedWarehouse(firstInvoice.set_warehouse || '');
+
+              // Set IPD effect based on selected invoices
+              const hasAnyIPDEffect = invoices.some(inv => inv.custom_ipd_effect === 1);
+              setIsOpdEffect(hasAnyIPDEffect);
 
               // Process all invoices and merge their items
               const allLoadedItems: Item[] = [];

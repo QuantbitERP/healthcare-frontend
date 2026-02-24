@@ -1936,6 +1936,9 @@ export default function IPDBill() {
   // Permission state for rate changes
   const [canChangeRate, setCanChangeRate] = useState(false);
 
+  // Loading state for save/submit operations
+  const [isSaving, setIsSaving] = useState(false);
+
   // Auto-select default self-paid customer once data is available
   useEffect(() => {
     if (selectedCustomer) return;
@@ -3171,15 +3174,26 @@ export default function IPDBill() {
   // Save as Draft functionality
   // Inside NewBill component
   const handleSaveAsDraft = async (skipHighAlertCheck: boolean = false) => {
+    // Prevent multiple submissions
+    if (isSaving) {
+      console.log('Save operation already in progress');
+      return;
+    }
+
     if (!patientData) {
       showAlert("danger", "Error", "Please select a patient before saving.");
+      setIsSaving(false);
       return;
     }
 
     if (items.length === 0) {
       showAlert("danger", "Error", "Please add at least one item to the invoice.");
+      setIsSaving(false);
       return;
     }
+
+    // Set loading state to true and freeze screen
+    setIsSaving(true);
 
     // Check for high-alert items and show confirmation if any exist (unless skipped)
     if (!skipHighAlertCheck) {
@@ -3192,6 +3206,7 @@ export default function IPDBill() {
         setHighAlertItems(highAlertItems);
         setPendingSaveAction('draft');
         setShowHighAlertSaveDialog(true);
+        setIsSaving(false); // Reset loading state since we're waiting for user confirmation
         return; // Wait for user confirmation
       }
     }
@@ -3202,12 +3217,14 @@ export default function IPDBill() {
     if (itemsWithZeroOrNegativeStock.length > 0) {
       const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
       showAlert("danger", "Error", `Cannot save invoice. The following items have zero or negative stock: ${itemNames}`);
+      setIsSaving(false);
       return;
     }
 
     if (!posProfile) {
       showAlert("danger", "Error", "Please select a POS profile.");
       setShowPosProfileSelector(true);
+      setIsSaving(false);
       return;
     }
 
@@ -3219,6 +3236,7 @@ export default function IPDBill() {
 
       if (isFullyCompleted) {
         showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
+        setIsSaving(false);
         return;
       }
     }
@@ -3653,6 +3671,9 @@ export default function IPDBill() {
     } catch (error) {
       console.error("Error saving draft:", error);
       showAlert("danger", "Error", "Error saving draft. Please try again.");
+    } finally {
+      // Reset loading state and unfreeze screen
+      setIsSaving(false);
     }
   };
 
@@ -5184,6 +5205,15 @@ export default function IPDBill() {
   };
 
   const handleFinalizeAndPrint = async (skipHighAlertCheck: boolean = false) => {
+    // Prevent multiple submissions
+    if (isSaving) {
+      console.log('Submit operation already in progress');
+      return;
+    }
+
+    // Set loading state to true and freeze screen
+    setIsSaving(true);
+
     // If a draft invoice is loaded, submit it
     if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
       try {
@@ -5246,6 +5276,9 @@ export default function IPDBill() {
       } catch (error) {
         console.error("Error submitting draft invoice:", error);
         showAlert("danger", "Error", "Failed to submit invoice. Please try again.");
+      } finally {
+        // Reset loading state and unfreeze screen
+        setIsSaving(false);
       }
     } else {
       // Handle return invoice submission
@@ -5255,6 +5288,7 @@ export default function IPDBill() {
 
         if (itemsToReturn.length === 0) {
           showAlert("danger", "Error", "Please enter return quantities for at least one item.");
+          setIsSaving(false);
           return;
         }
 
@@ -5381,6 +5415,7 @@ export default function IPDBill() {
           setHighAlertItems(highAlertItems);
           setPendingSaveAction('finalize');
           setShowHighAlertSaveDialog(true);
+          setIsSaving(false); // Reset loading state since we're waiting for user confirmation
           return; // Wait for user confirmation
         }
       }
@@ -5391,12 +5426,14 @@ export default function IPDBill() {
       if (itemsWithZeroOrNegativeStock.length > 0) {
         const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
         showAlert("danger", "Error", `Cannot submit invoice. The following items have zero or negative stock: ${itemNames}`);
+        setIsSaving(false);
         return;
       }
 
       if (!posProfile) {
         showAlert("danger", "Error", "Please select a POS profile.");
         setShowPosProfileSelector(true);
+        setIsSaving(false);
         return;
       }
 
@@ -5408,6 +5445,7 @@ export default function IPDBill() {
 
         if (isFullyCompleted) {
           showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
+          setIsSaving(false);
           return;
         }
       }
@@ -5811,6 +5849,9 @@ export default function IPDBill() {
       } catch (error) {
         console.error("Error creating invoice:", error);
         showAlert("danger", "Error", "Error creating invoice. Please try again.");
+      } finally {
+        // Reset loading state and unfreeze screen for the entire function
+        setIsSaving(false);
       }
     }
   };
@@ -5861,6 +5902,12 @@ export default function IPDBill() {
       <SplashScreen 
         show={initialLoading} 
         message="Initializing IPD Billing System..." 
+      />
+      
+      {/* Saving/Submitting Splash Screen */}
+      <SplashScreen 
+        show={isSaving} 
+        message={isReturn ? "Submitting Return... Please wait" : loadedInvoiceName && loadedInvoiceDocstatus === 0 ? "Submitting Invoice... Please wait" : "Saving Invoice... Please wait"} 
       />
       
       <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
@@ -6423,7 +6470,7 @@ export default function IPDBill() {
           {isReturn ? (
             // Show Cancel Return button when in return mode
             <>
-              <Button type="danger-button" size="button-medium" onClick={() => {
+              <Button type="danger-button" size="button-medium" disabled={isSaving} onClick={() => {
                 setIsReturn(false);
                 setIsReturnInvoice(false);
                 setIsDirectReturn(false);
@@ -6432,7 +6479,7 @@ export default function IPDBill() {
               }}>
                 Cancel Return
               </Button>
-              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
                 Submit Return
               </Button>
             </>
@@ -6467,8 +6514,8 @@ export default function IPDBill() {
           ) : (
             // Show all buttons for new invoices or drafts
             <>
-              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-              <Button type="primary-outlined-button" size="button-medium" onClick={handleSaveAsDraft}>
+              <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
+              <Button type="primary-outlined-button" size="button-medium" disabled={isSaving} onClick={handleSaveAsDraft}>
               {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Update' : 'Save as Draft'}
               </Button>
               {/* <Button
@@ -6479,10 +6526,10 @@ export default function IPDBill() {
               >
                 Return Bill
               </Button> */}
-              <Button type="primary-button" size="button-medium" onClick={() => setShowClosingEntryModal(true)}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
                 Closing Entry
               </Button>
-              <Button type="primary-button" size="button-medium" onClick={handleFinalizeAndPrint}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
                 {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
               </Button>
             </>

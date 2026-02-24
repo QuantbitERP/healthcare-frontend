@@ -388,7 +388,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   const fetchInvoices = async (search = searchTerm, dRange = dateRange) => {
     setLoading(true);
     try {
-      let apiFilters: any[] = [['docstatus', '=', 1]];
+      let apiFilters: any[] = [['docstatus', '=', 1], ['is_return', '=', 0]];
 
       // Add IPD filter only if this is for IPD page
       if (isIPDPage) {
@@ -432,6 +432,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       const queryParams = new URLSearchParams({
         fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice']),
         filters: JSON.stringify(apiFilters),
+        order_by: 'posting_date desc, posting_time desc',
         limit_page_length: '100'
       });
 
