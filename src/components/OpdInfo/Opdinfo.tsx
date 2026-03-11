@@ -64,7 +64,7 @@ type SelectedPatient = {
     visitID?: string;
 };
 
-const PATIENT_API_BASE_URL = "http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+const PATIENT_API_BASE_URL = "https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
 
 const OpdCard: React.FC<PatientCardProps> = ({
     name = '',
