@@ -64,7 +64,7 @@ type SelectedPatient = {
     visitID?: string;
 };
 
-const PATIENT_API_BASE_URL = "http://192.168.7.196:8085/masterdata/search-patient";
+const PATIENT_API_BASE_URL = "http://103.219.1.138:4430/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
 
 const OpdCard: React.FC<PatientCardProps> = ({
     name = '',
@@ -199,17 +199,22 @@ const OpdCard: React.FC<PatientCardProps> = ({
             setIsLoading(true);
 
             try {
-                const apiParam = searchType === "uhid" ? "UHID" : searchType === "aadharCardNo" ? "aadharCardNo" : searchType === "mobile" ? "MobileNo" : searchType === "fullName" ? "FullName" : "aadharCardNo";
+                const apiParam = searchType === "uhid" ? "UHID" : searchType === "aadharCardNo" ? "Aadhar No" : searchType === "mobile" ? "Mobile No" : searchType === "fullName" ? "Full Name" : "Aadhar No";
                 console.log("API call with param:", apiParam, "and value:", value);
-                const queryParams = new URLSearchParams({
-                    [apiParam]: value,
-                    PageIndex: "1",
-                    PageSize: "10",
-                    IsExpired: "false",
+                
+                const response = await axios.get(PATIENT_API_BASE_URL, {
+                    params: {
+                        search_type: apiParam,
+                        search_value: value,
+                        PageIndex: "1",
+                        PageSize: "10",
+                        IsExpired: "false",
+                    },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
                 });
-
-                const response = await axios.get(`${PATIENT_API_BASE_URL}?${queryParams}`);
-                const patients = response.data.searchPatientDTO || [];
+                const patients = response.data.message || [];
                 console.log("Search results:", patients);
                 setSearchResults(patients);
                 setShowDropdown(patients.length > 0);
