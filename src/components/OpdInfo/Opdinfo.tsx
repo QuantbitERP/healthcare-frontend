@@ -192,9 +192,39 @@ const OpdCard: React.FC<PatientCardProps> = ({
             if (value.length < 2) {
                 setSearchResults([]);
                 setShowDropdown(false);
-                console.log("Search value too short, clearing results");
                 return;
             }
+
+            // Check if authentication is available
+            if (!isInitialized) {
+                console.error("Authentication not initialized yet");
+                showAlert('danger', 'Authentication Error', 'Authentication is still initializing. Please wait a moment and try again.');
+                setSearchResults([]);
+                setShowDropdown(false);
+                return;
+            }
+
+            // For patient search API, we need either API keys or session-based authentication
+            const useSessionAuth = localStorage.getItem('useSessionAuth');
+            if ((!apiKey || !apiSecret) && !useSessionAuth) {
+                console.error("No authentication method available for patient search:", { isInitialized, apiKey: !!apiKey, apiSecret: !!apiSecret, useSessionAuth });
+                showAlert('danger', 'Authentication Error', 'No authentication method available. Please ensure you are properly logged in.');
+                setSearchResults([]);
+                setShowDropdown(false);
+                return;
+            }
+
+            // Build headers based on available authentication method
+            const headers: any = {
+                'Content-Type': 'application/json',
+            };
+
+            // Use token authentication if API keys are available
+            if (apiKey && apiSecret) {
+                headers['Authorization'] = `token ${apiKey}:${apiSecret}`;
+            }
+            // For session-based auth, let the fetch interceptor handle it
+            // No additional headers needed, just use fetch with credentials
 
             setIsLoading(true);
 
@@ -210,24 +240,33 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         PageSize: "10",
                         IsExpired: "false",
                     },
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    headers: headers,
+                    withCredentials: true // Important for session-based authentication
                 });
                 const patients = response.data.message || [];
                 console.log("Search results:", patients);
                 setSearchResults(patients);
                 setShowDropdown(patients.length > 0);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Patient search failed:", error);
-                showAlert('danger', 'Error', 'Search failed. Please try again.');
+                
+                // Handle authentication errors specifically
+                if (error.response?.status === 401 || 
+                    (error.response?.data?.exception && error.response?.data?.exception.includes("AuthenticationError"))) {
+                    showAlert('danger', 'Authentication Error', 'Authentication failed. Please check your login credentials and try again.');
+                } else if (error.response?.data?.exception) {
+                    showAlert('danger', 'API Error', error.response.data.exception);
+                } else {
+                    showAlert('danger', 'Error', 'Search failed. Please try again.');
+                }
+                
                 setSearchResults([]);
                 setShowDropdown(false);
             } finally {
                 setIsLoading(false);
             }
         }, 500),
-        []
+        [apiKey, apiSecret, isInitialized, showAlert]
     );
 
     const handleSearchChange = (value: string) => {
