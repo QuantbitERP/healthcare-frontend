@@ -1541,7 +1541,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           headers: headers,
           withCredentials: true
         });
-        const patients = response.data.searchPatientDTO || [];
+        const patients = response.data.message || [];
         console.log("API response:", response.data);
         setSearchResults(patients);
         setShowDropdown(patients.length > 0);
