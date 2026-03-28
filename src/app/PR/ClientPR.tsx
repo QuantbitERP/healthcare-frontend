@@ -1521,14 +1521,26 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       setIsLoading(true);
 
       try {
-        const queryParams = new URLSearchParams({
-          [searchType === "uhid" ? "UHID" : searchType === "mobile" ? "MobileNo" : searchType === "fullName" ? "FullName" : "aadharCardNo"]: value,
-          PageIndex: "1",
-          PageSize: "10",
-          IsExpired: "false",
-        });
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for axios compatibility
+        const headers: any = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
+            authHeaders;
 
-        const response = await axios.get(`${API_BASE_URL}?${queryParams}`);
+        const response = await axios.get(`${FRAPPE_API_BASE_URL.replace('/api/resource', '')}/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient`, {
+          params: {
+            search_type: searchType === "uhid" ? "UHID" : searchType === "mobile" ? "MobileNo" : searchType === "fullName" ? "FullName" : "aadharCardNo",
+            search_value: value,
+            PageIndex: "1",
+            PageSize: "10",
+            IsExpired: "false",
+          },
+          headers: headers,
+          withCredentials: true
+        });
         const patients = response.data.searchPatientDTO || [];
         console.log("API response:", response.data);
         setSearchResults(patients);
