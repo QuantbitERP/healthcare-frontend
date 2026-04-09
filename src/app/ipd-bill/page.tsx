@@ -2103,9 +2103,9 @@ export default function IPDBill() {
 
       console.log("Total quantity calculated:", totalQty);
 
-      // Get invoiced quantity from POS invoices
+      // Get invoiced quantity from Sale bills
       const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
         {
           method: 'GET',
           headers,
@@ -2129,7 +2129,7 @@ export default function IPDBill() {
 
         try {
           const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            `${API_BASE_URL}/Sale%20Bill/${invoice.name}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
@@ -2177,7 +2177,7 @@ export default function IPDBill() {
 
       // Get all invoices for this requisition
       const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
         {
           method: 'GET',
           headers,
@@ -2200,7 +2200,7 @@ export default function IPDBill() {
       for (const invoice of invoices) {
         try {
           const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            `${API_BASE_URL}/Sale%20Bill/${invoice.name}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
@@ -2254,7 +2254,7 @@ export default function IPDBill() {
 
       // Get all invoices for this prescription
       const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
+        `${API_BASE_URL}/Sale%20Bill?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
         {
           method: 'GET',
           headers,
@@ -2275,7 +2275,7 @@ export default function IPDBill() {
       for (const invoice of invoices) {
         try {
           const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+            `${API_BASE_URL}/Sale%20Bill/${invoice.name}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
@@ -3273,7 +3273,7 @@ export default function IPDBill() {
     console.log('DEBUG: isIpdEffect type:', typeof isIpdEffect);
 
     const payload = {
-      doctype: "POS Invoice",
+      doctype: "Sale Bill",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -3558,7 +3558,7 @@ export default function IPDBill() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+        const response = await fetch(`${API_BASE_URL}/Sale%20Bill/${loadedInvoiceName}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
@@ -3567,7 +3567,7 @@ export default function IPDBill() {
 
         if (response.ok) {
           const result = await response.json();
-          showAlert("success", "Success", `POS Invoice ${loadedInvoiceName} updated successfully!`);
+          showAlert("success", "Success", `Sale Bill ${loadedInvoiceName} updated successfully!`);
           console.log("Draft updated:", result);
           // Keep the invoice loaded but don't reset
         } else {
@@ -3604,7 +3604,7 @@ export default function IPDBill() {
           }
           else if (result.message?.status === "success") {
             // When draft saved successfully
-            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+            showAlert("success", "Success", result.message?.message || "Sale Bill saved as draft successfully!");
             console.log("Draft saved:", result);
 
             // --- START: Link file to invoice if file was uploaded ---
@@ -4910,7 +4910,7 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoice.name}`, {
+      const response = await fetch(`${API_BASE_URL}/Sale%20Bill/${invoice.name}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -5227,7 +5227,7 @@ export default function IPDBill() {
             authHeaders;
 
         // Submit the draft invoice
-        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+        const response = await fetch(`${API_BASE_URL}/Sale%20Bill/${loadedInvoiceName}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
@@ -5457,7 +5457,7 @@ export default function IPDBill() {
       console.log('DEBUG: isIpdEffect type when finalizing:', typeof isIpdEffect);
 
       const payload = {
-        doctype: "POS Invoice",
+        doctype: "Sale Bill",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -5755,7 +5755,7 @@ export default function IPDBill() {
         }
 
         // Now submit the created draft invoice
-        const submitResponse = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoiceName}`, {
+        const submitResponse = await fetch(`${API_BASE_URL}/Sale%20Bill/${invoiceName}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
@@ -5937,7 +5937,7 @@ export default function IPDBill() {
           rightButtons={
             <div className="flex flex-row space-x-2">
               <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
-                View POS Invoices
+                View Sale Bills
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={handleChangePOSProfile}>
                 Change POS Profile
@@ -6493,7 +6493,7 @@ export default function IPDBill() {
                 onClick={async () => {
                   if (networkPrinter) {
                     try {
-                      await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+                      await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
                       showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
                     } catch (error) {
                       console.error("Network printing failed:", error);

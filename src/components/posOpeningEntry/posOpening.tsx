@@ -26,12 +26,12 @@ interface BalanceDetail {
   opening_amount: number;
 }
 
-interface POSOpeningEntry {
+interface OpeningEntry {
+  period_start_date: string;
+  posting_date: string;
   company: string;
   pos_profile: string;
   user: string;
-  period_start_date: string;
-  posting_date: string;
   status: string;
   balance_details: BalanceDetail[];
 }
@@ -40,13 +40,13 @@ const POSOpeningEntry: React.FC = () => {
   const { posProfile, currentUser, isAuthenticated } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
-  const [formData, setFormData] = useState<POSOpeningEntry>({
+  const [formData, setFormData] = useState<OpeningEntry>({
     company: "",
     pos_profile: posProfile || "",
     user: currentUser || "",
     period_start_date: new Date().toISOString().slice(0, 16),
     posting_date: new Date().toISOString().slice(0, 10),
-    status: "Draft",
+    status: "Open",
     balance_details: [{ mode_of_payment: "", opening_amount: 0 }],
   });
   const [companies, setCompanies] = useState<string[]>([]);
@@ -57,6 +57,9 @@ const POSOpeningEntry: React.FC = () => {
 
   // Check for open POS Opening Entry and redirect if necessary
   useEffect(() => {
+    console.log(isAuthenticated);
+    console.log(posProfile);
+    console.log(currentUser);
     if (!isAuthenticated || !posProfile || !currentUser) {
       router.push("/login");
       return;
@@ -135,7 +138,7 @@ const POSOpeningEntry: React.FC = () => {
     fetchData();
   }, [isAuthenticated]);
 
-  const handleInputChange = (field: keyof POSOpeningEntry, value: string) => {
+  const handleInputChange = (field: keyof OpeningEntry, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -206,31 +209,40 @@ const POSOpeningEntry: React.FC = () => {
           authHeaders;
       
       const response = await fetch(
-        "https://192.168.7.221:4422/api/resource/POS Opening Entry",
+        "https://192.168.7.221:4422/api/resource/Opening Entry",
         {
           method: "POST",
           headers,
           body: JSON.stringify({
-            ...formData,
+            period_start_date: formData.period_start_date,
+            posting_date: formData.posting_date,
+            company: formData.company,
+            pos_profile: formData.pos_profile,
+            user: formData.user,
+            status: "Open",
+            balance_details: formData.balance_details.map(detail => ({
+              mode_of_payment: detail.mode_of_payment,
+              opening_amount: detail.opening_amount
+            })),
             docstatus: 1, // Submit on creation
           }),
         }
       );
 
       const data = await response.json();
-      console.log("POS Opening Entry response:", data);
+      console.log("Opening Entry response:", data);
 
       if (response.ok && data.data) {
-        console.log("POS Opening Entry created:", data.data.name);
+        console.log("Opening Entry created:", data.data.name);
         setIsOpen(false);
         router.push("/pos"); // Redirect to POS page
       } else {
-        console.error("Failed to create POS Opening Entry:", data);
-        setError(data.message || "Failed to create POS Opening Entry.");
+        console.error("Failed to create Opening Entry:", data);
+        setError(data.message || "Failed to create Opening Entry.");
       }
     } catch (err) {
-      console.error("Error creating POS Opening Entry:", err);
-      setError("An error occurred while creating the POS Opening Entry.");
+      console.error("Error creating Opening Entry:", err);
+      setError("An error occurred while creating the Opening Entry.");
     } finally {
       setLoading(false);
     }
@@ -242,7 +254,7 @@ const POSOpeningEntry: React.FC = () => {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create POS Opening Entry</DialogTitle>
+            <DialogTitle>Create Opening Entry</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -288,7 +300,7 @@ const POSOpeningEntry: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="user">User</Label>
+                <Label htmlFor="user">Cashier</Label>
                 <Input
                   id="user"
                   value={formData.user}

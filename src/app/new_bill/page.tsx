@@ -2106,9 +2106,9 @@ export default function NewBill() {
 
       console.log("Total quantity calculated:", totalQty);
 
-      // Get invoiced quantity from POS invoices
+      // Get invoiced quantity from Sale Bills
       const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
         {
           method: 'GET',
           headers,
@@ -2457,7 +2457,7 @@ export default function NewBill() {
                 doctype: 'File',
                 file_name: fileName,
                 file_url: fileUrl,
-                attached_to_doctype: 'POS Invoice',
+                attached_to_doctype: 'Sale Bill',
                 attached_to_name: invoiceName,
                 is_private: 0,
                 folder: 'Home/Attachments'
@@ -2564,7 +2564,7 @@ export default function NewBill() {
 
   // Function to recalculate totals
   const recalculateTotals = (itemsList: Item[]) => {
-    // Skip recalculation if loading from POS invoice
+    // Skip recalculation if loading from Sale Bill
     if (isLoadingFromPosInvoice) {
       return;
     }
@@ -3195,6 +3195,14 @@ export default function NewBill() {
       return;
     }
 
+    // Check for open Opening Entries for this POS profile
+    const hasOpeningEntries = await checkForOpeningEntries();
+    if (!hasOpeningEntries) {
+      showAlert("danger", "Error", "No open Opening Entries found for this profile. Cannot create Sale Bill. Please create an Opening Entry first.");
+      setIsSaving(false);
+      return;
+    }
+
     // Set loading state to true and freeze screen
     setIsSaving(true);
 
@@ -3273,7 +3281,7 @@ export default function NewBill() {
     // });
 
     const payload = {
-      doctype: "POS Invoice",
+      doctype: "Sale Bill",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -3552,7 +3560,7 @@ export default function NewBill() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+        const response = await fetch(`${API_BASE_URL}/Sale%20Bill/${loadedInvoiceName}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
@@ -3561,7 +3569,7 @@ export default function NewBill() {
 
         if (response.ok) {
           const result = await response.json();
-          showAlert("success", "Success", `POS Invoice ${loadedInvoiceName} updated successfully!`);
+          showAlert("success", "Success", `Sale Bill ${loadedInvoiceName} updated successfully!`);
           console.log("Draft updated:", result);
           // Keep the invoice loaded but don't reset
         } else {
@@ -3598,7 +3606,7 @@ export default function NewBill() {
           }
           else if (result.message?.status === "success") {
             // When draft saved successfully
-            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+            showAlert("success", "Success", result.message?.message || "Sale Bill saved as draft successfully!");
             console.log("Draft saved:", result);
 
             // --- START: Link file to invoice if file was uploaded ---
@@ -3622,7 +3630,7 @@ export default function NewBill() {
                     doctype: 'File',
                     file_name: selectedFile.name,
                     file_url: attachmentUrl,
-                    attached_to_doctype: 'POS Invoice',
+                    attached_to_doctype: 'Sale Bill',
                     attached_to_name: invoiceName,
                     is_private: 0,
                     folder: 'Home/Attachments'
@@ -4854,7 +4862,7 @@ export default function NewBill() {
         body: JSON.stringify({
           doctype: 'File',
           filters: {
-            attached_to_doctype: 'POS Invoice',
+            attached_to_doctype: 'Sale Bill',
             attached_to_name: invoiceName
           },
           fields: ['name', 'file_name', 'file_url', 'file_size', 'is_private']
@@ -4907,7 +4915,7 @@ export default function NewBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoice.name}`, {
+      const response = await fetch(`${API_BASE_URL}/Sale%20Bill/${invoice.name}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -5224,7 +5232,7 @@ export default function NewBill() {
             authHeaders;
 
         // Submit the draft invoice
-        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+        const response = await fetch(`${API_BASE_URL}/Sale%20Bill/${loadedInvoiceName}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
@@ -5251,19 +5259,19 @@ export default function NewBill() {
         // Print the invoice using network printer
         if (networkPrinter) {
           try {
-            await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+            await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Pos Invoice print Format');
             showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
           } catch (error) {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://192.168.7.221:4422/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://192.168.7.221:4422/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
         }
 
@@ -5398,6 +5406,14 @@ export default function NewBill() {
         return;
       }
 
+      // Check for open Opening Entries for this POS profile
+      const hasOpeningEntries = await checkForOpeningEntries();
+      if (!hasOpeningEntries) {
+        showAlert("danger", "Error", "No open Opening Entries found for this profile. Cannot create Sale Bill. Please create an Opening Entry first.");
+        setIsSaving(false);
+        return;
+      }
+
       // Check for high-alert items and show confirmation if any exist (unless skipped)
       if (!skipHighAlertCheck) {
         console.log("Checking for high-alert items in finalize, items count:", items.length);
@@ -5448,7 +5464,7 @@ export default function NewBill() {
       const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
 
       const payload = {
-        doctype: "POS Invoice",
+        doctype: "Sale Bill",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -5782,7 +5798,7 @@ export default function NewBill() {
                 doctype: 'File',
                 file_name: selectedFile.name,
                 file_url: attachmentUrl,
-                attached_to_doctype: 'POS Invoice',
+                attached_to_doctype: 'Sale Bill',
                 attached_to_name: invoiceName,
                 is_private: 0,
                 folder: 'Home/Attachments'
@@ -5815,19 +5831,19 @@ export default function NewBill() {
         // Print the invoice using network printer
         if (networkPrinter) {
           try {
-            await networkPrinter.printDocument(invoiceName, 'POS Invoice', 'Pos Invoice print Format');
+            await networkPrinter.printDocument(invoiceName, 'Sale Bill', 'Pos Invoice print Format');
             showAlert("success", "Print Success", `Invoice ${invoiceName} sent to network printer successfully!`);
           } catch (error) {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://192.168.7.221:4422/printview?doctype=Sale%20Bill&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://192.168.7.221:4422/printview?doctype=Sale%20Bill&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
         }
 
@@ -5867,13 +5883,13 @@ export default function NewBill() {
       const result = await response.json();
       console.log("Closing entry response:", result);
 
-      if (response.ok && result.success) {
+      if (response.ok && result.message.success) {
         showAlert("success", "Success", `POS Closing Entry ${result.closing_entry} created and submitted successfully!`);
         setShowClosingEntryModal(false);
         // Optionally, refresh data or navigate
       } else {
         console.error("Failed to create POS Closing Entry:", result.error);
-        showAlert("danger", "Error", `Failed to create POS Closing Entry: ${result.error || 'Unknown error'}`);
+        // showAlert("danger", "Error", `Failed to create POS Closing Entry: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("Error creating POS Closing Entry:", error);
@@ -5916,13 +5932,13 @@ export default function NewBill() {
           parentTitle="POS"
           parentLink="/pos"
           title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New OPD Bill"}
-          icon="../assets/icons/BriefcaseIcon.svg"
+          icon="../pos/assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           warehouse={selectedWarehouse || undefined}
           rightButtons={
             <div className="flex flex-row space-x-2">
               <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
-                View POS Invoices
+                View Sale Bills
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={handleChangePOSProfile}>
                 Change POS Profile
@@ -6477,18 +6493,18 @@ export default function NewBill() {
                 onClick={async () => {
                   if (networkPrinter) {
                     try {
-                      await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+                      await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Pos Invoice print Format');
                       showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
                     } catch (error) {
                       console.error("Network printing failed:", error);
                       showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                       // Fallback to browser print
-                      window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                      window.open(`https://192.168.7.221:4422/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
                     }
                   } else {
                     // Fallback to browser print if network printer not available
                     console.warn('Network printer not available, using browser print');
-                    window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                    window.open(`https://192.168.7.221:4422/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
                   }
                 }}
               >

@@ -288,7 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           authHeaders;
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/resource/POS Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"],["user","=","${user}"]]`,
+        `https://192.168.7.221:4422/api/resource/Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"],["user","=","${user}"]]`,
         {
           method: "GET",
           headers,
@@ -298,11 +298,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const responseData = await response.json();
       if (response.ok && responseData.data && responseData.data.length > 0) {
-        return true; // Open POS Opening Entry exists for this user and profile
+        return true; // Open Opening Entry exists for this user and profile
       }
-      return false; // No open POS Opening Entry
+      return false; // No open Opening Entry
     } catch (error) {
-      console.error("Error checking POS Opening Entry:", error);
+      console.error("Error checking Opening Entry:", error);
       return false; // Treat errors as no open entry
     }
   };
@@ -319,7 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           authHeaders;
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/resource/POS Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"]]&fields=["name","user"]`,
+        `https://192.168.7.221:4422/api/resource/Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"]]&fields=["name","user"]`,
         {
           method: "GET",
           headers,
@@ -331,17 +331,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("checkAnyOpenPOS API response:", responseData); // Debug log
       if (response.ok && responseData.data && responseData.data.length > 0) {
         const openEntry = responseData.data[0];
-        console.log("Found open POS entry:", openEntry); // Debug log
+        console.log("Found open Opening Entry:", openEntry); // Debug log
         return {
           isOpen: true,
           entryName: openEntry.name,
           userName: openEntry.user,
         };
       }
-      console.log("No open POS entries found"); // Debug log
-      return { isOpen: false }; // No open POS Opening Entry
+      console.log("No open Opening Entries found"); // Debug log
+      return { isOpen: false }; // No open Opening Entry
     } catch (error) {
-      console.error("Error checking any open POS Opening Entry:", error);
+      console.error("Error checking any open Opening Entry:", error);
       return null; // Treat errors as null
     }
   };

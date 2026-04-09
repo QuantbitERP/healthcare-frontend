@@ -118,7 +118,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
         ["status", "=", "Open"]
       ]));
 
-      const response = await fetch(`${API_BASE_URL}/POS%20Opening%20Entry?filters=${filters}&fields=["name", "pos_profile", "period_start_date", "user", "company"]`, {
+      const response = await fetch(`${API_BASE_URL}/Opening%20Entry?filters=${filters}&fields=["name", "pos_profile", "period_start_date", "user", "company"]`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -133,13 +133,13 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
           setSelectedOpeningEntry(null);
         }
       } else {
-        console.error('Failed to fetch POS Opening Entries:', response.status, response.statusText);
-        showAlert("danger", "Error", "Failed to fetch open POS Opening Entries.");
+        console.error('Failed to fetch Opening Entries:', response.status, response.statusText);
+        showAlert("danger", "Error", "Failed to fetch open Opening Entries.");
         setOpeningEntries([]);
       }
     } catch (error) {
-      console.error('Error fetching POS Opening Entries:', error);
-      showAlert("danger", "Error", "Error fetching open POS Opening Entries.");
+      console.error('Error fetching Opening Entries:', error);
+      showAlert("danger", "Error", "Error fetching open Opening Entries.");
       setOpeningEntries([]);
     } finally {
       setLoadingEntries(false);
@@ -148,7 +148,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
 
   const handleCreateClosingEntryClick = async () => {
     if (!selectedOpeningEntry) {
-      showAlert("warning", "Warning", "Please select a POS Opening Entry.");
+      showAlert("warning", "Warning", "Please select an Opening Entry.");
       return;
     }
 
@@ -250,13 +250,13 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
       <Dialog open={isOpen && !showClosingDetails} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Select POS Opening Entry</DialogTitle>
+            <DialogTitle>Select Opening Entry</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {loadingEntries ? (
               <div className="text-center">Loading opening entries...</div>
             ) : openingEntries.length === 0 ? (
-              <div className="text-center text-gray-500">No open POS Opening Entries found for this profile.</div>
+              <div className="text-center text-gray-500">No open Opening Entries found for this profile.</div>
             ) : (
               <select
                 className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"

@@ -108,7 +108,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       const filterStr = JSON.stringify(filters);
-      const url = `${API_BASE_URL}/POS%20Invoice?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return","custom_ipd_effect"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
+      const url = `${API_BASE_URL}/Sale%20Bill?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return","custom_ipd_effect"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -165,7 +165,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     
     // Fetch the full invoice document to get items
     try {
-      const invoiceUrl = `${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}`;
+      const invoiceUrl = `${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}`;
       
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
@@ -206,7 +206,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     const company = invoice.company;
     console.log('Printing invoice:', invoiceName);
     const url = 'https://192.168.7.221:4422/printview?' +
-      'doctype=POS Invoice&' +
+      'doctype=Sale Bill&' +
       'name=' + encodeURIComponent(invoiceName) + '&' +
       'format=' + encodeURIComponent(invoice.status === 'Return' ? 'IP SALE RETURN INVOICE' : 'Pos Invoice print Format') + '&' +
       'trigger_print=1&' +
@@ -229,7 +229,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       // Submit the draft invoice
-      const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Invoice/${invoice.name}`, {
+      const response = await fetch(`https://192.168.7.221:4422/api/resource/Sale%20Bill/${invoice.name}`, {
         method: 'PUT',
         headers,
         credentials: 'include',
@@ -268,7 +268,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 <Search className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-black">POS Invoices</h2>
+                <h2 className="text-xl font-bold text-black">Sale Bills</h2>
                 <p className="text-black text-xs mt-1">Manage and track all your invoices</p>
               </div>
             </div>

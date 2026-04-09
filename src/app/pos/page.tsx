@@ -121,12 +121,12 @@ export default function POS() {
         setHasFetchedInitialInvoices(false);
       } else {
         // No opening entry, redirect to opening page
-        window.location.href = '/opening';
+        router.push('/pos/opening');
       }
     } catch (error) {
       console.error("Error checking opening entry:", error);
       // On error, redirect to opening page to be safe
-      window.location.href = '/opening';
+      router.push('/pos/opening');
     }
   };
 

@@ -179,7 +179,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       console.log("No conflicts found, proceeding to opening page");
       setPosProfile(selectedProfile);
       onSelect(selectedProfile);
-      router.push("/opening");
+      router.push("/pos/opening");
     } else if (!currentUser) {
       setError("User information not available. Please log in again.");
       router.push("/login");
@@ -192,7 +192,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>POS Opening Entry Already Open</DialogTitle>
+            <DialogTitle>Opening Entry Already Open</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-700">
