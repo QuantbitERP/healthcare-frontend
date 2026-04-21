@@ -56,7 +56,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
           authHeaders;
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/resource/POS Invoice?filters=[["return_against","=","${invoice.name}"]]&fields=["name"]`,
+        `https://demohims.quantcloud.in/api/resource/Sale Bill?filters=[["return_against","=","${invoice.name}"]]&fields=["name"]`,
         {
           method: 'GET',
           headers,
@@ -81,7 +81,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
                 authHeaders;
 
             const detailResponse = await fetch(
-              `https://192.168.7.221:4422/api/resource/POS Invoice/${returnInvoice.name}`,
+              `https://demohims.quantcloud.in/api/resource/Sale Bill/${returnInvoice.name}`,
               {
                 method: 'GET',
                 headers,

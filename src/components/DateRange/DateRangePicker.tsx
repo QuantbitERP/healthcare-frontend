@@ -125,7 +125,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             isDatePicker={true}
           />
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 z-[1000]" align="start">
           <Calendar
             initialFocus
             mode="range"

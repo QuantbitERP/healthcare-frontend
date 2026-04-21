@@ -33,17 +33,20 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictInfo, setConflictInfo] = useState<{ entryName: string; userName: string } | null>(null);
-  const { isAuthenticated, apiKey, apiSecret, currentUser, setPosProfile, csrfToken } =
+  const { isAuthenticated, apiKey, apiSecret, currentUser, setPosProfile, csrfToken, isInitialized } =
     useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Wait for initialization before checking authentication
+    if (!isInitialized) return;
+    
     // Only fetch if authenticated (either via keys or session)aries.
     if (isOpen && isAuthenticated && currentUser) {
       const fetchPOSProfiles = async () => {
         try {
           console.log("Fetching POS Profiles for user:", currentUser);
-          const url = `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
+          const url = `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
 
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
@@ -102,7 +105,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       setError("Please log in to access POS profiles.");
       router.push("/login");
     }
-  }, [isOpen, isAuthenticated, apiKey, apiSecret, currentUser, csrfToken, router]);
+  }, [isOpen, isAuthenticated, apiKey, apiSecret, currentUser, csrfToken, router, isInitialized]);
 
   const handleSelect = async () => {
     if (selectedProfile && currentUser) {
@@ -125,7 +128,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
         }
 
         const response = await fetch(
-          `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
+          `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
           {
             method: "POST",
             headers: headers,
