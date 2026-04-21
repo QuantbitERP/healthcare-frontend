@@ -37,7 +37,7 @@ interface OpeningEntry {
 }
 
 const POSOpeningEntry: React.FC = () => {
-  const { posProfile, currentUser, isAuthenticated } = useAuth();
+  const { posProfile, currentUser, isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
   const [formData, setFormData] = useState<OpeningEntry>({
@@ -57,6 +57,9 @@ const POSOpeningEntry: React.FC = () => {
 
   // Check for open POS Opening Entry and redirect if necessary
   useEffect(() => {
+    // Wait for initialization before checking authentication
+    if (!isInitialized) return;
+    
     console.log(isAuthenticated);
     console.log(posProfile);
     console.log(currentUser);
@@ -67,7 +70,7 @@ const POSOpeningEntry: React.FC = () => {
 
     // Since conflict checking now happens in POSProfileSelector on /pos page,
     // we can proceed directly with the opening entry form
-  }, [isAuthenticated, posProfile, currentUser, router]);
+  }, [isAuthenticated, posProfile, currentUser, router, isInitialized]);
 
   // Fetch Companies, POS Profiles, and Modes of Payment
   useEffect(() => {
@@ -84,7 +87,7 @@ const POSOpeningEntry: React.FC = () => {
             authHeaders;
         
         const companyRes = await fetch(
-          "https://192.168.7.221:4422/api/resource/Company?fields=[\"name\"]",
+          "https://demohims.quantcloud.in/api/resource/Company?fields=[\"name\"]",
           {
             method: "GET",
             headers,
@@ -100,7 +103,7 @@ const POSOpeningEntry: React.FC = () => {
 
         // Fetch POS Profiles
         const posRes = await fetch(
-          "https://192.168.7.221:4422/api/resource/POS Profile?fields=[\"name\"]",
+          "https://demohims.quantcloud.in/api/resource/POS Profile?fields=[\"name\"]",
           {
             method: "GET",
             headers,
@@ -116,7 +119,7 @@ const POSOpeningEntry: React.FC = () => {
 
         // Fetch Modes of Payment
         const mopRes = await fetch(
-          "https://192.168.7.221:4422/api/resource/Mode of Payment?fields=[\"name\"]",
+          "https://demohims.quantcloud.in/api/resource/Mode of Payment?fields=[\"name\"]",
           {
             method: "GET",
             headers,
@@ -209,7 +212,7 @@ const POSOpeningEntry: React.FC = () => {
           authHeaders;
       
       const response = await fetch(
-        "https://192.168.7.221:4422/api/resource/Opening Entry",
+        "https://demohims.quantcloud.in/api/resource/Opening Entry",
         {
           method: "POST",
           headers,

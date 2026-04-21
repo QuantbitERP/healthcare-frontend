@@ -46,18 +46,19 @@ interface Invoice {
 const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
-  const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState<{ from: Date | null, to: Date | null }>({ from: null, to: null });
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceNumberSearchTerm, setInvoiceNumberSearchTerm] = useState('');
+  const [patientNameSearchTerm, setPatientNameSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined, to: Date | undefined }>({ from: undefined, to: undefined });
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showItemsModal, setShowItemsModal] = useState(false);
   const [itemsForModal, setItemsForModal] = useState<any[]>([]);
-
+  
   const { } = useAuth();
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchInvoices = async (searchTerm: string, dates: { from: Date | null, to: Date | null }) => {
+  const fetchInvoices = async (invoiceNumber: string, patientName: string, dates: { from: Date | undefined, to: Date | undefined }) => {
     // Skip POS profile validation when showing only returns
     if (!posProfile && !showOnlyReturns) {
       showAlert("danger", "Error", "POS Profile is missing.");
@@ -88,14 +89,23 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         filters.push(['is_return', '=', 1]);
       }
 
-      if (searchTerm) {
-        filters.push(['name', 'like', `%${searchTerm}%`]);
+      if (invoiceNumber) {
+        filters.push(['name', 'like', `%${invoiceNumber}%`]);
+      }
+      if (patientName) {
+        filters.push(['custom_patient_name', 'like', `%${patientName}%`]);
       }
       if (dates.from) {
-        filters.push(['posting_date', '>=', dates.from.toISOString().split('T')[0]]);
+        // Add one day to the 'to' date to include the full end date
+        const fromDate = new Date(dates.from);
+        fromDate.setHours(0, 0, 0, 0);
+        filters.push(['posting_date', '>=', fromDate.toISOString().split('T')[0]]);
       }
       if (dates.to) {
-        filters.push(['posting_date', '<=', dates.to.toISOString().split('T')[0]]);
+        // Set time to end of day to include the full end date
+        const toDate = new Date(dates.to);
+        toDate.setHours(23, 59, 59, 999);
+        filters.push(['posting_date', '<=', toDate.toISOString().split('T')[0]]);
       }
 
       // Use the same authentication logic as other functions
@@ -140,7 +150,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
       const initialDateRange = { from: yesterday, to: today };
       setDateRange(initialDateRange);
-      fetchInvoices(invoiceSearchTerm, initialDateRange);
+      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, { from: yesterday, to: today });
     }
   }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns]);
 
@@ -150,7 +160,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         clearTimeout(searchTimeoutRef.current);
       }
       searchTimeoutRef.current = setTimeout(() => {
-        fetchInvoices(invoiceSearchTerm, dateRange);
+        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
       }, 500); // Debounce search
     }
     return () => {
@@ -158,7 +168,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [invoiceSearchTerm, dateRange, isOpen]);
+  }, [invoiceNumberSearchTerm, patientNameSearchTerm, dateRange, isOpen]);
 
   const handleViewDetails = async (invoice: Invoice) => {
     console.log('Selected invoice details:', invoice); // Debug log
@@ -205,7 +215,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     const invoiceName = invoice.name;
     const company = invoice.company;
     console.log('Printing invoice:', invoiceName);
-    const url = 'https://192.168.7.221:4422/printview?' +
+    const url = 'https://demohims.quantcloud.in/printview?' +
       'doctype=Sale Bill&' +
       'name=' + encodeURIComponent(invoiceName) + '&' +
       'format=' + encodeURIComponent(invoice.status === 'Return' ? 'IP SALE RETURN INVOICE' : 'Pos Invoice print Format') + '&' +
@@ -229,7 +239,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       // Submit the draft invoice
-      const response = await fetch(`https://192.168.7.221:4422/api/resource/Sale%20Bill/${invoice.name}`, {
+      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Sale%20Bill/${invoice.name}`, {
         method: 'PUT',
         headers,
         credentials: 'include',
@@ -245,7 +255,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       showAlert("success", "Success", `Invoice ${invoice.name} submitted successfully!`);
 
       // Refresh the invoice list
-      fetchInvoices(invoiceSearchTerm, dateRange);
+      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
 
       // Close the details modal
       setShowDetailsModal(false);
@@ -281,8 +291,42 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           </div>
         </div>
 
+        {/* Search Inputs */}
+        <div className="px-6 py-4 border-b border-gray-200 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search by Invoice No</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter invoice number..."
+                value={invoiceNumberSearchTerm}
+                onChange={(e) => setInvoiceNumberSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search by Patient Name</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter patient name..."
+                value={patientNameSearchTerm}
+                onChange={(e) => setPatientNameSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Count */}
+        {/* <div className="px-6 py-2 bg-gray-50 border-b border-gray-200">
+          <div className="text-sm text-gray-600">
+            Showing <span className="font-semibold text-gray-900">{invoices.length}</span> invoices
+          </div>
+        </div> */}
+
         <DataTableComponent
           columns={[
+            { accessorKey: 'idx', header: 'IDX', cell: ({ row }) => row.index + 1 },
             { accessorKey: 'name', header: 'Invoice No' },
             { accessorKey: 'customer', header: 'Customer' },
             {
@@ -336,6 +380,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           data={invoices}
           loading={loading}
           columnNames={{
+            idx: 'IDX',
             name: 'Invoice No',
             customer: 'Customer',
             custom_patient_name: 'Patient',
@@ -348,10 +393,12 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             modified_by: 'Modified By',
             action: 'Actions',
           }}
-          onSearch={setInvoiceSearchTerm}
-          onDataChange={(dates) => setDateRange({ from: dates?.from || null, to: dates?.to || null })}
-          searchPlaceholder='Search by Invoice No...'
-          hideFilters={false}
+          hideFilters={true}
+          hideMeFilter={true}
+          onFilterClick={() => {}}
+          hideDatePicker={false}
+          onDataChange={(dates) => setDateRange({ from: dates?.from || undefined, to: dates?.to || undefined })}
+          hideShowColumns={true}
         />
 
         {/* Footer Actions */}

@@ -169,7 +169,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
 
   const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean, selectedCompany?: string): Promise<Item[]> => {
     try {
@@ -412,7 +412,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
+      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchName}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -960,9 +960,9 @@ export default function Return() {
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, checkUserRole } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-  const ITEM_DETAILS_API_URL = 'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+  const ITEM_DETAILS_API_URL = 'https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
  useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoading(false);
@@ -993,7 +993,7 @@ export default function Return() {
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1043,7 +1043,7 @@ export default function Return() {
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1085,7 +1085,7 @@ export default function Return() {
         Array.isArray(authHeaders) ?
           Object.fromEntries(authHeaders) :
           authHeaders;
-      const resp = await fetch('https://192.168.7.221:4422/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+      const resp = await fetch('https://demohims.quantcloud.in/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1313,7 +1313,7 @@ export default function Return() {
               Object.fromEntries(authHeaders) :
               authHeaders;
 
-          const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
+          const batchQtyResponse = await fetch(`https://demohims.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -1975,7 +1975,7 @@ export default function Return() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch('https://192.168.7.221:4422/api/method/upload_file', {
+      const response = await fetch('https://demohims.quantcloud.in/api/method/upload_file', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -2008,7 +2008,7 @@ export default function Return() {
                 Object.fromEntries(authHeaders) :
                 authHeaders;
 
-            const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
+            const fileDocResponse = await fetch('https://demohims.quantcloud.in/api/resource/File', {
               method: 'POST',
               headers,
               credentials: 'include',
@@ -2016,7 +2016,7 @@ export default function Return() {
                 doctype: 'File',
                 file_name: fileName,
                 file_url: fileUrl,
-                attached_to_doctype: 'POS Invoice',
+                attached_to_doctype: 'Sale Bill',
                 attached_to_name: invoiceName,
                 is_private: 0,
                 folder: 'Home/Attachments'
@@ -2270,7 +2270,7 @@ export default function Return() {
           Array.isArray(authHeaders) ?
             Object.fromEntries(authHeaders) :
             authHeaders;
-        const taxTemplateResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+        const taxTemplateResponse = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2295,7 +2295,7 @@ export default function Return() {
         //   Array.isArray(authHeaders) ? 
         //     Object.fromEntries(authHeaders) : 
         //     authHeaders;
-        const taxAccountsResponse = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+        const taxAccountsResponse = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2336,7 +2336,7 @@ export default function Return() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2381,7 +2381,7 @@ export default function Return() {
             authHeaders;
 
         const response = await fetch(
-          'https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+          'https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
           {
             method: 'POST',
             headers,
@@ -2446,7 +2446,7 @@ export default function Return() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+      const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -2828,7 +2828,7 @@ export default function Return() {
     // });
 
     const payload = {
-      doctype: "POS Invoice",
+      doctype: "Sale Bill",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -3105,7 +3105,7 @@ export default function Return() {
 
         if (response.ok) {
           const result = await response.json();
-          showAlert("success", "Success", `POS Invoice ${loadedInvoiceName} updated successfully!`);
+          showAlert("success", "Success", `Sale Bill ${loadedInvoiceName} updated successfully!`);
           console.log("Draft updated:", result);
           // Keep the invoice loaded but don't reset
         } else {
@@ -3124,7 +3124,7 @@ export default function Return() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -3142,7 +3142,7 @@ export default function Return() {
           }
           else if (result.message?.status === "success") {
             // When draft saved successfully
-            showAlert("success", "Success", result.message?.message || "POS Invoice saved as draft successfully!");
+            showAlert("success", "Success", result.message?.message || "Sale Bill saved as draft successfully!");
             console.log("Draft saved:", result);
 
             // --- START: Link file to invoice if file was uploaded ---
@@ -3160,7 +3160,7 @@ export default function Return() {
                     Object.fromEntries(authHeaders) :
                     authHeaders;
 
-                const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
+                const fileDocResponse = await fetch('https://demohims.quantcloud.in/api/resource/File', {
                   method: 'POST',
                   headers,
                   credentials: 'include',
@@ -3168,7 +3168,7 @@ export default function Return() {
                     doctype: 'File',
                     file_name: selectedFile.name,
                     file_url: attachmentUrl,
-                    attached_to_doctype: 'POS Invoice',
+                    attached_to_doctype: 'Sale Bill',
                     attached_to_name: invoiceName,
                     is_private: 0,
                     folder: 'Home/Attachments'
@@ -4421,7 +4421,7 @@ export default function Return() {
       return fileUrl;
     }
     // Otherwise, prepend the server URL
-    return `https://192.168.7.221:4422/${fileUrl}`;
+    return `https://demohims.quantcloud.in/${fileUrl}`;
   };
   // --- END: Function to get full file URL ---
 
@@ -4442,14 +4442,14 @@ export default function Return() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch('https://192.168.7.221:4422/api/method/frappe.client.get_list', {
+      const response = await fetch('https://demohims.quantcloud.in/api/method/frappe.client.get_list', {
         method: 'POST',
         headers,
         credentials: 'include',
         body: JSON.stringify({
           doctype: 'File',
           filters: {
-            attached_to_doctype: 'POS Invoice',
+            attached_to_doctype: 'Sale Bill',
             attached_to_name: invoiceName
           },
           fields: ['name', 'file_name', 'file_url', 'file_size', 'is_private']
@@ -4822,13 +4822,13 @@ export default function Return() {
         // Print the invoice using network printer
         if (networkPrinter) {
           try {
-            await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+            await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
             showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
           } catch (error) {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Sale%20Bill%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
             // Close splash screen after redirecting to print
             setIsSaving(false);
@@ -4836,7 +4836,7 @@ export default function Return() {
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Sale%20Bill%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
           // Close splash screen after redirecting to print
           setIsSaving(false);
@@ -4939,7 +4939,7 @@ export default function Return() {
                     Object.fromEntries(authHeaders) :
                     authHeaders;
 
-                const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+                const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_sale_bill_return', {
                   method: 'POST',
                   headers,
                   credentials: 'include',
@@ -4954,7 +4954,7 @@ export default function Return() {
 
                   // Print the return invoice
                   if (returnInvoiceName) {
-                    const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+                    const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
                     window.open(printUrl, '_blank');
                     // Close splash screen after redirecting to print
                     setIsSaving(false);
@@ -5073,7 +5073,7 @@ export default function Return() {
                   Object.fromEntries(authHeaders) :
                   authHeaders;
 
-              const response = await fetch('https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+              const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_sale_bill_return', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -5090,7 +5090,7 @@ export default function Return() {
 
                 // Print the return invoice
                 if (returnInvoiceName) {
-                  const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+                  const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
                   window.open(printUrl, '_blank');
                   // Close splash screen after redirecting to print
                   setIsSaving(false);
@@ -5205,7 +5205,7 @@ export default function Return() {
       const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
 
       const payload = {
-        doctype: "POS Invoice",
+        doctype: "Sale Bill",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -5464,7 +5464,7 @@ export default function Return() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -5528,7 +5528,7 @@ export default function Return() {
                 Object.fromEntries(authHeaders) :
                 authHeaders;
 
-            const fileDocResponse = await fetch('https://192.168.7.221:4422/api/resource/File', {
+            const fileDocResponse = await fetch('https://demohims.quantcloud.in/api/resource/File', {
               method: 'POST',
               headers,
               credentials: 'include',
@@ -5536,7 +5536,7 @@ export default function Return() {
                 doctype: 'File',
                 file_name: selectedFile.name,
                 file_url: attachmentUrl,
-                attached_to_doctype: 'POS Invoice',
+                attached_to_doctype: 'Sale Bill',
                 attached_to_name: invoiceName,
                 is_private: 0,
                 folder: 'Home/Attachments'
@@ -5569,19 +5569,19 @@ export default function Return() {
         // Print the invoice using network printer
         if (networkPrinter) {
           try {
-            await networkPrinter.printDocument(invoiceName, 'POS Invoice', 'Pos Invoice print Format');
+            await networkPrinter.printDocument(invoiceName, 'Sale Bill', 'Sale Bill print Format');
             showAlert("success", "Print Success", `Invoice ${invoiceName} sent to network printer successfully!`);
           } catch (error) {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(invoiceName)}&format=Sale%20Bill%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(invoiceName)}&format=Sale%20Bill%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
           // Close splash screen after redirecting to print
           setIsSaving(false);
@@ -5617,7 +5617,7 @@ export default function Return() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+      const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -5682,7 +5682,7 @@ export default function Return() {
           rightButtons={
             <div className="flex flex-row space-x-2">
               <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
-                View POS Invoices
+                View Sale Bills
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={() => setShowPosProfileSelector(true)}>
                 Change POS Profile
@@ -6252,20 +6252,20 @@ export default function Return() {
                 onClick={async () => {
                   if (networkPrinter) {
                     try {
-                      await networkPrinter.printDocument(loadedInvoiceName, 'POS Invoice', 'Pos Invoice print Format');
+                      await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
                       showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
                     } catch (error) {
                       console.error("Network printing failed:", error);
                       showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                       // Fallback to browser print
-                      window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                      window.open(`https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
                       // Close splash screen after redirecting to print
                       setIsSaving(false);
                     }
                   } else {
                     // Fallback to browser print if network printer not available
                     console.warn('Network printer not available, using browser print');
-                    window.open(`https://192.168.7.221:4422/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                    window.open(`https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
                     // Close splash screen after redirecting to print
                     setIsSaving(false);
                   }
@@ -6456,7 +6456,7 @@ export default function Return() {
                           authHeaders;
 
                       const returnResponse = await fetch(
-                        `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                        `https://demohims.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
                         {
                           method: 'GET',
                           headers,
@@ -6477,7 +6477,7 @@ export default function Return() {
                               authHeaders;
 
                           const returnInvResponse = await fetch(
-                            `https://192.168.7.221:4422/api/resource/POS%20Invoice/${returnInv.name}`,
+                            `https://demohims.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
                             {
                               method: 'GET',
                               headers,
