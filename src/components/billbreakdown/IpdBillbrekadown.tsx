@@ -64,7 +64,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
     transactions: '0',
   });
 
-  const FRAPPE_BASE_URL = 'https://192.168.7.221:4422';
+  const FRAPPE_BASE_URL = 'https://demohims.quantcloud.in';
 
   // Fetch concession types and users (unchanged)
   useEffect(() => {

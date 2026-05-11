@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/buttons/Button";
 import DataTableComponent from "@/components/DataTable";
@@ -13,7 +13,7 @@ import { authenticatedFetch } from "@/utils/apiHelper";
 import { FRAPPE_BASE_URL } from "@/config/frappe";
 
 export default function POS() {
-  const API_BASE_URL = "https://192.168.7.221:4422/api/resource";
+  // const API_BASE_URL = "https://demohims.quantcloud.in/api/resource";
   const selectOptions = [
     { label: "Invoice ID", value: "name" },
     { label: "Customer Name", value: "customer" },
@@ -31,9 +31,15 @@ export default function POS() {
 
   const [page, setPage] = useState(0); // For pagination
   const [hasFetchedInitialInvoices, setHasFetchedInitialInvoices] = useState(false);
+  const hasInitializedRef = useRef(false);
 
-  const { logout, isAuthenticated, posProfile, currentUser, setPosProfile, apiKey, apiSecret, csrfToken, checkAnyOpenPOS } = useAuth();
+  const { logout, isAuthenticated, posProfile, currentUser, setPosProfile, apiKey, apiSecret, csrfToken, checkAnyOpenPOS, isInitialized } = useAuth();
   const router = useRouter();
+
+  // Clear redirect flag on mount to prevent stale flags from previous sessions
+  useEffect(() => {
+    localStorage.removeItem('pos_redirected_to_login');
+  }, []);
 
   const fetchSalesInvoices = useCallback(async (currentPage: number) => {
     setLoading(true);
@@ -61,14 +67,37 @@ export default function POS() {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, apiKey, apiSecret]); // Dependencies for useCallback
+  }, []); // Empty dependencies to prevent recreation
 
   useEffect(() => {
     const checkOpeningEntryAndShowSelector = async () => {
-      if (!isAuthenticated || !currentUser) {
+      // Prevent running multiple times
+      if (hasInitializedRef.current) {
+        return;
+      }
+
+      // Wait for auth context to initialize before checking
+      if (!isInitialized) {
+        return;
+      }
+
+      // Mark as initialized
+      hasInitializedRef.current = true;
+
+      // Check if we've already redirected to prevent redirect loop
+      const hasAlreadyRedirected = localStorage.getItem('pos_redirected_to_login');
+
+      // Only redirect if we're definitively not authenticated after initialization
+      if (!isAuthenticated && !currentUser && !hasAlreadyRedirected) {
         // Redirect to Frappe login with current URL as return address
+        localStorage.setItem('pos_redirected_to_login', 'true');
         redirectToFrappeLogin();
         return;
+      }
+
+      // Clear the redirect flag if we're authenticated
+      if (isAuthenticated && hasAlreadyRedirected) {
+        localStorage.removeItem('pos_redirected_to_login');
       }
 
       // If we have a POS profile, check if there's an opening entry
@@ -79,7 +108,7 @@ export default function POS() {
             // Opening entry exists, don't show selector
             setShowPosProfileSelector(false);
             setForceShowProfileSelector(false);
-            if (!hasFetchedInitialInvoices) {
+            if (!hasFetchedInitialInvoices && apiKey && apiSecret) {
               fetchSalesInvoices(0);
               setHasFetchedInitialInvoices(true);
             }
@@ -102,7 +131,7 @@ export default function POS() {
     };
 
     checkOpeningEntryAndShowSelector();
-  }, [isAuthenticated, posProfile, currentUser, router, fetchSalesInvoices, hasFetchedInitialInvoices, checkAnyOpenPOS]);
+  }, [isInitialized]);
 
   const handlePOSProfileSelect = async (profile: string) => {
     setPosProfile(profile); // Handled in POSProfileSelector, kept for consistency
@@ -156,7 +185,7 @@ export default function POS() {
       <div className="my-20">
         <PageHeader
           title="POS"
-          icon="../assets/icons/BriefcaseIcon.svg"
+          icon="../pos/assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           rightButtons={
             <div className="flex flex-row space-x-2">

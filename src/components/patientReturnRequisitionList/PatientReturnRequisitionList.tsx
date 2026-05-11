@@ -71,7 +71,7 @@ const PatientReturnRequisitionList: React.FC<PatientReturnRequisitionListProps> 
   const [selectedRequisitionItems, setSelectedRequisitionItems] = useState<any[]>([]);
   const [selectedRequisitionInfo, setSelectedRequisitionInfo] = useState<any>(null);
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchRequisitions = useCallback(async (search?: string, dateRange?: DateRange) => {

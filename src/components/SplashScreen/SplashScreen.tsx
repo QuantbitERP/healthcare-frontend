@@ -63,8 +63,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
     (async () => {
       try {
         const [cr, br] = await Promise.all([
-          fetch("https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_company", { credentials: "include" }),
-          fetch("https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch",  { credentials: "include" }),
+          fetch("https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_company", { credentials: "include" }),
+          fetch("https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch",  { credentials: "include" }),
         ]);
         if (cr.ok) { const d = await cr.json(); if (d.message) setCompanyName(d.message); }
         if (br.ok) { const d = await br.json(); if (d.message) setBranchName(d.message);  }

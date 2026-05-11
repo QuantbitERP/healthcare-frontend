@@ -32,7 +32,7 @@ function POSInfo({ posProfile, warehouse, className = "" }: POSInfoProps) {
             authHeaders;
         
         const response = await fetch(
-          `https://192.168.7.221:4422/api/resource/Warehouse/${warehouse}`,
+          `https://demohims.quantcloud.in/api/resource/Warehouse/${warehouse}`,
           {
             method: "GET",
             headers,
@@ -60,16 +60,16 @@ function POSInfo({ posProfile, warehouse, className = "" }: POSInfoProps) {
   }
 
   return (
-    <div className={`flex items-center gap-2 text-sm font-medium text-gray-700 ${className}`}>
+    <div className={`flex items-center gap-2 text-sm font-medium text-white ${className}`}>
       {posProfile && (
         <div className="flex items-center gap-1">
-          <span className="text-gray-600">{posProfile}</span>
-          {warehouse && <span className="text-gray-400">•</span>}
+          <span className="text-white">{posProfile}</span>
+          {warehouse && <span className="text-white/70">•</span>}
         </div>
       )}
       {warehouse && (
         <div className="flex items-center gap-1">
-          <span className="text-gray-500">({warehouseName})</span>
+          <span className="text-white/90">({warehouseName})</span>
         </div>
       )}
     </div>

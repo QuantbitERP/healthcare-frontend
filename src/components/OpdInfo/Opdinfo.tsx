@@ -64,7 +64,7 @@ type SelectedPatient = {
     visitID?: string;
 };
 
-const PATIENT_API_BASE_URL = "https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+const PATIENT_API_BASE_URL = "https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
 
 const OpdCard: React.FC<PatientCardProps> = ({
     name = '',
@@ -699,7 +699,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         </div>
                     </div>
                     <InfoRow
-                        icon="assets/icons/Cake.svg"
+                        icon="pos/assets/icons/Cake.svg"
                         label="Gender"
                         value={editedPatient.age}
                         selectValue={editedPatient.sex}
@@ -709,25 +709,25 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     />
                     {/* This is the new row for Age only */}
                     <InfoRow
-                        icon="assets/icons/Cake.svg"
+                        icon="pos/assets/icons/Cake.svg"
                         label="Age"
                         value={editedPatient.age}
                         onChange={(value) => handleFieldChange('age', value)}
                     />
                     <InfoRow
-                        icon="assets/icons/Phone.svg"
+                        icon="pos/assets/icons/Phone.svg"
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
                     />
                     <InfoRow
-                        icon="assets/icons/Id.svg"
+                        icon="pos/assets/icons/Id.svg"
                         label="Visit No"
                         value={editedPatient.visitID || ''}
                         disabled={true}
                     />
                     <InfoRow
-                        icon="assets/icons/Id.svg"
+                        icon="pos/assets/icons/Id.svg"
                         label="ABHA ID"
                         value={editedPatient.ABHAID}
                         onChange={(value) => handleFieldChange('ABHAID', value)}
@@ -826,19 +826,19 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     </div>
 
                     <InfoRow
-                        icon="assets/icons/Building.svg"
+                        icon="pos/assets/icons/Building.svg"
                         label="Customer Name"
                         value={editedPatient.name || ''}
                         onChange={(value) => handleFieldChange('name', value)}
                     />
                     <InfoRow
-                        icon="assets/icons/DoorEnter.svg"
+                        icon="pos/assets/icons/DoorEnter.svg"
                         label="Visit Type"
                         value={editedPatient.visitType || ''}
                         disabled={true} // <-- 1. THIS IS YOUR ORIGINAL GOAL
                     />
                     <InfoRow
-                        icon="assets/icons/FirstAidKit.svg"
+                        icon="pos/assets/icons/FirstAidKit.svg"
                         label="Consulting Doctor"
                         value={editedPatient.doctor}
                         onChange={(value) => handleFieldChange('doctor', value)}

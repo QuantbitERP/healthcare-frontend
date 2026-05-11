@@ -20,7 +20,7 @@ interface Requisition {
 }
 
 export default function PatientRequisitionList() {
-  const API_BASE_URL = "https://192.168.7.221:4422/api/resource";
+  const API_BASE_URL = "https://demohims.quantcloud.in/api/resource";
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

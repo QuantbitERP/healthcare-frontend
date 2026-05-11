@@ -132,7 +132,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const suggestionsRef = useRef<HTMLUListElement>(null);
   const { } = useAuth();
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
 
   const searchItems = async (query: string = '', classification: string = '', generic: boolean = false, company: string = ''): Promise<Item[]> => {
     try {
@@ -222,9 +222,10 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
               return false; // Hide items with no business category
             }
             // Split business categories by comma and trim whitespace
-            const categories = item.custom_business_category.split(',').map(cat => cat.trim());
-            // Check if selected company matches any of the business categories
-            const matches = categories.includes(company);
+            const categories = item.custom_business_category.split(',').map(cat => cat.trim().toLowerCase().replace(/_/g, ' '));
+            // Check if selected company matches any of the business categories (case-insensitive, normalize underscores)
+            const normalizedCompany = company.toLowerCase().replace(/_/g, ' ');
+            const matches = categories.includes(normalizedCompany);
             console.log(`Item ${item.itemName}: categories=[${categories.join(', ')}], matches=${matches}`);
             return matches;
           });
@@ -480,7 +481,7 @@ const useStockQty = () => {
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
 
         const response = await fetch(
-          `https://192.168.7.221:4422/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
+          `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
           {
             method: "POST",
             headers,
@@ -507,6 +508,8 @@ const useStockQty = () => {
 };
 
 export default function ClientPR({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+    const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+
   const router = useRouter();
   const params = use(searchParams);
   const { fetchDepartment, fetchBranches, fetchKits, fetchClassifications } = useFrappeApi();
@@ -582,7 +585,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       //     Object.fromEntries(authHeaders) : 
       //     authHeaders;
 
-      const batchQtyResponse = await fetch(`https://192.168.7.221:4422/api/method/erpnext.stock.utils.get_stock_balance`, {
+      const batchQtyResponse = await fetch(`https://demohims.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -760,7 +763,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
+        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
         {
           method: 'GET',
           headers,
@@ -806,7 +809,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
+        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
         {
           method: 'GET',
           headers,
@@ -1145,8 +1148,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const API_BASE_URL = "http://192.168.7.196:8085/masterdata/search-patient";
-  const FRAPPE_API_BASE_URL = "https://192.168.7.221:4422/api/resource";
+  const FRAPPE_API_BASE_URL = "https://demohims.quantcloud.in/api/resource";
 
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
@@ -1424,7 +1426,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const handleFinalize = async () => {
     const docName = await savePatientRequisition(true);
     if (docName) {
-      const printUrl = `https://192.168.7.221:4422/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+      const printUrl = `https://demohims.quantcloud.in/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
       window.location.href = printUrl;
     }
   };
@@ -1488,20 +1490,32 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
   const fetchPatientDetails = async (mrn: string) => {
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      // Use the same authentication logic as other functions
+      const authHeaders = getAuthHeaders();
+      // Convert HeadersInit to plain object for axios compatibility
+      const headers: any = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
+          authHeaders;
       const storedCsrfToken = localStorage.getItem('csrfToken');
       if (storedCsrfToken) {
         headers['X-Frappe-CSRF-Token'] = storedCsrfToken;
       }
 
-      const response = await axios.get(`http://192.168.7.196:8085/masterdata/patient-details?mrn=${mrn}`, {
-        headers,
-        withCredentials: true,
+      const response = await axios.get(`${FRAPPE_API_BASE_URL.replace('/api/resource', '')}/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient`, {
+        params: {
+          search_type: "UHID",
+          search_value: mrn,
+          PageIndex: "1",
+          PageSize: "100",
+          IsExpired: "false",
+        },
+        headers: headers,
+        withCredentials: true
       });
       console.log("Patient Details API response:", response.data);
-      return response.data;
+      return response.data.message || [];
     } catch (error) {
       console.error("Failed to fetch patient details:", error);
       showAlert("danger", "Error", "Failed to fetch additional patient details.");
@@ -1532,10 +1546,10 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
         const response = await axios.get(`${FRAPPE_API_BASE_URL.replace('/api/resource', '')}/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient`, {
           params: {
-            search_type: searchType === "uhid" ? "UHID" : searchType === "mobile" ? "MobileNo" : searchType === "fullName" ? "FullName" : "aadharCardNo",
+            search_type: searchType === "uhid" ? "UHID" : searchType === "mobile" ? "Mobile No" : searchType === "fullName" ? "Full Name" : "aadharCard No",
             search_value: value,
             PageIndex: "1",
-            PageSize: "10",
+            PageSize: "100",
             IsExpired: "false",
           },
           headers: headers,
@@ -1979,7 +1993,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           authHeaders;
 
       const response = await fetch(
-        `https://192.168.7.221:4422/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://demohims.quantcloud.in/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -2073,7 +2087,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       // First, check if an amendment already exists
       const checkAmendResponse = await fetch(
-        `https://192.168.7.221:4422/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://demohims.quantcloud.in/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -2098,7 +2112,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         } else {
           // Fetch the cancelled document
           const fetchResponse = await fetch(
-            `https://192.168.7.221:4422/api/resource/Patient%20Requisition/${requisitionNo}`,
+            `https://demohims.quantcloud.in/api/resource/Patient%20Requisition/${requisitionNo}`,
             {
               method: 'GET',
               headers,
@@ -2153,7 +2167,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
           // Create the new amended document
           const createResponse = await fetch(
-            `https://192.168.7.221:4422/api/resource/Patient%20Requisition`,
+            `https://demohims.quantcloud.in/api/resource/Patient%20Requisition`,
             {
               method: 'POST',
               headers,
@@ -2199,7 +2213,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     }
 
     try {
-      const printUrl = 'https://192.168.7.221:4422/printview?' +
+      const printUrl = 'https://demohims.quantcloud.in/printview?' +
         'doctype=Patient%20Requisition&' +
         'name=' + encodeURIComponent(requisitionNo) + '&' +
         'trigger_print=1&' +
@@ -2304,7 +2318,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         parentTitle="Patient Requisition"
         parentLink="/PatientRequistionList"
         title={requisitionNo ? `Edit Requisition ${requisitionNo}` : "New Requisition"}
-        icon="../assets/icons/BriefcaseIcon.svg"
+        icon="../pos/assets/icons/BriefcaseIcon.svg"
         rightButtons={
           <div className="flex flex-row space-x-2">
           </div>

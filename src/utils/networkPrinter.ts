@@ -43,7 +43,7 @@ export class NetworkPrinter {
       }
 
       // Fetch network printer settings from Frappe
-      const response = await fetch('https://192.168.7.221:4422/api/resource/Network%20Printer%20Settings/test', {
+      const response = await fetch('https://demohims.quantcloud.in/api/resource/Network%20Printer%20Settings/test', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ export class NetworkPrinter {
 
     try {
       // Generate PDF content from Frappe print view
-      const printUrl = `https://192.168.7.221:4422/printview?` +
+      const printUrl = `https://demohims.quantcloud.in/printview?` +
         `doctype=${encodeURIComponent(doctype)}&` +
         `name=${encodeURIComponent(documentName)}&` +
         `format=${encodeURIComponent(format)}&` +
@@ -141,7 +141,7 @@ export class NetworkPrinter {
 
   private fallbackToBrowserPrint(documentName: string, doctype: string, format: string): void {
     console.log('Falling back to browser print');
-    const printUrl = `https://192.168.7.221:4422/printview?` +
+    const printUrl = `https://demohims.quantcloud.in/printview?` +
       `doctype=${encodeURIComponent(doctype)}&` +
       `name=${encodeURIComponent(documentName)}&` +
       `format=${encodeURIComponent(format)}&` +

@@ -135,7 +135,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(true); // Default collapsed
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Default open
   const { isAuthenticated, isInitialized, currentUser } = useAuth();
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate summary counts
@@ -225,6 +225,9 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       if (isDischarge) filters.push(["discharge", "=", "1"]);
       if (isRoutine) filters.push(["routine", "=", "1"]);
       if (isASAP) filters.push(["asap", "=", "1"]);
+      
+      // Filter to show only requisitions where is_requistion == 1
+      filters.push(["is_requisition", "=", "1"]);
 
       if (filters.length > 0) {
         params.filters = JSON.stringify(filters);
@@ -276,11 +279,11 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                 return sum + qty;
               }, 0);
 
-            // Get invoiced quantity from POS invoices
+            // Get invoiced quantity from Sale Bills
             try {
               console.log("Searching for invoices with custom_req_no =", req.name);
               const invoiceResponse = await axios.get(
-                `${API_BASE_URL}/POS Invoice?filters=[["custom_req_no","=","${req.name}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+                `${API_BASE_URL}/Sale Bill?filters=[["custom_req_no","=","${req.name}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
                 { headers: axiosHeaders, withCredentials: true }
               );
 
@@ -296,7 +299,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
 
                 try {
                   const fullInvoiceResponse = await axios.get(
-                    `${API_BASE_URL}/POS Invoice/${invoice.name}?fields=["name","items"]`,
+                    `${API_BASE_URL}/Sale Bill/${invoice.name}?fields=["name","items"]`,
                     { headers: axiosHeaders, withCredentials: true }
                   );
 
@@ -309,7 +312,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
                   }
                 } catch (error: any) {
                   if (error.response?.status === 403) {
-                    console.log(`Access forbidden (403) - User lacks permission for POS Invoice ${invoice.name}`);
+                    console.log(`Access forbidden (403) - User lacks permission for Sale Bill ${invoice.name}`);
                     // Continue processing other requisitions even if we can't access invoice details
                   } else {
                     console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
@@ -337,7 +340,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               };
             } catch (error: any) {
               if (error.response?.status === 403) {
-                console.log(`Access forbidden (403) - User lacks permission for POS Invoice data when processing requisition ${req.name}`);
+                console.log(`Access forbidden (403) - User lacks permission for Sale Bill data when processing requisition ${req.name}`);
                 // Return default status when we can't access invoice data
                 return {
                   ...req,
@@ -425,7 +428,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
       
       // Handle 403 FORBIDDEN errors gracefully
       if (error.response?.status === 403) {
-        console.log("Access forbidden (403) - User lacks permission for Patient Requisition or POS Invoice data");
+        console.log("Access forbidden (403) - User lacks permission for Patient Requisition or Sale Bill data");
         // You could show a user-friendly message here if needed
         // For now, we'll just clear the data and let the user see an empty list
       }
@@ -553,19 +556,19 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
         );
       },
     },
-    {
-      id: "select",
-      header: "Select",
-      cell: ({ row }: any) => (
-        <Button
-          onClick={() => onSelectRequisition(row.original)}
-          size="button-small"
-          type="primary-button"
-        >
-          Select
-        </Button>
-      ),
-    },
+    // {
+    //   id: "select",
+    //   header: "Select",
+    //   cell: ({ row }: any) => (
+    //     <Button
+    //       onClick={() => onSelectRequisition(row.original)}
+    //       size="button-small"
+    //       type="primary-button"
+    //     >
+    //       Select
+    //     </Button>
+    //   ),
+    // },
 
 
 

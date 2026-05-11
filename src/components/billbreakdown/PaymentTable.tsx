@@ -80,7 +80,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
               Object.fromEntries(authHeaders) : 
               authHeaders;
           
-          const response = await fetch(`https://192.168.7.221:4422/api/resource/POS%20Profile/${posProfile}`, {
+          const response = await fetch(`https://demohims.quantcloud.in/api/resource/POS%20Profile/${posProfile}`, {
             method: 'GET',
             headers,
           });

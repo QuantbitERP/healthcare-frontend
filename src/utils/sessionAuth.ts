@@ -32,6 +32,7 @@ export async function checkFrappeSession(): Promise<SessionUser | null> {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
                 },
+                // Ensure cookies are sent across contexts
             }
         );
 

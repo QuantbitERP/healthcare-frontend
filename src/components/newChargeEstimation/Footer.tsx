@@ -328,7 +328,7 @@ const handleFinalizeAndPrint = async () => {
               )
             }
           >
-            Preview & Print
+            {/* Preview & Print */}
           </Buttons>
         </div>
         <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">

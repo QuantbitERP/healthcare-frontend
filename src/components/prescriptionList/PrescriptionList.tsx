@@ -128,7 +128,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(true); // Default collapsed
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Default open
 
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate summary counts
@@ -519,6 +519,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
               onSearch={handleSearch}
               onDataChange={handleDateRangeChange}
               onFilterClick={() => { }}
+              onRowClick={(row) => onSelectPrescription(row)}
               isSearchFocus={true}
               hideFilters={false}
               hideDatePicker={false}

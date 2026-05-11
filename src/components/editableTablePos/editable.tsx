@@ -798,7 +798,7 @@ const EditableTable = ({
                 Object.fromEntries(authHeaders) :
                 authHeaders;
 
-            const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchName}`, {
+            const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchName}`, {
               method: 'GET',
               headers,
               credentials: 'include',
@@ -1133,7 +1133,7 @@ const EditableTable = ({
                     Object.fromEntries(authHeaders) :
                     authHeaders;
 
-                const response = await fetch(`https://192.168.7.221:4422/api/resource/Batch/${batchNo}`, {
+                const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchNo}`, {
                   method: 'GET',
                   headers,
                   credentials: 'include',

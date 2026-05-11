@@ -48,7 +48,7 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const { apiKey, apiSecret } = useAuth();
-  const API_BASE_URL = 'https://192.168.7.221:4422/api/resource';
+  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchInvoices = async (searchTerm: string, dates: { from: Date | null, to: Date | null }) => {
@@ -141,7 +141,7 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
     const invoiceName = invoice.name;
     const company = invoice.company;
     console.log('Printing invoice:', invoiceName);
-    const url = 'https://192.168.7.221:4422/printview?' +
+    const url = 'https://demohims.quantcloud.in/printview?' +
       'doctype=IPD BIll&' +
       'name=' + encodeURIComponent(invoiceName) + '&' +
       'format=' + encodeURIComponent(invoice.status === 'Return' ? 'IP SALE RETURN INVOICE' : 'IPD Bill Print Format') + '&' +
@@ -165,7 +165,7 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       // Submit the draft invoice
-      const response = await fetch(`https://192.168.7.221:4422/api/resource/IPD%20BIll/${invoice.name}`, {
+      const response = await fetch(`https://demohims.quantcloud.in/api/resource/IPD%20BIll/${invoice.name}`, {
         method: 'PUT',
         headers,
         credentials: 'include',

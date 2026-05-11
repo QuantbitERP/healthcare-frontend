@@ -44,8 +44,8 @@ function PageHeader(props: PageHeaderProps) {
     { label: 'Patient Requisition', route: '/PR', icon: '📋', type: 'page' },
     { label: 'Patient Requisition List', route: '/PatientRequistionList', icon: '📑', type: 'page' },
     { label: 'Return', route: '/return', icon: '↩️', type: 'page' },
-    { label: 'Home', route: 'https://192.168.7.196/Home', icon: '🏠', type: 'page' },
-    { label: 'ERP', route: 'https://192.168.7.196/Home', icon: '🏢', type: 'page' },
+    { label: 'Home', route: 'https://demohims.quantcloud.in/app/home', icon: '🏠', type: 'page' },
+    { label: 'ERP', route: 'https://demohims.quantcloud.in/app/home', icon: '🏢', type: 'page' },
   ];
 
   // Search Frappe for pages and documents
@@ -69,7 +69,7 @@ function PageHeader(props: PageHeaderProps) {
             authHeaders;
 
         const response = await fetch(
-          `https://192.168.7.221:4422/api/method/frappe.client.get_list?doctype=Page&filters=[["name","like","%${query}%"]]&fields=["name","title"]&limit_page_length=5`,
+          `https://demohims.quantcloud.in/api/method/frappe.client.get_list?doctype=Page&filters=[["name","like","%${query}%"]]&fields=["name","title"]&limit_page_length=5`,
           {
             method: 'GET',
             headers,
@@ -83,7 +83,7 @@ function PageHeader(props: PageHeaderProps) {
             data.message.forEach((page: any) => {
               frappeResults.push({
                 label: page.title || page.name,
-                route: `https://192.168.7.221:4422/app/${page.name.toLowerCase().replace(/ /g, '-')}`,
+                route: `https://demohims.quantcloud.in/app/${page.name.toLowerCase().replace(/ /g, '-')}`,
                 icon: '📄',
                 type: 'page',
               });
@@ -109,7 +109,7 @@ function PageHeader(props: PageHeaderProps) {
               authHeaders;
 
           const response = await fetch(
-            `https://192.168.7.221:4422/api/method/frappe.client.get_list?doctype=${doctype}&filters=[["name","like","%${query}%"]]&fields=["name"]&limit_page_length=3`,
+            `https://demohims.quantcloud.in/api/method/frappe.client.get_list?doctype=${doctype}&filters=[["name","like","%${query}%"]]&fields=["name"]&limit_page_length=3`,
             {
               method: 'GET',
               headers,
@@ -123,7 +123,7 @@ function PageHeader(props: PageHeaderProps) {
               data.message.forEach((doc: any) => {
                 frappeResults.push({
                   label: `${doc.name} (${doctype})`,
-                  route: `https://192.168.7.221:4422/app/${(doctype.toLowerCase().replace(/ /g, '-') === 'grn' ? 'purchase-receipt' : doctype.toLowerCase().replace(/ /g, '-'))}/${doc.name}`,
+                  route: `https://demohims.quantcloud.in/app/${(doctype.toLowerCase().replace(/ /g, '-') === 'grn' ? 'purchase-receipt' : doctype.toLowerCase().replace(/ /g, '-'))}/${doc.name}`,
                   icon: '📋',
                   type: 'document',
                 });
@@ -261,7 +261,7 @@ function PageHeader(props: PageHeaderProps) {
     <div style={{
       zIndex: 100,
       backgroundColor: 'transparent',
-      backgroundImage: 'url("pos/assets/images/Header.svg")',
+      backgroundImage: 'url("/pos/assets/images/Header.svg")',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat'
