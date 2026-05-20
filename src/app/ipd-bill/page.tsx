@@ -5263,13 +5263,13 @@ export default function IPDBill() {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
         }
 
