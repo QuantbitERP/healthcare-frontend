@@ -27,7 +27,7 @@ function TotalBreakdownCard({ open, setOpen }: TotalBreakdownCardProps) {
           <div className="flex items-center gap-2 justify-between border-b border-[#D9D9E0] px-6 py-4">
             <div className="flex items-center gap-2">
               <Image
-                src={"/assets/icons/moneybag.svg"}
+                src={"assets/icons/moneybag.svg"}
                 height={24}
                 width={24}
                 alt="amount icon"
@@ -39,7 +39,7 @@ function TotalBreakdownCard({ open, setOpen }: TotalBreakdownCardProps) {
             <DialogClose asChild>
               <Image
                 className="border border-[#D9D9E0] cursor-pointer rounded-md p-1"
-                src={"/assets/icons/x.svg"}
+                src={"assets/icons/x.svg"}
                 height={24}
                 width={24}
                 alt="filter icon"
@@ -48,9 +48,9 @@ function TotalBreakdownCard({ open, setOpen }: TotalBreakdownCardProps) {
           </div>
         </DialogHeader>
         <div className="px-2">
-            <Alerts heading="2 bills selected" content="" variant="secondary"/>
-            <div className="px-2 py-2 flex flex-col space-y-6 items-center w-full">
-            
+          <Alerts heading="2 bills selected" content="" variant="secondary" />
+          <div className="px-2 py-2 flex flex-col space-y-6 items-center w-full">
+
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col space-y-3">
                 <Label className="text-[#1C2024] text-sm">Receipt Amount</Label>
@@ -97,7 +97,7 @@ function TotalBreakdownCard({ open, setOpen }: TotalBreakdownCardProps) {
                 type="button"
                 variant="default"
                 className="bg-primary text-white"
-                // onClick={onSubmit}
+              // onClick={onSubmit}
               >
                 Distribute Amount
               </Button>

@@ -36,7 +36,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
   const handleSetSortedColumn = (columnId: string) => {
     setSortedColumn(columnId as keyof TableDataType);
   };
-  
+
 
   return [
     {
@@ -54,7 +54,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           <SortableHeaderButton
             column={column}
             label={t("table.billId")}
-            sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn}}
+            sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
             className=""
           />
         </div>
@@ -79,7 +79,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.patient")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -124,7 +124,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.uhid")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -135,7 +135,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.company")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -147,7 +147,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.associateCompany")}
           className="justify-end w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
     },
@@ -158,7 +158,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.billType")}
           className="justify-end w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
     },
@@ -169,7 +169,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.status")}
           className="justify-start w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
       cell: ({ row }) => {
@@ -188,10 +188,10 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.claimSendNo")}
           className="flex justify-end w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
-       enableGrouping: true,
+      enableGrouping: true,
     },
     {
       accessorKey: "submittedBy",
@@ -199,7 +199,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.submittedBy")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -226,7 +226,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.companyAmount")}
           className="justify-end w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
       cell: ({ row }) => (
@@ -242,7 +242,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.patientAmount")}
           className="justify-end w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
       cell: ({ row }) => (
@@ -258,7 +258,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           column={column}
           label={t("table.referralLetterNo")}
           className="justify-end w-full"
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
         />
       ),
     },
@@ -268,7 +268,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.modifiedOn")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -301,7 +301,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.priorAuthDoneBy")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -325,7 +325,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.billFinalizedBy")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -349,7 +349,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         <SortableHeaderButton
           column={column}
           label={t("table.submitDate")}
-          sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+          sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           className=""
         />
       ),
@@ -384,7 +384,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
             column={column}
             label={`${t("table.billAmount")} (${getCurrencySymbol("INR")})`}
             className="justify-end w-full"
-            sortedProps={{ sortedColumn, setSortedColumn:handleSetSortedColumn }}
+            sortedProps={{ sortedColumn, setSortedColumn: handleSetSortedColumn }}
           />
         </div>
       ),
@@ -394,7 +394,7 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
           <DropDownWithButton
             trigger={
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="More"
                 width={16}
                 height={16}
@@ -405,5 +405,5 @@ export const Columns = (): ColumnDef<TableDataType>[] => {
         </div>
       ),
     },
-  ]as ColumnDef<TableDataType>[];
+  ] as ColumnDef<TableDataType>[];
 };

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Buttons from "../buttons/Button";
 import SplitButton from "../splitButton/splitButton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Check from "../checkbox/CheckboxComponent";  
+import Check from "../checkbox/CheckboxComponent";
 
 import {
   Dialog,
@@ -35,7 +35,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
       <DialogContent className="w-fit h-fit p-0 rounded-lg shadow-none border-none [&>button]:hidden">
         <div className="w-[640px] h-fit rounded-lg flex flex-col gap-6 bg-[#FFF] border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)]">
           <div className="w-full px-6 py-4 border-b border-b-[#D9D9E0] gap-2 flex flex-row">
-            <Image src={'/assets/icons/PrinterBlack.svg'} width={24} height={24} alt="Printer" />
+            <Image src={'assets/icons/PrinterBlack.svg'} width={24} height={24} alt="Printer" />
             <p className="text-[#1C2024] text-base font-semibold">Print</p>
           </div>
           <div className="w-full px-6">
@@ -62,7 +62,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
                 <div className="flex flex-row gap-2 w-full">
                   <div className="flex items-start">
                     <Check label="" />
-                  </div> 
+                  </div>
                   <div className="flex flex-col gap-2 w-full">
                     <span className="text-[#1C2024] text-sm font-normal">From Date</span>
                     <Popover>
@@ -79,7 +79,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
                           ) : (
                             <span className="text-[#8B8D98] text-sm font-normal w-full">Pick a Date</span>
                           )}
-                          <Image src={'/assets/icons/CalendarGrey.svg'} width={16} height={16} alt="Calendar" />
+                          <Image src={'assets/icons/CalendarGrey.svg'} width={16} height={16} alt="Calendar" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -108,7 +108,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
                           ) : (
                             <span className="text-[#8B8D98] text-sm font-normal w-full">Pick a Date</span>
                           )}
-                          <Image src={'/assets/icons/CalendarGrey.svg'} width={16} height={16} alt="Calendar" />
+                          <Image src={'assets/icons/CalendarGrey.svg'} width={16} height={16} alt="Calendar" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -120,7 +120,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
                         />
                       </PopoverContent>
                     </Popover>
-                  </div> 
+                  </div>
                 </div>
               </div>
               <div className="flex flex-row gap-4">
@@ -146,7 +146,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
                           ) : (
                             <span className="text-[#8B8D98] text-sm font-normal w-full">Pick Date and Time</span>
                           )}
-                          <Image src={'/assets/icons/CalendarGrey.svg'} width={16} height={16} alt="Calendar" />
+                          <Image src={'assets/icons/CalendarGrey.svg'} width={16} height={16} alt="Calendar" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[275px] p-0" align="start">
@@ -177,7 +177,7 @@ const Print: React.FC<PrintProps> = ({ open, setOpen }) => {
                     </Popover>
                   </div>
                 </div>
-              </div> 
+              </div>
             </div>
           </div>
 

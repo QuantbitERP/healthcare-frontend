@@ -33,7 +33,7 @@ type BalanceUtilizedProps = {
 const columns: ColumnDef<RowData>[] = [
   {
     accessorKey: 'description',
-    header: ({  }) => (
+    header: ({ }) => (
       <div className="flex flex-row items-center">
         <Button
           variant="ghost"
@@ -47,9 +47,8 @@ const columns: ColumnDef<RowData>[] = [
       const isTotalAmount = row.original.description === 'Balance Amount';
       return (
         <span
-          className={`${
-            row.original.tagText === 'Cancelled' ? 'line-through' : ''
-          } ${isTotalAmount ? 'font-semibold' : ''}`}
+          className={`${row.original.tagText === 'Cancelled' ? 'line-through' : ''
+            } ${isTotalAmount ? 'font-semibold' : ''}`}
         >
           {String(getValue())}
         </span>
@@ -73,9 +72,8 @@ const columns: ColumnDef<RowData>[] = [
       return (
         <div className="border-l border-[#D9D9E0] -ml-3">
           <span
-            className={`text-right w-full block h-10 py-3 pl-3 ${
-              row.original.tagText === 'Cancelled' ? 'line-through' : ''
-            } ${isTotalAmount ? 'font-bold text-lg' : ''}`}
+            className={`text-right w-full block h-10 py-3 pl-3 ${row.original.tagText === 'Cancelled' ? 'line-through' : ''
+              } ${isTotalAmount ? 'font-bold text-lg' : ''}`}
           >
             ₹{String(getValue())}
           </span>

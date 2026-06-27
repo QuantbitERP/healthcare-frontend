@@ -93,41 +93,41 @@ export const columns = (onRemoveBill?: (billId: string) => void): ColumnDef<Bill
     header: () => (
       <div className="h-10 border-l border-[#D9D9E0] pl-5 py-2">
         <span>Total Amount</span>
-  
+
       </div>
     ),
     cell: ({ row }) => (
       <div className="flex items-center justify-end gap-2 border-l border-[#D9D9E0] h-10">
-          {formatCurrency(Number(row.original.totalAmount), "INR")}
-          {onRemoveBill && (
-            <button
-              onClick={() => onRemoveBill(row.original.billId)}
-              className="p-1 hover:bg-red-50 rounded-md transition-colors"
-              title="Remove bill"
-            >
-              <Image
-                src="/assets/icons/Trash.svg"
-                alt="Remove"
-                width={16}
-                height={16}
-                className="text-red-500"
-              />
-            </button>
-          )}
-          <DropDownWithButton
-            trigger={
-              <Image
-                src="/assets/icons/DotsVertical.svg"
-                alt="More"
-                width={16}
-                height={16}
-              />
-            }
-            menuRendering={tableActionMenu}
-          />
-        </div>
+        {formatCurrency(Number(row.original.totalAmount), "INR")}
+        {onRemoveBill && (
+          <button
+            onClick={() => onRemoveBill(row.original.billId)}
+            className="p-1 hover:bg-red-50 rounded-md transition-colors"
+            title="Remove bill"
+          >
+            <Image
+              src="assets/icons/Trash.svg"
+              alt="Remove"
+              width={16}
+              height={16}
+              className="text-red-500"
+            />
+          </button>
+        )}
+        <DropDownWithButton
+          trigger={
+            <Image
+              src="assets/icons/DotsVertical.svg"
+              alt="More"
+              width={16}
+              height={16}
+            />
+          }
+          menuRendering={tableActionMenu}
+        />
+      </div>
     ),
-     enableSorting: true,
+    enableSorting: true,
   },
 ];
 

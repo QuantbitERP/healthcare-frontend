@@ -47,7 +47,7 @@ export default function ComponentsShowcase() {
                 <Button type="secondary-button" size="button-medium">Secondary</Button>
                 <Button type="danger-button" size="button-medium">Danger</Button>
                 <Button type="link-primary" variant="link-button">Link Button</Button>
-                <Button variant="icon" iconSrc="/assets/icons/Search.svg" alt="Search" />
+                <Button variant="icon" iconSrc="assets/icons/Search.svg" alt="Search" />
                 <Button variant="outline" type="primary-button">Outline</Button>
                 <Button disabled>Disabled</Button>
               </div>

@@ -86,7 +86,7 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
   approvedDate,
   approvedBy,
   size = "large",
-  
+
 }) => {
   const [activeToggle, setActiveToggle] = useState<string>("General Information");
   const [selfPaying, setSelfPaying] = useState<boolean>(isSelfPaying);

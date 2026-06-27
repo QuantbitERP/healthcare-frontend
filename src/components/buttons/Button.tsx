@@ -27,7 +27,7 @@ const Button: React.FC<ButtonProps> = ({
   variant = "button",
   type = "primary-button",
   size = "button-small",
-  iconSrc = "../app/assets/icons/Leading Icon.svg",
+  iconSrc = "../appassets/icons/Leading Icon.svg",
   alt = "icon",
   children,
   onClick,
@@ -41,8 +41,7 @@ const Button: React.FC<ButtonProps> = ({
   return (
     <button
       className={cn(
-        `button ${isIcon ? "icon" : ""} ${isLink ? "link-button" : ""} ${
-          isOutline ? `outline-${type}` : type
+        `button ${isIcon ? "icon" : ""} ${isLink ? "link-button" : ""} ${isOutline ? `outline-${type}` : type
         } ${size} !w-fit`,
         disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "",
         className

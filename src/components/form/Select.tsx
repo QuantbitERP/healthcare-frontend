@@ -157,7 +157,7 @@ export default function SelectInput({
             {value ? getLabelForValue(value as string, options) : placeholder}
           </SelectValue>
         )}
-        <Image src={'/assets/icons/CaretDownDark.svg'} height={16} width={16} alt="caret icon" />
+        <Image src={'assets/icons/CaretDownDark.svg'} height={16} width={16} alt="caret icon" />
       </SelectTrigger>
 
       {!multiple ? (

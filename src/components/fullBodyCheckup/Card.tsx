@@ -53,7 +53,7 @@ const CostBreakdownCard: React.FC<CostBreakdownCardProps> = ({
   size = "small",
   selectedService,
 }) => {
-  
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [data, setData] = useState(initialData);
   const [open, setOpen] = useState(false);
@@ -86,35 +86,33 @@ const CostBreakdownCard: React.FC<CostBreakdownCardProps> = ({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
       <div
         className={`bg-white shadow-xl rounded-t-xl flex flex-col overflow-hidden animate-slideUp
-      ${
-        size === "small"
-          ? "w-[640px] max-h-[90vh]"
-          : size === "medium"
-          ? "w-[960px] max-h-[90vh]"
-          : "w-[100vw] h-[93%]"
-      } 
+      ${size === "small"
+            ? "w-[640px] max-h-[90vh]"
+            : size === "medium"
+              ? "w-[960px] max-h-[90vh]"
+              : "w-[100vw] h-[93%]"
+          } 
       ${isNestedDialog ? "z-60" : ""}
     `}
       >
         {/* Header */}
         <div className="w-full flex items-center px-6 py-4 border-b border-[#D9D9E0]">
           <Image
-            src={"/assets/icons/Notepad.svg"}
+            src={"assets/icons/Notepad.svg"}
             width={24}
             height={24}
             alt="notepad"
           />
           <span
-            className={`${
-              open ? "text-[#0D74CE] cursor-pointer" : "text-[#1C2024]"
-            } font-semibold text-base flex-1 pl-2`}
+            className={`${open ? "text-[#0D74CE] cursor-pointer" : "text-[#1C2024]"
+              } font-semibold text-base flex-1 pl-2`}
             onClick={() => setOpen(false)}
           >
             {selectedService}
             {open && <span className="text-[#1C2024]"> / {modalData}</span>}
           </span>
           <Buttons
-            iconSrc={"/assets/icons/x.svg"}
+            iconSrc={"assets/icons/x.svg"}
             size="button-icon-small"
             type="secondary-button"
             variant="icon"
@@ -125,13 +123,12 @@ const CostBreakdownCard: React.FC<CostBreakdownCardProps> = ({
         {/* Body Scrollable */}
         <div
           id="cardBody"
-          className={`flex-1 overflow-auto no-scrollbar ${
-            size === "small"
+          className={`flex-1 overflow-auto no-scrollbar ${size === "small"
               ? "px-6"
               : size === "medium"
-              ? "px-8"
-              : "px-[calc((100vw-960px)/2)] pt-4"
-          }`}
+                ? "px-8"
+                : "px-[calc((100vw-960px)/2)] pt-4"
+            }`}
           onScroll={handleScroll}
         >
           {!open ? (
@@ -141,31 +138,31 @@ const CostBreakdownCard: React.FC<CostBreakdownCardProps> = ({
                 <div className="flex flex-col w-full border border-[#D9D9E0] rounded-md text-sm">
                   <div className="flex w-full border-b border-[#D9D9E0]">
                     <InfoRowItem
-                      icon={"/assets/icons/LabelIcon.svg"}
+                      icon={"assets/icons/LabelIcon.svg"}
                       label="Package Code"
                       value={packageCode}
                     />
                     <InfoRowItem
-                      icon={"/assets/icons/GenderMale.svg"}
+                      icon={"assets/icons/GenderMale.svg"}
                       label="Gender"
                       value={gender}
                     />
                   </div>
                   <div className="flex w-full border-b border-[#D9D9E0]">
                     <InfoRowItem
-                      icon={"/assets/icons/Company.svg"}
+                      icon={"assets/icons/Company.svg"}
                       label="Department"
                       value={"Cardiology"}
                     />
                     <InfoRowItem
-                      icon={"/assets/icons/Packages.svg"}
+                      icon={"assets/icons/Packages.svg"}
                       label="Package Type"
                       value={"Health Checkup"}
                     />
                   </div>
                   <div className="flex w-full">
                     <InfoRowItem
-                      icon={"/assets/icons/Emergency.svg"}
+                      icon={"assets/icons/Emergency.svg"}
                       label="Emergency"
                       value={<Switch />}
                     />
@@ -249,10 +246,10 @@ const CostBreakdownCard: React.FC<CostBreakdownCardProps> = ({
                 </div>
               </div>
             ) : (
-              <Service onClose={() => {}} />
+              <Service onClose={() => { }} />
             )
           ) : (
-            <Service onClose={() => {}} />
+            <Service onClose={() => { }} />
           )}
         </div>
 

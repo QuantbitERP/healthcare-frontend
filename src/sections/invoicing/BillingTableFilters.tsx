@@ -20,19 +20,19 @@ function BillingTableFilters(): JSX.Element {
       <div className="filters flex space-x-sm py-xs">
         <TableUtilToggle inputProps={{ checked, setChecked }} label={t("actionLabels.meMode")} />
         <TableUtilFilterButton
-          icon={"/assets/icons/FilterIcon.svg"}
+          icon={"assets/icons/FilterIcon.svg"}
           label={t("actionLabels.filters")}
           badgeCount={Number("2")}
         />
         <DateRangePicker
           dateProps={{
             date: { from: new Date(), to: new Date() },
-            setDate: () => {},
+            setDate: () => { },
           }}
         />
 
         <UtilDropDownButton
-          leadingIcon={"/assets/icons/columns.svg"}
+          leadingIcon={"assets/icons/columns.svg"}
           label={t("actionLabels.showColumns")}
           className="drop-down-button"
           isDatePicker={false}

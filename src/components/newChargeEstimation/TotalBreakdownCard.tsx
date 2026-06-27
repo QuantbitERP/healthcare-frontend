@@ -34,10 +34,10 @@ function TotalBreakdownCard({
   const [paidByOptions, setPaidByOptions] = useState<
     { key: string; value: string }[]
   >([]);
- 
+
   const [open, setOpen] = useState(false);
- 
-  
+
+
   const [selectedValue, setSelectedValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [gstList, setGstList] = useState<KVPairListResultModelResultModel>();
@@ -51,7 +51,7 @@ function TotalBreakdownCard({
     setPaidByName,
     setSponsoredbyName,
     setPendingPaybleAmount,
-    
+
   } = useGlobalTables();
 
   useEffect(() => {
@@ -70,16 +70,16 @@ function TotalBreakdownCard({
   }, []);
 
   useEffect(() => {
-    if(selectedPatientBill){
+    if (selectedPatientBill) {
       const selectedOption =
-                  paidByOptions.find((item) => item.value === selectedValue) ||
-                  null;
+        paidByOptions.find((item) => item.value === selectedValue) ||
+        null;
       setPaidBy(selectedOption);
       setPaidByName(selectedPatientBill?.paidByName ?? "");
       setSponsoredbyName(selectedPatientBill?.sponsoredbyName ?? "")
       setPendingPaybleAmount(selectedPatientBill?.billPatientPayableAmount ?? 0)
     }
-  },[paidByOptions, selectedPatientBill, selectedValue, setPaidBy, setPaidByName, setPendingPaybleAmount, setSponsoredbyName]);
+  }, [paidByOptions, selectedPatientBill, selectedValue, setPaidBy, setPaidByName, setPendingPaybleAmount, setSponsoredbyName]);
 
 
 
@@ -98,7 +98,7 @@ function TotalBreakdownCard({
           amount: item.amount ?? 0,     // convert null → 0 (or undefined, depending on what you want)
         })) as InsertReceiptPayment[]
       );
-      
+
     }
   }, [selectedPatientBill?.receiptPayments, setPatientRecordPayment, setPatientRecordPaymentInUpdate]);
 
@@ -115,7 +115,7 @@ function TotalBreakdownCard({
       }
     }
   }, [gstList, selectedPatientBill?.billGstId, setGSTID]);
-  
+
 
   const handleSelect = (value: string) => {
     setSelectedValue(value);
@@ -163,7 +163,7 @@ function TotalBreakdownCard({
     };
   }, []);
 
- const calculateTotalAmount = (patientServicesTable: any[]) => {
+  const calculateTotalAmount = (patientServicesTable: any[]) => {
     return patientServicesTable.reduce((total, row) => {
       const rate = parseFloat(row.rate) || 0;
       const quantity = parseFloat(row.quantity) || 0;
@@ -199,7 +199,7 @@ function TotalBreakdownCard({
               <p className="text-[#1C2024] text-xs font-semibold">
                 {billData && "finalBillAmount" in billData
                   ? billData.finalBillAmount : billData && "billTotalAmount" in billData ? billData?.billTotalAmount
-                  : calculateTotalAmount(patientServicesTable)}
+                    : calculateTotalAmount(patientServicesTable)}
               </p>
             </div>
             <div className="flex flex-row justify-between items-center h-8 ">
@@ -215,7 +215,7 @@ function TotalBreakdownCard({
                     {selectedValue ? `GST (${selectedValue}%)` : "GST"}
                   </p>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     width={16}
                     height={16}
                     alt="Caret"
@@ -266,7 +266,7 @@ function TotalBreakdownCard({
           </div>
           <div>
             <Image
-              src={"/assets/icons/DividerHorizontal.svg"}
+              src={"assets/icons/DividerHorizontal.svg"}
               width={224}
               height={220}
               alt="Divider"

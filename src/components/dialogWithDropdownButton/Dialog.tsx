@@ -116,7 +116,7 @@ export default function CloseDialogueBox({
       try {
         setLoading(true);
         setLoadingAction("cancel");
-    
+
         const response = await dispatch(
           cancelDraftOpdBill({
             version: "1",
@@ -130,9 +130,9 @@ export default function CloseDialogueBox({
         ).unwrap();
 
         const cancelled = response?.data?.cancelled ?? [];
-    
+
         if (cancelled.length > 0) {
-          
+
           setCancelClicked(true);
           setOpen(false);
           setShowCancelButtons(false);
@@ -151,7 +151,7 @@ export default function CloseDialogueBox({
         }, 100);
       }
     }
-     else if (billData?.id) {
+    else if (billData?.id) {
       try {
         setLoading(true);
         setLoadingAction("cancel");
@@ -200,8 +200,8 @@ export default function CloseDialogueBox({
         "billDocumentNumber" in billData
           ? billData.billDocumentNumber
           : "tempDocumentNo" in billData
-          ? billData.tempDocumentNo
-          : undefined,
+            ? billData.tempDocumentNo
+            : undefined,
       existingBillId: billData?.id,
       visittype: billData?.visittype,
       patientid: billData?.patientid ?? "",
@@ -219,9 +219,9 @@ export default function CloseDialogueBox({
       billConcession: patientBillConcession ?? [],
       receiptPayments: (patientRecordPayment ?? []).map((item) => ({
         ...item,
-        billReceiptPaymentDetailId: item.id,    
+        billReceiptPaymentDetailId: item.id,
       })),
-      
+
       billDiscountPercent: billData?.billDiscountAmount ?? 0,
       billDiscountAmount: billData?.billDiscountAmount ?? 0,
       billGstId: billData?.billGstId ?? null,
@@ -238,8 +238,7 @@ export default function CloseDialogueBox({
       const res = await OpdBillService.putApiVOpdBillOpdbills("1", "", payload);
       if (!res.isError) {
         router.push(
-          `/opd_bills?status=cancel&Duplicate&billNumber=${
-            (billData as any)?.billDocumentNumber
+          `/opd_bills?status=cancel&Duplicate&billNumber=${(billData as any)?.billDocumentNumber
           }`
         );
       } else {
@@ -274,7 +273,7 @@ export default function CloseDialogueBox({
           <div className="text-[#1C2024] text-base font-semibold leading-6 flex justify-between">
             <span>{title}</span>
             <Image
-              src={"/assets/icons/x.svg"}
+              src={"assets/icons/x.svg"}
               width={24}
               height={24}
               alt="Close Icon"
@@ -302,7 +301,7 @@ export default function CloseDialogueBox({
                             ?.reason ?? dropdownLabel}
                         </button>
                         <Image
-                          src="/assets/icons/CaretDownFilled.svg"
+                          src="assets/icons/CaretDownFilled.svg"
                           width={16}
                           height={16}
                           alt="Caret Down Icon"
@@ -382,7 +381,7 @@ export default function CloseDialogueBox({
                     <>
                       Cancel Bill
                       <Image
-                        src={"/assets/icons/CarretDownWhite.svg"}
+                        src={"assets/icons/CarretDownWhite.svg"}
                         width={16}
                         height={16}
                         alt="Caret Down Icon"

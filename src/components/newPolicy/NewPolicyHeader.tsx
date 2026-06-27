@@ -15,29 +15,29 @@ const Header: React.FC<HeaderProps> = ({ policyData }) => {
     >
       <div className="w-fit h-fit flex flex-row items-center gap-2">
         <Image
-          src={"/assets/icons/receipt-rupee.svg"}
+          src={"assets/icons/receipt-rupee.svg"}
           alt="Icon"
           width={24}
           height={24}
         />
-         <div className="flex gap-1 text-base font-semibold">
-           <span
-             className="font-semibold text-lg text-[#0D74CE] cursor-pointer"
-             onClick={() => router.push("/employee_policies")}
-           >
-             Employee Policies
-           </span>
-           <span className="font-semibold text-lg text-[#1C2024]">/</span>
-         </div>
-         {policyData ? (
-           <span className="font-semibold text-lg text-[#1C2024]">
-             {policyData.id}
-           </span>
-         ) : (
-           <span className="font-semibold text-lg text-[#1C2024]">
-             New Employee Policy
-           </span>
-         )}
+        <div className="flex gap-1 text-base font-semibold">
+          <span
+            className="font-semibold text-lg text-[#0D74CE] cursor-pointer"
+            onClick={() => router.push("/employee_policies")}
+          >
+            Employee Policies
+          </span>
+          <span className="font-semibold text-lg text-[#1C2024]">/</span>
+        </div>
+        {policyData ? (
+          <span className="font-semibold text-lg text-[#1C2024]">
+            {policyData.id}
+          </span>
+        ) : (
+          <span className="font-semibold text-lg text-[#1C2024]">
+            New Employee Policy
+          </span>
+        )}
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
               Visit Information
             </span>
           </div>
-          
+
           {/* Display patient info */}
           <div className="flex flex-row gap-2 items-center">
             <Avatar
@@ -40,7 +40,7 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
             </span>
           </div>
         </div>
-        
+
         <div className="flex flex-row gap-2">
           <Tags
             variant="tag"
@@ -56,13 +56,13 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
           />
         </div>
       </div>
-      
+
       {/* Patient information details */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-row h-8 items-center justify-between">
           <div className="flex flex-row gap-1">
             <Image
-              src={"/assets/icons/Id.svg"}
+              src={"assets/icons/Id.svg"}
               width={16}
               height={16}
               alt="UHID"
@@ -75,11 +75,11 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
             {visitData?.patientMrn || "N/A"}
           </span>
         </div>
-        
+
         <div className="flex flex-row h-8 items-center justify-between">
           <div className="flex flex-row gap-1">
             <Image
-              src={"/assets/icons/Cake.svg"}
+              src={"assets/icons/Cake.svg"}
               width={16}
               height={16}
               alt="Age"
@@ -92,11 +92,11 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
             {visitData?.patientAgeYears || "N/A"} / {visitData?.patientGender || "N/A"}
           </span>
         </div>
-        
+
         <div className="flex flex-row h-8 items-center justify-between">
           <div className="flex flex-row gap-1">
             <Image
-              src={"/assets/icons/Cash.svg"}
+              src={"assets/icons/Cash.svg"}
               width={16}
               height={16}
               alt="Category"
@@ -109,11 +109,11 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
             {visitData?.category || "N/A"}
           </span>
         </div>
-        
+
         <div className="flex flex-row h-8 items-center justify-between">
           <div className="flex flex-row gap-1">
             <Image
-              src={"/assets/icons/Building.svg"}
+              src={"assets/icons/Building.svg"}
               width={16}
               height={16}
               alt="Company"
@@ -126,11 +126,11 @@ const VisitInformationCard: React.FC<VisitInformationCardProps> = ({ visitData }
             {visitData?.companyName || "N/A"}
           </span>
         </div>
-        
+
         <div className="flex flex-row h-8 items-center justify-between">
           <div className="flex flex-row gap-1">
             <Image
-              src={"/assets/icons/DoorEnter.svg"}
+              src={"assets/icons/DoorEnter.svg"}
               width={16}
               height={16}
               alt="Visit Code"

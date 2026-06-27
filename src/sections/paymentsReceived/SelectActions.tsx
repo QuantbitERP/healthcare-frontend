@@ -35,9 +35,8 @@ function SelectActions<T>({
 }: SelectActionsProps<T>) {
   return (
     <div
-      className={`fixed z-30 bg-black text-white mx-auto w-[780px] rounded-lg px-md py-sm left-1/2 -translate-x-1/2 bottom-16 flex justify-between items-center ${
-        open ? "" : "hidden"
-      } `}
+      className={`fixed z-30 bg-black text-white mx-auto w-[780px] rounded-lg px-md py-sm left-1/2 -translate-x-1/2 bottom-16 flex justify-between items-center ${open ? "" : "hidden"
+        } `}
     >
       <div>
         <button
@@ -46,7 +45,7 @@ function SelectActions<T>({
         >
           <span>{`${rows.length} Selected`}</span>
           <Image
-            src={"/assets/icons/x-white.svg"}
+            src={"assets/icons/x-white.svg"}
             height={16}
             width={16}
             alt="close-icon"
@@ -58,12 +57,12 @@ function SelectActions<T>({
         className="flex space-x-6 text-xs"
       >
         <div className="flex items-center space-x-2 cursor-pointer"
-         onClick={() => {
-          setOpenSubmitBill(true);
-          setOpen(false);
-        }}>
+          onClick={() => {
+            setOpenSubmitBill(true);
+            setOpen(false);
+          }}>
           <Image
-            src={"/assets/icons/amount.svg"}
+            src={"assets/icons/amount.svg"}
             height={16}
             width={16}
             alt="export-icon"
@@ -83,7 +82,7 @@ function SelectActions<T>({
                 }}
               >
                 <Image
-                  src={"/assets/icons/Submit.svg"}
+                  src={"assets/icons/Submit.svg"}
                   height={18}
                   width={18}
                   alt="submit-icon"
@@ -101,7 +100,7 @@ function SelectActions<T>({
               }}
             >
               <Image
-                src={"/assets/icons/trash.svg"}
+                src={"assets/icons/trash.svg"}
                 height={16}
                 width={16}
                 alt="delete-icon"
@@ -122,7 +121,7 @@ function SelectActions<T>({
               }}
             >
               <Image
-                src={"/assets/icons/Remove.svg"}
+                src={"assets/icons/Remove.svg"}
                 height={16}
                 width={16}
                 alt="remove-icon"

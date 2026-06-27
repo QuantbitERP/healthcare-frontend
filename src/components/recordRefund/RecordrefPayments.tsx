@@ -32,18 +32,18 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
 interface RecordRefundProps {
-  setOpen :Dispatch<SetStateAction<boolean>>
+  setOpen: Dispatch<SetStateAction<boolean>>
   setSaveRecord: (value: boolean) => void;
-  refund:RefundsDto,
-  setrefund:React.Dispatch<RefundsDto> 
+  refund: RefundsDto,
+  setrefund: React.Dispatch<RefundsDto>
 }
-const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord,refund,setrefund }) => {
-  
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [data, setData] = useState<RecordRefundDto[]>(refund?.recordRefunds||[]);
- 
+const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord, refund, setrefund }) => {
 
-  const paymentModes= useSelector((state: RootState) => state.refundFilter.Paymodes);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [data, setData] = useState<RecordRefundDto[]>(refund?.recordRefunds || []);
+
+
+  const paymentModes = useSelector((state: RootState) => state.refundFilter.Paymodes);
 
   useEffect(() => {
     if (JSON.stringify(refund.recordRefunds) !== JSON.stringify(data)) {
@@ -97,9 +97,8 @@ const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord,refu
               />
             </div>
             <span
-              className={`text-right w-full block ${
-                row.original.tagText === "Cancelled" ? "line-through" : ""
-              }`}
+              className={`text-right w-full block ${row.original.tagText === "Cancelled" ? "line-through" : ""
+                }`}
             >
               ₹{numericValue}
             </span>
@@ -128,9 +127,8 @@ const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord,refu
       ),
       cell: ({ row, getValue }) => (
         <span
-          className={`text-center w-full block ${
-            row.original.tagText === "Cancelled" ? "line-through" : ""
-          }`}
+          className={`text-center w-full block ${row.original.tagText === "Cancelled" ? "line-through" : ""
+            }`}
         >
           {getValue() as string}
         </span>
@@ -214,9 +212,8 @@ const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord,refu
       ),
       cell: ({ row, getValue }) => (
         <span
-          className={`text-center w-full block ${
-            row.original.tagText === "Cancelled" ? "line-through" : ""
-          }`}
+          className={`text-center w-full block ${row.original.tagText === "Cancelled" ? "line-through" : ""
+            }`}
         >
           {getValue() as string}
         </span>
@@ -252,11 +249,10 @@ const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord,refu
           </Tooltip>
         </TooltipProvider>
       ),
-      cell: ({ row}) => (
+      cell: ({ row }) => (
         <span
-          className={`text-center w-full block ${
-            row.original.tagText === "Cancelled" ? "line-through" : ""
-          }`}
+          className={`text-center w-full block ${row.original.tagText === "Cancelled" ? "line-through" : ""
+            }`}
         >
           {row.original.bankName}
         </span>
@@ -278,11 +274,11 @@ const RecordRefund: React.FC<RecordRefundProps> = ({ setOpen, setSaveRecord,refu
     <div className="w-[640px] h-fit rounded-lg flex flex-col gap-6 bg-[#FFF] border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)]">
       <div className="w-full px-6 py-4 border-b border-b-[#D9D9E0] justify-between flex flex-row">
         <div className="flex flex-row gap-2 items-center">
-          <Image src={"/assets/icons/CurrencyIcon.svg"} width={24} height={24} alt="Rupee" />
+          <Image src={"assets/icons/CurrencyIcon.svg"} width={24} height={24} alt="Rupee" />
           <p className="text-[#1C2024] text-base font-semibold">Record a Refund</p>
         </div>
         <Buttons
-          iconSrc={"/assets/icons/ThreeDots.svg"}
+          iconSrc={"assets/icons/ThreeDots.svg"}
           size="button-icon-small"
           type="secondary-button"
           variant="icon"

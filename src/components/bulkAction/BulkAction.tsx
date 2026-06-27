@@ -25,9 +25,8 @@ function BulkAction({
 }: BulkActionProps) {
   return (
     <div
-      className={`fixed z-50 bg-black text-white mx-auto w-[800px] rounded-lg px-md py-sm left-1/2 -translate-x-1/2 bottom-18 flex justify-between items-center shadow-lg ${
-        open ? "" : "hidden"
-      }  `}
+      className={`fixed z-50 bg-black text-white mx-auto w-[800px] rounded-lg px-md py-sm left-1/2 -translate-x-1/2 bottom-18 flex justify-between items-center shadow-lg ${open ? "" : "hidden"
+        }  `}
     >
       <div>
         <button
@@ -36,7 +35,7 @@ function BulkAction({
         >
           <span>{`${rows.length} Selected`}</span>
           <Image
-            src={"/assets/icons/x-white.svg"}
+            src={"assets/icons/x-white.svg"}
             height={16}
             width={16}
             alt="close-icon"
@@ -57,7 +56,7 @@ function BulkAction({
               className="flex items-center space-x-2 cursor-pointer"
             >
               <Image
-                src={"/assets/icons/trash.svg"}
+                src={"assets/icons/trash.svg"}
                 height={16}
                 width={16}
                 alt="trash-icon"

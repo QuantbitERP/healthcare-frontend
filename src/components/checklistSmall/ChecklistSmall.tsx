@@ -55,11 +55,11 @@ export default function Menu<TData>({
       <div className="min-w-[158px] min-h-8 rounded-full">
         <PopoverTrigger>
           <div className="w-fit h-8 flex flex-row gap-2 rounded-full items-center border border-[#B9BBC6] bg-white px-3 py-2">
-            <Image src={'/assets/icons/Columns3.svg'} alt="Plus" width={16} height={16} />
+            <Image src={'assets/icons/Columns3.svg'} alt="Plus" width={16} height={16} />
             <span className="text-[#1C2024] text-xs font-medium">
               Show Columns
             </span>
-            <Image src={'/assets/icons/CaretDownDark.svg'} alt="Right" width={16} height={16} />
+            <Image src={'assets/icons/CaretDownDark.svg'} alt="Right" width={16} height={16} />
           </div>
         </PopoverTrigger>
         <PopoverContent
@@ -120,12 +120,12 @@ export default function Menu<TData>({
                     <div
                       key={column.id}
                       className="cursor-pointer w-full h-fit px-4 py-2 flex flex-row rounded-none text-[#1C2024] hover:text-[#0D74CE] hover:bg-[#E6F4FE] font-normal text-sm"
-                      // onClick={() => {
-                      //   setPendingColumnVisibility((prev) => ({
-                      //     ...prev,
-                      //     [column.id]: !isVisible,
-                      //   }));
-                      // }}
+                    // onClick={() => {
+                    //   setPendingColumnVisibility((prev) => ({
+                    //     ...prev,
+                    //     [column.id]: !isVisible,
+                    //   }));
+                    // }}
                     >
                       <Checkbox
                         checked={isVisible}

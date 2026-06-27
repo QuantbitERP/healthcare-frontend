@@ -7131,7 +7131,7 @@ export default function IPDBill() {
             <Popover>
               <PopoverTrigger asChild>
                 <Image
-                  src="/assets/icons/DotsVertical.svg"
+                  src="assets/icons/DotsVertical.svg"
                   alt="Dots"
                   width={50}
                   height={50}

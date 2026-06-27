@@ -58,8 +58,8 @@ const getCommonPinningStyles = (column: any, autoSize: boolean | undefined) => {
     boxShadow: isLastLeftPinnedColumn
       ? "-1px 0px 0px 0px #D9D9E0 inset"
       : isFirstRightPinnedColumn
-      ? "1px 0px 0px 0px #D9D9E0 inset"
-      : undefined,
+        ? "1px 0px 0px 0px #D9D9E0 inset"
+        : undefined,
     left: isPinned === "left" ? `${column.getStart("left")}px` : undefined,
     right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
     opacity: isPinned ? 0.95 : 1,
@@ -170,9 +170,9 @@ export default function GroupedDataTableComponent({
     groupColumn ? [groupColumn] : []
   );
 
-  useEffect(()=>{
+  useEffect(() => {
     setTableData(data)
-  },[data, data.length])
+  }, [data, data.length])
 
   const memoizedColumns = useMemo(() => {
     if (!columns || columns.length === 0) return [];
@@ -235,8 +235,8 @@ export default function GroupedDataTableComponent({
     setTableData(
       newMeMode
         ? data.filter(
-            (e) => e[meKeyAccesser || "created_by"]?.toLowerCase() === "me"
-          )
+          (e) => e[meKeyAccesser || "created_by"]?.toLowerCase() === "me"
+        )
         : data
     );
     setMeMode(newMeMode);
@@ -292,7 +292,7 @@ export default function GroupedDataTableComponent({
           />
         )}
         <TableUtilFilterButton
-          icon={"/assets/icons/FilterIcon.svg"}
+          icon={"assets/icons/FilterIcon.svg"}
           label="Filter"
           badgeCount={filterCount || 0}
           onClick={onFilterClick}
@@ -305,7 +305,7 @@ export default function GroupedDataTableComponent({
           <DropdownMenu onOpenChange={setOpenShowCols} open={openShowCols}>
             <DropdownMenuTrigger asChild>
               <UtilDropDownButton
-                leadingIcon={"/assets/icons/columns.svg"}
+                leadingIcon={"assets/icons/columns.svg"}
                 label="Show Columns"
               />
             </DropdownMenuTrigger>
@@ -441,12 +441,11 @@ export default function GroupedDataTableComponent({
               <TableHead
                 key={header.id}
                 className={`text-left px-6 py-3 h-10 font-medium text-sm text-[#1C2024] [&>button]:hover:bg-transparent [&>button]:px-0 border-0 bg-[#F8F9FA] whitespace-nowrap overflow-hidden border-b border-[#E5E7EB]
-                  ${
-                    ["package"].includes(header.column.id)
-                      ? "sticky left-0 z-[60] bg-[#F8F9FA]"
-                      : ""
+                  ${["package"].includes(header.column.id)
+                    ? "sticky left-0 z-[60] bg-[#F8F9FA]"
+                    : ""
                   } `}
-                style={{...headerPinStyles, height: '40px', maxHeight: '40px', minHeight: '40px'}}
+                style={{ ...headerPinStyles, height: '40px', maxHeight: '40px', minHeight: '40px' }}
               >
                 <div className="flex items-center text-sm font-medium gap-2 h-full overflow-hidden">
                   {isRowSelectable && index === 0 && (
@@ -517,11 +516,10 @@ export default function GroupedDataTableComponent({
             return (
               <TableCell
                 key={cell.id}
-                className={`text-nowrap px-4 py-2  ${
-                  index === 0
+                className={`text-nowrap px-4 py-2  ${index === 0
                     ? "bg-inherit hover:text-primary hover:font-bold "
                     : ""
-                }
+                  }
                          `}
                 style={getCommonPinningStyles(cell.column, autoSize) as any}
               >
@@ -577,7 +575,7 @@ export default function GroupedDataTableComponent({
     //     <TableCell colSpan={columns.length} className="h-24 text-center py-20">
     //       <div className="flex flex-col items-center justify-center w-full space-y-3">
     //         <Image
-    //           src={"/assets/icons/alert-circle.svg"}
+    //           src={"assets/icons/alert-circle.svg"}
     //           height={24}
     //           width={24}
     //           alt="no data found"
@@ -633,7 +631,7 @@ export default function GroupedDataTableComponent({
           pageName={pageName || ""}
           modalProps={{
             open: table.getSelectedRowModel().rows.length > 0,
-            setOpen: () => {},
+            setOpen: () => { },
           }}
           deselectRows={() => table.resetRowSelection()}
           rows={table.getSelectedRowModel().rows as any[]}

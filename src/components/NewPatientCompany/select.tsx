@@ -14,7 +14,7 @@ interface SearchableSelectProps {
   onSearchChange?: (value: string) => void;
   onSelectionChange?: (value: string) => void;
   placeholder?: string;
-  items:KVPair[];
+  items: KVPair[];
   onApiSearch?: (query: string) => Promise<string[]>;
 }
 function SearchableSelect({
@@ -33,8 +33,8 @@ function SearchableSelect({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Show API results if searched, otherwise show local items
-  
- 
+
+
 
   // Sync with parent component props
   useEffect(() => {
@@ -112,8 +112,8 @@ function SearchableSelect({
 
   return (
     <div className="flex flex-col gap-2">
-      <Select 
-        value={selectedValue} 
+      <Select
+        value={selectedValue}
         onValueChange={handleSelectChange}
         open={isOpen}
         onOpenChange={(open) => {
@@ -134,31 +134,31 @@ function SearchableSelect({
           }
         }}
       >
-        <SelectTrigger 
-          className="w-full min-h-[2.5rem] h-auto" 
+        <SelectTrigger
+          className="w-full min-h-[2.5rem] h-auto"
           onClick={handleSelectOpen}
         >
-          <SelectValue 
+          <SelectValue
             placeholder={selectedValue ? getSelectedDisplayValue() : placeholder}
             className="whitespace-normal break-words"
           >
             {selectedValue ? getSelectedDisplayValue() : placeholder}
           </SelectValue>
-          <Image src={'/assets/icons/CaretDownDark.svg'} height={16} width={16} alt="caret icon" />
+          <Image src={'assets/icons/CaretDownDark.svg'} height={16} width={16} alt="caret icon" />
         </SelectTrigger>
         <SelectContent position="popper" className="w-[400px] max-w-[400px] border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!py-0 z-[300] max-h-[300px] flex flex-col">
           {/* Search input inside dropdown - sticky at top */}
           <div className="flex items-center border-b border-b-[#D9D9E0] px-3 sticky top-0 bg-white z-10" cmdk-input-wrapper="">
             <svg className="mr-2 h-4 w-4 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/>
-              <path d="m21 21-4.35-4.35"/>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
             </svg>
             <input
               ref={searchInputRef}
               type="text"
               placeholder={"Search..."}
               className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-              
+
               onChange={handleSearchChange}
               onKeyDown={handleSearchKeyDown}
               onFocus={() => {
@@ -180,26 +180,26 @@ function SearchableSelect({
               }}
             />
           </div>
-          
+
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
             {/* Filtered items */}
             {
-               items.length > 0 ? (
-              items.map((item,index) => (
-                <SelectItem 
-                  key={index} 
-                  value={item.key || ''}
-                  className="h-9 cursor-pointer w-full px-4 py-2 flex text-[#1C2024] text-sm hover:bg-[#E6F4FE] hover:text-[#0D74CE] data-[selected=true]:bg-[#E6F4FE] data-[selected=true]:text-[#0D74CE] whitespace-normal break-words min-h-[2.5rem] h-auto"
-                >
-                  {item.value}
-                </SelectItem>
-              ))
-            ) : (
-              <div className="px-4 py-2 text-sm text-[#60646C]">
-                No results found.
-              </div>)
-              }
+              items.length > 0 ? (
+                items.map((item, index) => (
+                  <SelectItem
+                    key={index}
+                    value={item.key || ''}
+                    className="h-9 cursor-pointer w-full px-4 py-2 flex text-[#1C2024] text-sm hover:bg-[#E6F4FE] hover:text-[#0D74CE] data-[selected=true]:bg-[#E6F4FE] data-[selected=true]:text-[#0D74CE] whitespace-normal break-words min-h-[2.5rem] h-auto"
+                  >
+                    {item.value}
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="px-4 py-2 text-sm text-[#60646C]">
+                  No results found.
+                </div>)
+            }
           </div>
         </SelectContent>
       </Select>

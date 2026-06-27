@@ -110,7 +110,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
   });
   useEffect(() => {
     // dispatch(fetchConcessions());
-    dispatch(fetchAllOpdFilters({version: "1",tenant: "", hospitalId:"f1b0f4c7-9f66-48db-b94d-0f4ca190d477"}));
+    dispatch(fetchAllOpdFilters({ version: "1", tenant: "", hospitalId: "f1b0f4c7-9f66-48db-b94d-0f4ca190d477" }));
   }, [dispatch]);
   useEffect(() => {
     if (concessions.length > 0) {
@@ -163,11 +163,10 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
             <div
               key={type}
               onClick={() => setActive(type as "company" | "patient")}
-              className={`w-1/2 text-center py-2 text-xs font-medium cursor-pointer transition-all duration-200 rounded-md ${
-                active === type
+              className={`w-1/2 text-center py-2 text-xs font-medium cursor-pointer transition-all duration-200 rounded-md ${active === type
                   ? "bg-white shadow-md"
                   : "bg-[#F9F9FB] text-[#6B7280]"
-              }`}
+                }`}
             >
               {type === "company" ? "Company" : "Patient"}
             </div>
@@ -191,7 +190,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                             {insuranceCompany}
                           </SelectValue>
                           <Image
-                            src="/assets/icons/CaretDownDark.svg"
+                            src="assets/icons/CaretDownDark.svg"
                             height={16}
                             width={16}
                             alt="dropdown"
@@ -239,7 +238,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                       {insuranceCompany}
                     </SelectValue>
                     <Image
-                      src="/assets/icons/CaretDownDark.svg"
+                      src="assets/icons/CaretDownDark.svg"
                       height={16}
                       width={16}
                       alt="dropdown"
@@ -298,7 +297,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                             {patient.label} ({patient.value})
                           </SelectValue>
                           <Image
-                            src="/assets/icons/CaretDownDark.svg"
+                            src="assets/icons/CaretDownDark.svg"
                             height={16}
                             width={16}
                             alt="dropdown"
@@ -408,7 +407,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                     {paymentMode}
                   </SelectValue>
                   <Image
-                    src="/assets/icons/CaretDownDark.svg"
+                    src="assets/icons/CaretDownDark.svg"
                     height={16}
                     width={16}
                     alt="dropdown"
@@ -497,7 +496,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                     {concessionCategory}
                   </SelectValue>
                   <Image
-                    src="/assets/icons/CaretDownDark.svg"
+                    src="assets/icons/CaretDownDark.svg"
                     height={16}
                     width={16}
                     alt="dropdown"
@@ -556,7 +555,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                     {concessionDoctor}
                   </SelectValue>
                   <Image
-                    src="/assets/icons/CaretDownDark.svg"
+                    src="assets/icons/CaretDownDark.svg"
                     height={16}
                     width={16}
                     alt="dropdown"

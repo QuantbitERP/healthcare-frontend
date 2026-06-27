@@ -47,13 +47,13 @@ function BuildReport({
   billingClassProps: { billingClass, setBillingClass },
   companyNameProps: { companyName, setCompanyName },
   groupByProps: { groupBy, setGroupBy },
-  dateProps: {  setDate },
+  dateProps: { setDate },
   ApplyFilter,
   onSuccess,
 }: BuildReportProps): React.ReactElement {
   const isMountedRef = useRef(true);
   const [_, setLocalFilters] = useState({});
-  
+
   // API data states
   const [serviceGroups, setServiceGroups] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
@@ -69,7 +69,7 @@ function BuildReport({
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch all APIs in parallel
         const [
           serviceGroupsRes,
@@ -98,7 +98,7 @@ function BuildReport({
                 : Array.isArray(data?.items)
                   ? data.items
                   : [];
-            
+
             return items.map((item: any) => ({
               key: item.key || item.id || "",
               value: item.value || item.name || "",
@@ -144,7 +144,7 @@ function BuildReport({
 
   useEffect(() => {
     if (!isMountedRef.current) return;
-    
+
     const count = {
       serviceGroup: serviceGroup.length > 0 ? serviceGroup : undefined,
       department: department.length > 0 ? department : undefined,
@@ -159,7 +159,7 @@ function BuildReport({
   }, [serviceGroup, department, service, billingClass, companyName, groupByOptions, groupBy]);
 
   const onSubmit = () => {
-    if (loading || !isMountedRef.current) return; 
+    if (loading || !isMountedRef.current) return;
     const filters = {
       serviceGroup: serviceGroup.length > 0 ? serviceGroup : undefined,
       department: department.length > 0 ? department : undefined,
@@ -169,19 +169,19 @@ function BuildReport({
       groupBy: groupBy.length > 0 ? groupBy : undefined,
     };
 
-   
+
     const cleanedFilters = Object.fromEntries(
       Object.entries(filters).filter(([, value]) => value !== null && value !== undefined)
     );
-  
+
     setFilters(cleanedFilters);
     setOpenFilters(false);
-    
+
     // Call success callback to show toast on parent page
     if (onSuccess) {
       onSuccess();
     }
-    
+
     // Trigger API fetch via parent Apply handler
     ApplyFilter();
   };
@@ -196,7 +196,7 @@ function BuildReport({
     dropdownId: string
   ) => {
     const isOpen = openDropdown === dropdownId;
-    
+
     return (
       <div className="w-full flex flex-col space-y-2">
         <label className="font-normal text-sm">{label}</label>
@@ -215,7 +215,7 @@ function BuildReport({
             <SelectValue placeholder={placeholder}>
               {loading ? "Loading..." : selected.length !== 0 ? `${selected.length} Selected` : "All"}
             </SelectValue>
-            <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="no data found" />
+            <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="no data found" />
           </SelectTrigger>
           <SelectContent
             className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!py-0"
@@ -274,11 +274,11 @@ function BuildReport({
       <DialogContent className="max-w-[700px] !p-0 [&>button]:!hidden gap-6">
         <DialogHeader>
           <div className="flex items-center justify-start space-x-xs border-b border-[#D9D9E0] px-6 py-4">
-            <Image src={"/assets/icons/NotepadTimer.svg"} height={24} width={24} alt="Build Report" />
+            <Image src={"assets/icons/NotepadTimer.svg"} height={24} width={24} alt="Build Report" />
             <DialogTitle>Build Report</DialogTitle>
           </div>
         </DialogHeader>
-        
+
         <div className="px-6 flex flex-col space-y-3 items-center w-full">
           <div className="flex items-center space-x-3 w-full">
             {renderDropdown("Service Group", serviceGroups, serviceGroup, setServiceGroup, "Service Group", "select-all-serviceGroup", "serviceGroup")}
@@ -292,7 +292,7 @@ function BuildReport({
             {renderDropdown("Company Name", companyNames, companyName, setCompanyName, "Company Name", "select-all-companyName", "companyName")}
             {renderDropdown("Group By", groupByOptions, groupBy, setGroupBy, "Group By", "select-all-groupBy", "groupBy")}
           </div>
-         
+
         </div>
         <DialogFooter className="sm:justify-between w-full px-6 py-md border-t border-[#D9D9E0]">
           <div>
@@ -311,7 +311,7 @@ function BuildReport({
                   setGroupBy([]);
                   setOpenFilters(false);
                   setDate({
-                    from: new Date(), 
+                    from: new Date(),
                   });
                 }}
               >
@@ -326,10 +326,10 @@ function BuildReport({
               </Button>
             </DialogClose>
             <DialogClose>
-              <Button 
-                type="button" 
-                variant="default" 
-                className="bg-primary text-white" 
+              <Button
+                type="button"
+                variant="default"
+                className="bg-primary text-white"
                 onClick={onSubmit}
                 disabled={loading}
               >

@@ -43,9 +43,9 @@ const SelectInput = ({ label, field, options, onChange, required }: Props) => {
   const actualSelectedId = Array.isArray(selectedId)
     ? selectedId[0]
     : selectedId;
-  
+
   const selectedOption = options.find((opt) => opt.label === actualSelectedId);
-  
+
   useEffect(() => {
     if (selectedOption && !selectedOptionFound) {
       setSelectedOptionFound(true);
@@ -82,7 +82,7 @@ const SelectInput = ({ label, field, options, onChange, required }: Props) => {
 
             console.log({ valueToStore });
 
-            dispatch(updateField({ field:field as any, value: valueToStore }));
+            dispatch(updateField({ field: field as any, value: valueToStore }));
             onChange?.(selected.value);
             // Clear validation error when user selects an option
             if (validationError) {
@@ -97,7 +97,7 @@ const SelectInput = ({ label, field, options, onChange, required }: Props) => {
             {selectedOption?.value || ""}
           </SelectValue>
           <Image
-            src="/assets/icons/CaretDownDark.svg"
+            src="assets/icons/CaretDownDark.svg"
             height={16}
             width={16}
             alt="dropdown"
@@ -122,7 +122,7 @@ const SelectInput = ({ label, field, options, onChange, required }: Props) => {
                         : opt.label;
                       console.log(valueToStore);
                       console.log("adsad");
-                      dispatch(updateField({ field:field as any, value: valueToStore }));
+                      dispatch(updateField({ field: field as any, value: valueToStore }));
                       onChange?.(opt.value);
                       if (validationError) {
                         dispatch(clearValidationError(field as string));

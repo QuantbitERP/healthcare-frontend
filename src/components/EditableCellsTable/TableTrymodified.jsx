@@ -177,7 +177,7 @@ export function DataTable({
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
   };
-  
+
 
   const addRow = (values) => {
     console.log(values);
@@ -230,18 +230,16 @@ export function DataTable({
                   <TableHead
                     key={header.id}
                     className={`min-h-0 px-3 py-0 bg-[#F9F9FB] hover:bg-[#F9F9FB] border border-x-0 border-t-0 border-b-[#CDCED6] text-[#60646C] hover:text-[#1C2024] font-semibold cursor-pointer
-                    ${
-                      ["service", "services", "Service"].includes(
-                        header.column.id
-                      )
+                    ${["service", "services", "Service"].includes(
+                      header.column.id
+                    )
                         ? "sticky left-0 z-50 bg-[#F9F9FB]"
                         : ""
-                    }
-                    ${
-                      header.column.id === "totalamt"
+                      }
+                    ${header.column.id === "totalamt"
                         ? "sticky right-0 z-50 bg-[#F9F9FB]"
                         : ""
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center">
                       {flexRender(
@@ -281,8 +279,8 @@ export function DataTable({
                         cell.column.id === "authorizedBy"
                           ? "list"
                           : cell.column.id === "service"
-                          ? "command"
-                          : "text"
+                            ? "command"
+                            : "text"
                       }
                       openCommand={openCommand}
                       openList={openList}
@@ -392,14 +390,13 @@ export function DataTable({
                         }
                       }}
                       ref={patientInputRef}
-                      className={`flex-1 border-none shadow-none focus-visible:ring-0 ${
-                        error ? "bg-red-100 border border-red-500" : ""
-                      }`}
+                      className={`flex-1 border-none shadow-none focus-visible:ring-0 ${error ? "bg-red-100 border border-red-500" : ""
+                        }`}
                     />
                   </TooltipTrigger>
                   <TooltipContent className="bg-[#DC3E42] text-white text-sm font-medium flex flex-row gap-1 item">
                     <Image
-                      src={"/assets/icons/InfoCircleWhite.svg"}
+                      src={"assets/icons/InfoCircleWhite.svg"}
                       alt="Circle"
                       width={16}
                       height={16}
@@ -487,7 +484,7 @@ export function DataTable({
                 }}
               >
                 <Image
-                  src={"/assets/icons/PlusBlue.svg"}
+                  src={"assets/icons/PlusBlue.svg"}
                   width={20}
                   height={20}
                   alt="add"
@@ -633,8 +630,8 @@ export function DataTable({
             >
               {value
                 ? authorizedBy.find(
-                    (authorizedBy) => authorizedBy.value === value
-                  )?.label
+                  (authorizedBy) => authorizedBy.value === value
+                )?.label
                 : "Select a Doctor"}
             </Button>
           </PopoverTrigger>
@@ -647,16 +644,15 @@ export function DataTable({
             }}
           >
             <Command
-              className={`${
-                size === "small"
-                  ? "w-[590px]"
-                  : size === "large"
+              className={`${size === "small"
+                ? "w-[590px]"
+                : size === "large"
                   ? "w-[calc(100vw-962px)]"
                   : "w-[590px]"
-              }  shadow-none rounded-b-none`}
+                }  shadow-none rounded-b-none`}
             >
-              <CommandInput 
-                placeholder="Search Doctors..." 
+              <CommandInput
+                placeholder="Search Doctors..."
                 onKeyDown={(e) => {
                   if (e.key === "Escape") {
                     setShowList(false);
@@ -818,11 +814,10 @@ const EditableCell = ({
         setTimeout(() => inputRef.current?.focus(), 0);
       }}
       className={`cursor-pointer border-b border-[#CDCED6] px-3 py-0 bg-white group-hover:bg-[#E6F4FE] group-hover:text-[#0D74CE]
-      ${
-        ["service", "services", "Service"].includes(cell.column.id)
+      ${["service", "services", "Service"].includes(cell.column.id)
           ? "sticky left-0 z-30"
           : ""
-      }
+        }
       ${cell.column.id === "totalamt" ? "sticky right-0 z-30" : ""}
       ${className}`}
     >
@@ -852,16 +847,15 @@ const EditableCell = ({
             }}
           >
             <Command
-              className={`${
-                size === "small"
-                  ? "w-[590px]"
-                  : size === "large"
+              className={`${size === "small"
+                ? "w-[590px]"
+                : size === "large"
                   ? "w-[calc(100vw-962px)]"
                   : "w-[590px]"
-              } border border-[#D9D9E0] rounded-t-none`}
+                } border border-[#D9D9E0] rounded-t-none`}
             >
-              <CommandInput 
-                placeholder="Search Doctors..." 
+              <CommandInput
+                placeholder="Search Doctors..."
                 onKeyDown={(e) => {
                   if (e.key === "Escape") {
                     setShowList(false);
@@ -948,14 +942,13 @@ const EditableCell = ({
                   onBlur={handleBlur}
                   autoFocus
                   onKeyDown={handleKeyDown}
-                  className={`min-w-[90px] text-black ${
-                    error ? "bg-red-100 border border-red-500" : ""
-                  }`}
+                  className={`min-w-[90px] text-black ${error ? "bg-red-100 border border-red-500" : ""
+                    }`}
                 />
               </TooltipTrigger>
               <TooltipContent className="bg-[#DC3E42] text-white text-sm font-medium flex flex-row gap-1">
                 <Image
-                  src={"/assets/icons/InfoCircleWhite.svg"}
+                  src={"assets/icons/InfoCircleWhite.svg"}
                   alt="Error"
                   width={16}
                   height={16}

@@ -135,7 +135,7 @@ export default function POS() {
 
   const handlePOSProfileSelect = async (profile: string) => {
     setPosProfile(profile); // Handled in POSProfileSelector, kept for consistency
-    
+
     // Check if there's an opening entry for the selected profile
     try {
       const openEntry = await checkAnyOpenPOS(profile);

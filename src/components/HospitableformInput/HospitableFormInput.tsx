@@ -131,7 +131,7 @@ export default function HospitalDataTable({ data }: any) {
                     {/* or use h-full if parent supports it */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
                       <Image
-                        src={"/assets/icons/alert-circle.svg"}
+                        src={"assets/icons/alert-circle.svg"}
                         height={24}
                         width={24}
                         alt="no data found"

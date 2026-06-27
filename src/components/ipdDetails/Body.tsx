@@ -474,7 +474,7 @@ function Body({ selectedPatient, billId }) {
                                 selectedPackages.length ===
                                 availablePackages.length
                               }
-                              onCheckedChange={() => {}}
+                              onCheckedChange={() => { }}
                             />
                             <span className="font-normal text-[#1C2024] text-sm">
                               All
@@ -497,7 +497,7 @@ function Body({ selectedPatient, billId }) {
                             <div className="flex items-center gap-2">
                               <Checkbox
                                 checked={selectedPackages.includes(pkg)}
-                                onCheckedChange={() => {}}
+                                onCheckedChange={() => { }}
                               />
                               <span className="font-normal text-[#1C2024] text-sm">
                                 {pkg}
@@ -541,11 +541,10 @@ function Body({ selectedPatient, billId }) {
                   )}
                   <div
                     className={` top-0 right-0 h-8 bg-white border border-[#D9D9E0]  rounded-lg focus-within:ring-2 focus-within:ring-[#0090FF] focus-within:ring-offset-2 z-50 transition-all duration-300 ease-in-out transform origin-right overflow-hidden
-                                    ${
-                                      showSearchInput
-                                        ? "w-[216px] opacity-100"
-                                        : "w-0 opacity-0"
-                                    }`}
+                                    ${showSearchInput
+                        ? "w-[216px] opacity-100"
+                        : "w-0 opacity-0"
+                      }`}
                   >
                     <div className="flex items-center px-3 gap-2">
                       <Image src={Search.src} alt="Search" width={16} height={16} />
@@ -573,12 +572,11 @@ function Body({ selectedPatient, billId }) {
                   alt="Up"
                   width={16}
                   height={16}
-                  className={`transition-transform duration-300 ease-in-out ${
-                    Object.values(expandedGroups).length > 0 &&
+                  className={`transition-transform duration-300 ease-in-out ${Object.values(expandedGroups).length > 0 &&
                     Object.values(expandedGroups).every(Boolean)
-                      ? ""
-                      : "rotate-180"
-                  }`}
+                    ? ""
+                    : "rotate-180"
+                    }`}
                 />
               </button>
               <FilterDialogue

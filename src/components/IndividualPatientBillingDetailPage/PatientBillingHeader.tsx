@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({
       >
         <div className="w-fit h-fit flex flex-row items-center gap-2">
           <Image
-            src="/assets/icons/receipt-rupee.svg"
+            src="assets/icons/receipt-rupee.svg"
             alt="Icon"
             width={24}
             height={24}
@@ -113,26 +113,24 @@ const Header: React.FC<HeaderProps> = ({
             disabled={loading || isFirst}
             onClick={() => handleNavigation(1)}
             className={`w-fit h-fit rounded-lg px-2 py-2 flex justify-center border border-[#D9D9E0] bg-white shadow
-            ${
-              loading || isFirst
+            ${loading || isFirst
                 ? "cursor-not-allowed opacity-50"
                 : "hover:bg-gray-50 cursor-pointer"
-            }`}
+              }`}
           >
-            <Image src="/assets/icons/Up.svg" alt="Up" width={24} height={24} />
+            <Image src="assets/icons/Up.svg" alt="Up" width={24} height={24} />
           </button>
           <button
             disabled={loading || isLast}
             onClick={() => handleNavigation(-1)}
             className={`w-fit h-fit rounded-lg px-2 py-2 flex justify-center border border-[#D9D9E0] bg-white shadow
-            ${
-              loading || isLast
+            ${loading || isLast
                 ? "cursor-not-allowed opacity-50"
                 : "hover:bg-gray-50 cursor-pointer"
-            }`}
+              }`}
           >
             <Image
-              src="/assets/icons/Down.svg"
+              src="assets/icons/Down.svg"
               alt="Down"
               width={24}
               height={24}

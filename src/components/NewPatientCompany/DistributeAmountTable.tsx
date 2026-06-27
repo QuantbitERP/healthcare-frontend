@@ -40,7 +40,7 @@ export type CustomColumnDef<T extends { id: string | number }> =
     isCommand?: boolean;
     isList?: boolean;
   };
-interface SubmitDataTableProps<T extends { id: string | number }>{
+interface SubmitDataTableProps<T extends { id: string | number }> {
   columns: CustomColumnDef<T>[];
   table: Table<T>;
   addButton?: boolean;
@@ -50,7 +50,7 @@ interface SubmitDataTableProps<T extends { id: string | number }>{
   onselect?: (value: string) => void;
   onSearch?: (value: string) => void;
   onAdd?: (value: string) => void;
- }
+}
 
 export function DistributeDataTable<T extends { id: string | number }>({
   table,
@@ -68,7 +68,7 @@ export function DistributeDataTable<T extends { id: string | number }>({
   const [_showCommand, setShowCommand] = useState(false);
   const [showInputRow, setShowInputRow] = useState(false);
   const [initialInput, setInitialInput] = useState("");
-  const [error, ] = useState<null | string>(null);
+  const [error,] = useState<null | string>(null);
   const setData = dataProps?.setData;
   // Get selected rows for bulk operations
   const selectedRows = table.getSelectedRowModel().rows.map((row) => ({
@@ -90,14 +90,14 @@ export function DistributeDataTable<T extends { id: string | number }>({
 
   const handleBulkDelete = () => {
     if (!setData) return;
-    
+
     const selectedIds = new Set(selectedRows.map((row) => row.id));
     setData((prevData) =>
       prevData.filter((row) => !selectedIds.has(row.id))
     );
     deselectRows();
   };
- 
+
 
 
   const showNew = (isCommand: boolean) => {
@@ -105,9 +105,9 @@ export function DistributeDataTable<T extends { id: string | number }>({
     setShowCommand(isCommand);
     setShowInputRow(!isCommand);
   };
-  
+
   const addRow = (values: Partial<T>) => {
-    onAdd?.( Object.values(values)[0]);
+    onAdd?.(Object.values(values)[0]);
     // if (!setData) return;
     // setShowInputRow(false);
     // const inputValue = Object.values(values)[0];
@@ -119,7 +119,7 @@ export function DistributeDataTable<T extends { id: string | number }>({
     //     } as unknown as T,
     //   ]);
     // setShowAddButton(true);
-   
+
   }
 
   const removeRow = () => {
@@ -127,75 +127,71 @@ export function DistributeDataTable<T extends { id: string | number }>({
     setShowAddButton(true);
   };
 
- 
+
 
   return (
     <div>
       <div className="relative w-full border  border-[#CDCED6] overflow-x-auto bg-white">
         <div className="relative flex flex-col">
-        <UITable
-          className={`w-full border-separate rounded-lg border-spacing-0 text-xs whitespace-nowrap 
+          <UITable
+            className={`w-full border-separate rounded-lg border-spacing-0 text-xs whitespace-nowrap 
           ${!showInputRow ? "rounded-none" : "rounded-b-lg"}`}
-        >
-          <TableHeader className="sticky top-0 z-40 bg-white">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className={`min-h-0 px-3 py-0 bg-[#F9F9FB] hover:bg-[#F9F9FB] border border-x-0 border-t-0   border-b-[#CDCED6] text-[#60646C] hover:text-[#1C2024] font-semibold cursor-pointer
-                    ${
-                      [
-                        "serviceName",
-                        "service",
-                        "item",
-                      ].includes(header.column.id)
-                        ? "sticky left-0 z-50 bg-[#F9F9FB] border-r border-r-[#CDCED6]"
-                        : ""
-                    }
-                    ${
-                      header.column.id === "totalamt"
-                        ? "sticky right-0 z-50 bg-[#F9F9FB]"
-                        : ""
-                    }`}
+          >
+            <TableHeader className="sticky top-0 z-40 bg-white">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={`min-h-0 px-3 py-0 bg-[#F9F9FB] hover:bg-[#F9F9FB] border border-x-0 border-t-0   border-b-[#CDCED6] text-[#60646C] hover:text-[#1C2024] font-semibold cursor-pointer
+                    ${[
+                          "serviceName",
+                          "service",
+                          "item",
+                        ].includes(header.column.id)
+                          ? "sticky left-0 z-50 bg-[#F9F9FB] border-r border-r-[#CDCED6]"
+                          : ""
+                        }
+                    ${header.column.id === "totalamt"
+                          ? "sticky right-0 z-50 bg-[#F9F9FB]"
+                          : ""
+                        }`}
+                    >
+                      <div className="flex items-center">
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                      </div>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody className="overflow-auto max-h-[calc(50vh)]">
+              {table.getRowModel().rows.length === 0 ? (
+                <TableRow className="h-10 text-[#1C2024] bg-white group hover:bg-[#E6F4FE] hover:text-[#0D74CE]">
+                  {table.getAllColumns().map((_, index) => (
+                    <TableCell key={index} className="px-3" />
+                  ))}
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row, _rowIndex) => (
+                  <TableRow
+                    key={row.id}
+                    className="h-10  text-[#1C2024] bg-white group hover:bg-[#E6F4FE] hover:text-[#0D74CE] border border-b border-[#CDCED6]"
+                    data-state={row.getIsSelected() && "selected"}
                   >
-                    <div className="flex items-center">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody className="overflow-auto max-h-[calc(50vh)]">
-            {table.getRowModel().rows.length === 0 ? (
-              <TableRow className="h-10 text-[#1C2024] bg-white group hover:bg-[#E6F4FE] hover:text-[#0D74CE]">
-                {table.getAllColumns().map((_, index) => (
-                  <TableCell key={index} className="px-3" />
-                ))}
-              </TableRow>
-            ) : (
-              table.getRowModel().rows.map((row, _rowIndex) => (
-                <TableRow
-                  key={row.id}
-                  className="h-10  text-[#1C2024] bg-white group hover:bg-[#E6F4FE] hover:text-[#0D74CE] border border-b border-[#CDCED6]"
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                   {row.getVisibleCells().map((cell, index) => (
+                    {row.getVisibleCells().map((cell, index) => (
                       <TableCell
                         key={cell.id}
-                        className={`whitespace-nowrap px-3 cursor-pointer border-b border-[#CDCED6] py-0 h-10 ${
-                          index === 0
+                        className={`whitespace-nowrap px-3 cursor-pointer border-b border-[#CDCED6] py-0 h-10 ${index === 0
                             ? "sticky left-0 bg-inherit z-[10] hover:text-primary border-r border-[#CDCED6]"
                             : ""
-                        } ${
-                          index === columns.length - 1
+                          } ${index === columns.length - 1
                             ? "sticky right-0 bg-inherit  hover:text-primary"
                             : ""
-                        }`}
+                          }`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -203,27 +199,27 @@ export function DistributeDataTable<T extends { id: string | number }>({
                         )}
                       </TableCell>
                     ))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </UITable>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </UITable>
         </div>
         <div className="sticky bottom-0 left-0 right-0 z-20">
-        {showInputRow && (
-          <div className="bg-white">
-            <div className="flex items-center justify-between w-full gap-2 pr-2 h-10">
-              <TooltipProvider>
-                <Tooltip open={!!error}>
-                  <TooltipTrigger asChild>
+          {showInputRow && (
+            <div className="bg-white">
+              <div className="flex items-center justify-between w-full gap-2 pr-2 h-10">
+                <TooltipProvider>
+                  <Tooltip open={!!error}>
+                    <TooltipTrigger asChild>
                       <SearchableSelect
                         searchValue={initialInput}
                         onSearchChange={(value) => { onSearch?.(value); }}
                         onSelectionChange={(value) => { onselect?.(value); setInitialInput(value) }}
                         placeholder={dropdownplaceHolder}
-                        items={dropdownItems||[]}
+                        items={dropdownItems || []}
                       ></SearchableSelect>
-                     
+
                       {/* <Input
                         placeholder="Type here..."
                         value={initialInput}
@@ -296,116 +292,116 @@ export function DistributeDataTable<T extends { id: string | number }>({
                           error ? "bg-red-100 border border-red-500" : ""
                         }`}
                       /> */}
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-[#DC3E42] text-white text-sm font-medium flex flex-row gap-1 item">
-                    <Image
-                      src={'/assets/icons/InfoCircleWhite.svg'}
-                      alt="Circle"
-                      width={16}
-                      height={16}
-                      className="rounded-lg"
-                    />
-                    {error}
-                    <TooltipArrow className="fill-[#DC3E42]" />
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <div className="flex items-center gap-2 shrink-0">
-                <Buttons
-                  size="button-xsmall"
-                  type="secondary-button"
-                  variant="button"
-                  onClick={() => {
-                    const isNumericColumn =
-                      columns[0]?.id === "opDisc" ||
-                      columns[0]?.id === "maxOpDisc" ||
-                      columns[0]?.id === "ipDisc" ||
-                      columns[0]?.id === "maxIpDisc" 
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-[#DC3E42] text-white text-sm font-medium flex flex-row gap-1 item">
+                      <Image
+                        src={'assets/icons/InfoCircleWhite.svg'}
+                        alt="Circle"
+                        width={16}
+                        height={16}
+                        className="rounded-lg"
+                      />
+                      {error}
+                      <TooltipArrow className="fill-[#DC3E42]" />
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Buttons
+                    size="button-xsmall"
+                    type="secondary-button"
+                    variant="button"
+                    onClick={() => {
+                      const isNumericColumn =
+                        columns[0]?.id === "opDisc" ||
+                        columns[0]?.id === "maxOpDisc" ||
+                        columns[0]?.id === "ipDisc" ||
+                        columns[0]?.id === "maxIpDisc"
 
-                    if (isNumericColumn) {
-                      if (
-                        initialInput.trim() &&
-                        /^\d*\.?\d*$/.test(initialInput)
-                      ) {
-                        addRow({
-                          [(columns[0]?.id as string) ?? ""]: initialInput,
-                        } as Partial<T>);
-                        setShowInputRow(false);
-                        setShowAddButton(true);
-                        setInitialInput("");
+                      if (isNumericColumn) {
+                        if (
+                          initialInput.trim() &&
+                          /^\d*\.?\d*$/.test(initialInput)
+                        ) {
+                          addRow({
+                            [(columns[0]?.id as string) ?? ""]: initialInput,
+                          } as Partial<T>);
+                          setShowInputRow(false);
+                          setShowAddButton(true);
+                          setInitialInput("");
+                        }
+                      } else {
+                        if (initialInput.trim()) {
+                          addRow({
+                            [(columns[0]?.id as string) ?? ""]: initialInput,
+                          } as Partial<T>);
+                          setShowInputRow(false);
+                          setShowAddButton(true);
+                          setInitialInput("");
+                        }
                       }
-                    } else {
-                      if (initialInput.trim()) {
-                        addRow({
-                          [(columns[0]?.id as string) ?? ""]: initialInput,
-                        } as Partial<T>);
-                        setShowInputRow(false);
-                        setShowAddButton(true);
-                        setInitialInput("");
-                      }
+                    }}
+                    disabled={
+                      !initialInput.trim() ||
+                      (columns[0]?.id === "amount" &&
+                        !/^\d*\.?\d*$/.test(initialInput))
                     }
-                  }}
-                  disabled={
-                    !initialInput.trim() ||
-                    (columns[0]?.id === "amount" &&
-                      !/^\d*\.?\d*$/.test(initialInput))
-                  }
-                >
-                  Save
-                </Buttons>
-                <button
-                  className="w-fit h-[24px] font-medium text-xs leading-4 pl-3 pr-3 pt-1 pb-1 rounded-[4px]
+                  >
+                    Save
+                  </Buttons>
+                  <button
+                    className="w-fit h-[24px] font-medium text-xs leading-4 pl-3 pr-3 pt-1 pb-1 rounded-[4px]
                     bg-white border-[1px] border-[#D9D9E0] hover:bg-[#E8E8EC] hover:border-[#B9BBC6] active:bg-[#E8E8EC]
                     focus-visible:ring-[#0090FF] disabled:border-[#B9BBC6] disabled:text-[#000000] disabled:bg-white
                     flex flex-row gap-2 justify-center items-center text-[#CE2C31]
                     focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none whitespace-nowrap"
-                  onClick={() => removeRow()}
-                >
-                  Delete
-                </button>
+                    onClick={() => removeRow()}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {addButton && showAddButton && (
-          <div className="bg-white ">
-            <div className="flex items-center justify-start w-full gap-2 pr-2 h-10">
-              <div
-                className="flex items-center gap-2 cursor-pointer px-3"
-                onClick={() => {
-                  const isCommand = columns.some(
-                    (col) => col.isCommand === true
-                  );
-                  showNew(isCommand);
-                  if (isCommand) {
-                    setShowInputRow(false);
-                  }
-                }}
-              >
-                <Image src={'/assets/icons/PlusBlue.svg'} width={20} height={20} alt="add" />
-                <Button
-                  size="icon"
-                  type="button"
-                  variant="link"
-                  className="text-xs font-semibold text-[#0D74CE]"
+          )}
+          {addButton && showAddButton && (
+            <div className="bg-white ">
+              <div className="flex items-center justify-start w-full gap-2 pr-2 h-10">
+                <div
+                  className="flex items-center gap-2 cursor-pointer px-3"
+                  onClick={() => {
+                    const isCommand = columns.some(
+                      (col) => col.isCommand === true
+                    );
+                    showNew(isCommand);
+                    if (isCommand) {
+                      setShowInputRow(false);
+                    }
+                  }}
                 >
-                  Add New
-                </Button>
+                  <Image src={'assets/icons/PlusBlue.svg'} width={20} height={20} alt="add" />
+                  <Button
+                    size="icon"
+                    type="button"
+                    variant="link"
+                    className="text-xs font-semibold text-[#0D74CE]"
+                  >
+                    Add New
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-      <BulkAction
-        modalProps={{
-          open: showRowActions,
-          setOpen: deselectRows,
-        }}
-        deselectRows={deselectRows}
-        rows={Array(selectedRows.length).fill(null)}
-        onDelete={handleBulkDelete}
-        pageName="file(s)"
-      />
+          )}
+        </div>
+        <BulkAction
+          modalProps={{
+            open: showRowActions,
+            setOpen: deselectRows,
+          }}
+          deselectRows={deselectRows}
+          rows={Array(selectedRows.length).fill(null)}
+          onDelete={handleBulkDelete}
+          pageName="file(s)"
+        />
       </div>
     </div>
   );

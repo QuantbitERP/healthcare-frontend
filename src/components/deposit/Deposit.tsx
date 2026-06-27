@@ -139,9 +139,8 @@ const columns: ColumnDef<DepositRow>[] = [
     ),
     cell: ({ row, getValue }) => (
       <span
-        className={`text-right w-full block h-10 py-3 ${
-          row.original.tagText === "Cancelled" ? "line-through" : ""
-        }`}
+        className={`text-right w-full block h-10 py-3 ${row.original.tagText === "Cancelled" ? "line-through" : ""
+          }`}
       >
         {String(getValue())}
       </span>
@@ -181,9 +180,8 @@ const columns: ColumnDef<DepositRow>[] = [
     ),
     cell: ({ row, getValue }) => (
       <span
-        className={`text-right w-full block ${
-          row.original.tagText === "Cancelled" ? "line-through" : ""
-        }`}
+        className={`text-right w-full block ${row.original.tagText === "Cancelled" ? "line-through" : ""
+          }`}
       >
         {String(getValue())}
       </span>
@@ -209,9 +207,8 @@ const columns: ColumnDef<DepositRow>[] = [
     ),
     cell: ({ row, getValue }) => (
       <span
-        className={`text-right w-full block h-10 py-3 ${
-          row.original.tagText === "Cancelled" ? "line-through" : ""
-        }`}
+        className={`text-right w-full block h-10 py-3 ${row.original.tagText === "Cancelled" ? "line-through" : ""
+          }`}
       >
         {String(getValue())}
       </span>
@@ -239,9 +236,8 @@ const columns: ColumnDef<DepositRow>[] = [
     cell: ({ row, getValue }) => (
       <div className="border-l border-[#D9D9E0]">
         <span
-          className={`text-right w-full block h-10 py-3 ${
-            row.original.tagText === "Cancelled" ? "line-through" : ""
-          }`}
+          className={`text-right w-full block h-10 py-3 ${row.original.tagText === "Cancelled" ? "line-through" : ""
+            }`}
         >
           {String(getValue())}
         </span>
@@ -278,7 +274,7 @@ const Discount: React.FC<DiscountProps> = ({ setOpen }) => {
       <div className="flex flex-row items-center justify-between  px-4 border-b border-b-[#D9D9E0]">
         <div className="w-full px-0 py-4  gap-2 flex flex-row">
           <Image
-            src={"/assets/icons/Camera.svg"}
+            src={"assets/icons/Camera.svg"}
             width={24}
             height={24}
             alt="Rupee"
@@ -286,7 +282,7 @@ const Discount: React.FC<DiscountProps> = ({ setOpen }) => {
           <p className="text-[#1C2024] text-base font-semibold">Deposit(s)</p>
         </div>
         <Buttons
-          iconSrc={"/assets/icons/X.svg"}
+          iconSrc={"assets/icons/X.svg"}
           size="sm"
           type="secondary-button"
           variant="icon"

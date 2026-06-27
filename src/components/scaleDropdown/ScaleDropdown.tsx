@@ -47,7 +47,7 @@ const ScaleDropdown: React.FC<ScaleDropdownProps> = ({
           <div className="relative w-[114px] h-8 flex items-center justify-between rounded-lg bg-[#FFFFFF] cursor-pointer transition-transform duration-200 hover:scale-105">
             <span className="whitespace-nowrap text-[#1C2024] text-sm font-medium leading-5">{selectedItem || placeholder}</span>
             <Image
-              src={'/assets/icons/CaretDownFilled.svg'}
+              src={'assets/icons/CaretDownFilled.svg'}
               width={16}
               height={16}
               alt="Caret Down Icon"
@@ -58,7 +58,7 @@ const ScaleDropdown: React.FC<ScaleDropdownProps> = ({
         <DropdownMenuContent className="w-[224px] p-0" align="start">
           {showSearch && (
             <div className="w-full h-fit p-2 border-b border-[#D9D9E0] flex flex-row items-center">
-              <Image src={'/assets/icons/Search.svg'} width={16} height={16} alt="Search Icon" />
+              <Image src={'assets/icons/Search.svg'} width={16} height={16} alt="Search Icon" />
               <input
                 type="text"
                 placeholder="Search"
@@ -83,7 +83,7 @@ const ScaleDropdown: React.FC<ScaleDropdownProps> = ({
             ))}
           {showButton && (
             <DropdownMenuItem className="flex items-center gap-2 text-[#0D74CE] hover:bg-[#E6F4FE] text-sm font-medium leading-5">
-              <Image src={'/assets/icons/PlusBlue.svg'} width={20} height={20} alt="Plus" />
+              <Image src={'assets/icons/PlusBlue.svg'} width={20} height={20} alt="Plus" />
               <span className="font-semibold">{buttonText}</span>
             </DropdownMenuItem>
           )}

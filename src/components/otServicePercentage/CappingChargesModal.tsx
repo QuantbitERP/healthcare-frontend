@@ -121,7 +121,7 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
         serviceData.cappingRoomCategorys.forEach((category: any) => {
           const categoryName = category.cappingRoomCategoryName?.toLowerCase() || "";
           const amount = category.cappingAmountorPercentage || 0;
-          
+
           // Map based on exact room category names from the listing
           if (categoryName.includes("opd")) {
             opd = amount;
@@ -175,7 +175,7 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
 
   const handleInputChange = (field: string, value: string) => {
     if (!isMounted) return;
-    
+
     const numericValue = parseFloat(value) || 0;
     setFormData(prev => ({
       ...prev,
@@ -195,9 +195,9 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
     return billingClasses.map((billingClass) => {
       const displayName = billingClass.value || billingClass.label || billingClass.name;
       const fieldKey = `roomCategory_${billingClass.key}`;
-      
+
       // Get the current value from formData or from serviceData's capping room categories
-      const currentValue = formData[fieldKey] || 
+      const currentValue = formData[fieldKey] ||
         serviceData?.cappingRoomCategorys?.find(
           (rc: any) => rc.cappingRoomCategoryId === billingClass.key
         )?.cappingAmountorPercentage || 0;
@@ -224,7 +224,7 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
 
   const handleSave = () => {
     if (!serviceData) return;
-    
+
     // Create the data structure that the parent component expects
     const saveData = {
       cappingHrs: formData.cappingHrs,
@@ -237,7 +237,7 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
         return acc;
       }, {} as any)
     };
-    
+
     // Call the parent's onSave callback with the updated data
     onSave(saveData);
     onClose();
@@ -250,79 +250,79 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
           className="fixed inset-x-0 bottom-0 z-50 gap-4 bg-white p-0 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom w-full h-11/12 overflow-hidden rounded-t-xl border-t flex flex-col"
         >
 
-        {/* Title Section */}
-        <SheetHeader className="px-6 py-4 border-b border-border">
-          <div className="flex items-center space-x-2">
-            <Image
-              src="/assets/icons/receipt-rupee.svg"
-              alt="Rupee icon"
-              width={24}
-              height={24}
-            />
-            <SheetTitle className="text-xl font-semibold text-[#1C2024]">Capping Charges</SheetTitle>
-          </div>
-        </SheetHeader>
-
-        {/* Content - Table Style */}
-        <div className="flex-1 px-6 py-4 overflow-y-auto">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-sm">
-            {/* Table Rows */}
-            <div className="divide-y divide-[#D9D9E0]">
-              {/* Service Name - Non-editable */}
-              <div className="grid grid-cols-2 h-10">
-                <div className="px-4 flex items-center text-left text-sm text-[#60646C]">
-                  Service Name
-                </div>
-                <div className="px-4 flex items-center justify-end text-sm text-[#1C2024] bg-gray-50">
-                  {formData.serviceName || "Service Name"}
-                </div>
-              </div>
-
-              {/* Service Code - Non-editable */}
-              <div className="grid grid-cols-2 h-10">
-                <div className="px-4 flex items-center text-left text-sm text-[#60646C]">
-                  Service Code
-                </div>
-                <div className="px-4 flex items-center justify-end text-sm text-[#1C2024] bg-gray-50">
-                  {formData.serviceCode || "OT000001"}
-                </div>
-              </div>
-
-              {/* Capping Hrs */}
-              <div className="grid grid-cols-2 h-10">
-                <div className="px-4 flex items-center text-left text-sm text-[#60646C]">
-                  Capping Hrs.
-                </div>
-                <div className="px-4 flex items-center justify-end">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.cappingHrs}
-                    onChange={(e) => handleInputChange("cappingHrs", e.target.value)}
-                    className="w-full text-right border-0 focus:ring-2 focus:ring-blue-500 bg-transparent h-8"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic Room Category Fields */}
-              {createRoomCategoryFields()}
+          {/* Title Section */}
+          <SheetHeader className="px-6 py-4 border-b border-border">
+            <div className="flex items-center space-x-2">
+              <Image
+                src="assets/icons/receipt-rupee.svg"
+                alt="Rupee icon"
+                width={24}
+                height={24}
+              />
+              <SheetTitle className="text-xl font-semibold text-[#1C2024]">Capping Charges</SheetTitle>
             </div>
+          </SheetHeader>
+
+          {/* Content - Table Style */}
+          <div className="flex-1 px-6 py-4 overflow-y-auto">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-lg shadow-sm">
+                {/* Table Rows */}
+                <div className="divide-y divide-[#D9D9E0]">
+                  {/* Service Name - Non-editable */}
+                  <div className="grid grid-cols-2 h-10">
+                    <div className="px-4 flex items-center text-left text-sm text-[#60646C]">
+                      Service Name
+                    </div>
+                    <div className="px-4 flex items-center justify-end text-sm text-[#1C2024] bg-gray-50">
+                      {formData.serviceName || "Service Name"}
+                    </div>
+                  </div>
+
+                  {/* Service Code - Non-editable */}
+                  <div className="grid grid-cols-2 h-10">
+                    <div className="px-4 flex items-center text-left text-sm text-[#60646C]">
+                      Service Code
+                    </div>
+                    <div className="px-4 flex items-center justify-end text-sm text-[#1C2024] bg-gray-50">
+                      {formData.serviceCode || "OT000001"}
+                    </div>
+                  </div>
+
+                  {/* Capping Hrs */}
+                  <div className="grid grid-cols-2 h-10">
+                    <div className="px-4 flex items-center text-left text-sm text-[#60646C]">
+                      Capping Hrs.
+                    </div>
+                    <div className="px-4 flex items-center justify-end">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.cappingHrs}
+                        onChange={(e) => handleInputChange("cappingHrs", e.target.value)}
+                        className="w-full text-right border-0 focus:ring-2 focus:ring-blue-500 bg-transparent h-8"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dynamic Room Category Fields */}
+                  {createRoomCategoryFields()}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer - Fixed at bottom */}
-        <div className="flex justify-end gap-4 p-6 border-t border-border bg-white mt-auto">
-          <Buttons
-            size="button-medium"
-            type="secondary-button"
-            variant="button"
-            onClick={onClose}
-          >
-            Cancel
-          </Buttons>
+          {/* Footer - Fixed at bottom */}
+          <div className="flex justify-end gap-4 p-6 border-t border-border bg-white mt-auto">
+            <Buttons
+              size="button-medium"
+              type="secondary-button"
+              variant="button"
+              onClick={onClose}
+            >
+              Cancel
+            </Buttons>
             <Buttons
               onClick={handleSave}
               size="button-medium"
@@ -331,9 +331,9 @@ const CappingChargesModal: React.FC<CappingChargesModalProps> = ({
             >
               Save Changes
             </Buttons>
-        </div>
-      </SheetPrimitive.Content>
-    </SheetPortal>
+          </div>
+        </SheetPrimitive.Content>
+      </SheetPortal>
     </Sheet>
   );
 };

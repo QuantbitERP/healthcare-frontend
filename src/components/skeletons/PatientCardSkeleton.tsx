@@ -158,7 +158,7 @@ const PatientCardSkeleton: React.FC<PatientCardSkeletonProps> = ({
         <span className="text-[#60646C] text-sm font-normal">Patient</span>
         <div className="mb-4 flex flex-row items-center relative">
           <Image
-            src={"/assets/icons/Search.svg"}
+            src={"assets/icons/Search.svg"}
             alt="Search"
             width={20}
             height={20}
@@ -225,11 +225,10 @@ const PatientCardSkeleton: React.FC<PatientCardSkeletonProps> = ({
                   {filteredPatients.map((patient, index) => (
                     <div
                       key={patient.patientId}
-                      className={`flex flex-row w-full h-9 px-4 py-1 hover:bg-[#E6F4FE] cursor-pointer text-sm font-normal justify-between items-center z-20 ${
-                        index === selectedIndex
-                          ? "bg-[#E6F4FE] text-[#0D74CE]"
-                          : "text-[#1C2024] hover:bg-[#E6F4FE] hover:text-[#0D74CE]"
-                      }`}
+                      className={`flex flex-row w-full h-9 px-4 py-1 hover:bg-[#E6F4FE] cursor-pointer text-sm font-normal justify-between items-center z-20 ${index === selectedIndex
+                        ? "bg-[#E6F4FE] text-[#0D74CE]"
+                        : "text-[#1C2024] hover:bg-[#E6F4FE] hover:text-[#0D74CE]"
+                        }`}
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent event from bubbling up
                         handlePatientClick(patient);

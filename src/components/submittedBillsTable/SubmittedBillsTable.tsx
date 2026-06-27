@@ -37,12 +37,12 @@ export function SubmitDataTable({ data, columns }: SubmitDataTableProps) {
   const [loading] = useState(false);
   const [, setOpenCancelBill] = useState(false);
   const [tableData, setTableData] = useState<BillRow[]>(data);
-  
+
   // Sync internal state with prop changes
   useEffect(() => {
     setTableData(data);
   }, [data]);
-  
+
   const table = useReactTable({
     data: tableData,
     columns,
@@ -105,9 +105,9 @@ export function SubmitDataTable({ data, columns }: SubmitDataTableProps) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -137,15 +137,13 @@ export function SubmitDataTable({ data, columns }: SubmitDataTableProps) {
                     {row.getVisibleCells().map((cell, index) => (
                       <TableCell
                         key={cell.id}
-                        className={`whitespace-nowrap px-lg cursor-pointer py-0 h-10 ${
-                          index === 0
+                        className={`whitespace-nowrap px-lg cursor-pointer py-0 h-10 ${index === 0
                             ? "sticky left-0 bg-inherit z-10 hover:text-primary"
                             : ""
-                        } ${
-                          index === columns.length - 1
+                          } ${index === columns.length - 1
                             ? "sticky right-0 bg-inherit z-10 hover:text-primary"
                             : ""
-                        }`}
+                          }`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -163,7 +161,7 @@ export function SubmitDataTable({ data, columns }: SubmitDataTableProps) {
                   >
                     <div className="flex flex-col items-center justify-center w-full space-y-3">
                       <Image
-                        src={"/assets/icons/alert-circle.svg"}
+                        src={"assets/icons/alert-circle.svg"}
                         height={24}
                         width={24}
                         alt="no data found"
@@ -213,9 +211,9 @@ export function SubmitDataTable({ data, columns }: SubmitDataTableProps) {
           rows={selectedRows}
           setOpenCancelBill={setOpenCancelBill}
           onRemoveRows={handleRemoveRows}
-          setOpenSubmitBill={() => {}}
+          setOpenSubmitBill={() => { }}
           totalRowCount={tableData.length}
-          setSelectedForSubmit={() => {}}
+          setSelectedForSubmit={() => { }}
         />
       </div>
     </div>

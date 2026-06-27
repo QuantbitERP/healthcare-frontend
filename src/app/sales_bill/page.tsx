@@ -5687,7 +5687,7 @@ export default function SalesBill() {
           parentTitle="POS"
           parentLink="/pos"
           title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New OPD Bill"}
-          icon="../assets/icons/BriefcaseIcon.svg"
+          icon="..assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           warehouse={selectedWarehouse || undefined}
           rightButtons={
@@ -6310,7 +6310,7 @@ export default function SalesBill() {
           <Popover>
             <PopoverTrigger asChild>
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="Dots"
                 width={50}
                 height={50}

@@ -83,14 +83,14 @@ function BillingTable(): JSX.Element {
     <div className="flex flex-col w-full mb-4">
       <PageHeader
         title="Patient/Company Receipt"
-        icon="/assets/icons/receipt-rupee.svg"
+        icon="assets/icons/receipt-rupee.svg"
         rightButtons={
           <button
             onClick={() => router.push("/new_receipt")}
             className={`bg-primary text-white flex space-x-sm rounded-lg px-md py-sm hover:bg-primary-hover font-medium text-sm items-center cursor-pointer`}
           >
             <Image
-              src={"/assets/icons/LeadingIcon.svg"}
+              src={"assets/icons/LeadingIcon.svg"}
               alt="CreateBill icon"
               width={16}
               height={16}
@@ -107,29 +107,29 @@ function BillingTable(): JSX.Element {
             ${alertType ? "" : "h-0"}
           `}
         >
-        {alertType === "cancel" && (
-          <Alerts
-            variant="success"
-            heading="Success!"
-            content="Bill Cancelled"
-            open={true}
-            onClick={undefined}
-            className={undefined}
-          />
-        )}
-        {alertType === "submit" && (
-          <Alerts
-            variant="success"
-            heading="Submitted!"
-            content="#BI10011006 Bill Submitted Succesfully."
-            open={true}
-            showButton
-            buttonText="Assign a Patient"
-            onClick={undefined}
-            className={undefined}
-          />
-        )}
-              </div>
+          {alertType === "cancel" && (
+            <Alerts
+              variant="success"
+              heading="Success!"
+              content="Bill Cancelled"
+              open={true}
+              onClick={undefined}
+              className={undefined}
+            />
+          )}
+          {alertType === "submit" && (
+            <Alerts
+              variant="success"
+              heading="Submitted!"
+              content="#BI10011006 Bill Submitted Succesfully."
+              open={true}
+              showButton
+              buttonText="Assign a Patient"
+              onClick={undefined}
+              className={undefined}
+            />
+          )}
+        </div>
         <div className="px-4">
           <ScoreCard date={date} />
 

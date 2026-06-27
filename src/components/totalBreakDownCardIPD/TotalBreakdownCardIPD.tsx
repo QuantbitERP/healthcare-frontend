@@ -206,7 +206,7 @@ function TotalBreakdownCardIPD({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Image
-                        src={"/assets/icons/ExclamationCircle.svg"}
+                        src={"assets/icons/ExclamationCircle.svg"}
                         width={16}
                         height={16}
                         alt="Exclaim"
@@ -273,7 +273,7 @@ function TotalBreakdownCardIPD({
                     {selectedValue ? `GST (${selectedValue}%)` : "GST"}
                   </p>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     width={16}
                     height={16}
                     alt="Caret"
@@ -332,7 +332,7 @@ function TotalBreakdownCardIPD({
           </div>
           <div>
             <Image
-              src={"/assets/icons/DividerHorizontal.svg"}
+              src={"assets/icons/DividerHorizontal.svg"}
               width={224}
               height={220}
               alt="Divider"

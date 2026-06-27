@@ -4570,7 +4570,7 @@ export default function NewBill() {
           parentTitle="POS"
           parentLink="/pos"
           title="New IPD Bill"
-          icon="../assets/icons/BriefcaseIcon.svg"
+          icon="..assets/icons/BriefcaseIcon.svg"
           posProfile={posProfile || undefined}
           warehouse={selectedWarehouse || undefined}
           rightButtons={
@@ -4901,7 +4901,7 @@ export default function NewBill() {
           <Popover>
             <PopoverTrigger asChild>
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="Dots"
                 width={50}
                 height={50}

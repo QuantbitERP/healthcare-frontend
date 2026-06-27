@@ -30,7 +30,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ date }) => {
   );
 
   useEffect(() => {
-    dispatch(fetchCountSummary({ version: "1",tenant: "", startDate: "2025-07-01", endDate: "2025-07-14" }));
+    dispatch(fetchCountSummary({ version: "1", tenant: "", startDate: "2025-07-01", endDate: "2025-07-14" }));
   }, [dispatch]);
   console.log(data);
   const scoreData: ScoreDataItem[] = [
@@ -70,7 +70,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ date }) => {
     <div className="flex mt-md px-0 h-[96px] w-full">
       <div className="flex items-center text-sm font-normal border border-[#D9D9E0] px-4 py-2 rounded-s-lg space-x-sm w-[220px] score-card">
         <Image
-          src={"/assets/icons/calendar.svg"}
+          src={"assets/icons/calendar.svg"}
           alt="Calendar icon"
           width={20}
           height={20}
@@ -79,21 +79,20 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ date }) => {
           {isSameDay || isFromTodayOnly
             ? "Today"
             : date?.from && date?.to
-            ? `${format(date.from, "eee, LLL dd")} - ${format(
+              ? `${format(date.from, "eee, LLL dd")} - ${format(
                 date.to,
                 "eee, LLL dd"
               )}`
-            : date?.from
-            ? format(date.from, "eee, LLL dd")
-            : "Pick a date"}
+              : date?.from
+                ? format(date.from, "eee, LLL dd")
+                : "Pick a date"}
         </span>
       </div>
 
       {(isSameDay ? scoreData : filteredScoreData).map((score, i, array) => (
         <div
-          className={`flex flex-col flex-grow border-e border-[#D9D9E0] border-y space-y-sm w-16 px-4 py-3 ${
-            i === array.length - 1 ? "rounded-e-lg" : ""
-          }`}
+          className={`flex flex-col flex-grow border-e border-[#D9D9E0] border-y space-y-sm w-16 px-4 py-3 ${i === array.length - 1 ? "rounded-e-lg" : ""
+            }`}
           key={score.label}
         >
           <span className="font-medium text-sm">{score.label}</span>

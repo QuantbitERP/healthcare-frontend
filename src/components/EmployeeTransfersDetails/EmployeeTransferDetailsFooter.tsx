@@ -10,19 +10,19 @@ function PatientBillingFooter() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [modalType, setModalType] = useState(""); 
+  const [modalType, setModalType] = useState("");
 
   const openModal = (type: string) => {
     setModalType(type);
     setIsModalOpen(true);
     setIsPopoverOpen(false);
   };
-  
+
   const closeModal = () => {
     setIsModalOpen(false);
     setModalType("");
   };
-  
+
 
   return (
     <>
@@ -35,33 +35,33 @@ function PatientBillingFooter() {
         <div className="w-fit h-fit flex items-center gap-4">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
-              <Image src="/assets/icons/DotsVertical.svg" alt="Dots" width={50} height={50} className="cursor-pointer border rounded-md px-3 py-2 border-[#D9D9E0]" />
+              <Image src="assets/icons/DotsVertical.svg" alt="Dots" width={50} height={50} className="cursor-pointer border rounded-md px-3 py-2 border-[#D9D9E0]" />
             </PopoverTrigger>
             <PopoverContent className="bg-white mx-4 border shadow-md rounded p-0 space-y-2 w-60">
               <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-3  py-2 rounded cursor-pointer"
-              onClick={() => openModal("Transfer Log")}>
+                onClick={() => openModal("Transfer Log")}>
                 Transfer Data Log
               </div>
               <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-3  py-2 rounded cursor-pointer"
-              onClick={() => openModal("Employee Category Change Log")}>
+                onClick={() => openModal("Employee Category Change Log")}>
                 Employee Category Change Log
               </div>
             </PopoverContent>
           </Popover>
         </div>
         {isModalOpen && (<SubmitBillModal type={modalType} onClose={closeModal} />)}
-          <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
+        <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
           <Buttons size="button-medium" type="secondary-button" variant="button" onClick={() => router.push("/payments_received")}>
-          Cancel
-        </Buttons>
-            <Buttons
-              size="button-medium"
-              type="primary-button"
-              variant="button"
-            >
-              Save Changes
-            </Buttons>
-          </div>
+            Cancel
+          </Buttons>
+          <Buttons
+            size="button-medium"
+            type="primary-button"
+            variant="button"
+          >
+            Save Changes
+          </Buttons>
+        </div>
       </div>
     </>
   );

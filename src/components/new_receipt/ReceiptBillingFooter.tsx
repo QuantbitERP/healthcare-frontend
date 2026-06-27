@@ -20,13 +20,13 @@ function PatientBillingFooter({
     >
       <div className="w-fit h-fit flex items-center gap-4">
         {/* Kebab Menu Button */}
-        <Buttons 
-          variant="icon" 
-          size="button-small" 
+        <Buttons
+          variant="icon"
+          size="button-small"
           type="secondary-button"
-          iconSrc="/assets/icons/DotsVertical.svg"
+          iconSrc="assets/icons/DotsVertical.svg"
           alt="More options"
-       
+
         />
       </div>
       <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">

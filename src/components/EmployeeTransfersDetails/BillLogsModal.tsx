@@ -53,7 +53,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({ type, onClose }) => {
         {/* Header */}
         <div className="w-full h-fit flex items-center px-6 py-4 border-b border-[#D9D9E0] gap-2">
           <Image
-            src={"/assets/icons/Notepad.svg"}
+            src={"assets/icons/Notepad.svg"}
             width={24}
             height={24}
             alt="notepad"
@@ -65,7 +65,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({ type, onClose }) => {
             size="button-icon-small"
             type="secondary-button"
             variant="icon"
-            iconSrc={"/assets/icons/x.svg"}
+            iconSrc={"assets/icons/x.svg"}
             onClick={onClose}
             className={undefined}
           >

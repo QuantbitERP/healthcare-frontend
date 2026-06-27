@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import {
   useReactTable,
@@ -34,11 +34,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import type { KVPair } from "@/services/api-client/models/KVPair"; 
+import type { KVPair } from "@/services/api-client/models/KVPair";
 import { GetBillReceiptPaymentDetails } from "@/services/api-client/models/GetBillReceiptPaymentDetails";
 
 type RowType = GetBillReceiptPaymentDetails & { id: any; tagText?: string };
-const RequisitionDateTimeCell = ({ getValue}:{ getValue: () => string }) => {
+const RequisitionDateTimeCell = ({ getValue }: { getValue: () => string }) => {
   const [date, setDate] = useState(
     getValue() ? new Date(getValue()) : new Date()
   );
@@ -61,7 +61,7 @@ const RequisitionDateTimeCell = ({ getValue}:{ getValue: () => string }) => {
               </span>
             ) : (
               <span className="text-[#1C2024] text-sm font-normal w-full">
-                Pick Date 
+                Pick Date
               </span>
             )}
           </Button>
@@ -75,9 +75,9 @@ const RequisitionDateTimeCell = ({ getValue}:{ getValue: () => string }) => {
                 if (newDate) {
                   const newDateTime = new Date(newDate);
                   if (date) {
-                      setDate(newDateTime);
+                    setDate(newDateTime);
                   }
-                
+
                 }
               }}
               initialFocus
@@ -137,167 +137,164 @@ const PaymentModeSelect = ({ row }: { row: { original: GetBillReceiptPaymentDeta
   );
 };
 
-const getColumns = (): 
-ColumnDef<RowType>[] => [
-  {
-    accessorFn: row => row.amount,
-    id: "paidAmount",
-    header: ({ column }) => (
-      <div className="flex flex-row items-center w-fit">
+const getColumns = ():
+  ColumnDef<RowType>[] => [
+    {
+      accessorFn: row => row.amount,
+      id: "paidAmount",
+      header: ({ column }) => (
+        <div className="flex flex-row items-center w-fit">
+          <Button
+            variant="ghost"
+            className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Paid Amount
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="ml-2 h-4 w-4" />
+            ) : null}
+          </Button>
+        </div>
+      ),
+      cell: ({ row, getValue }) => (
+        <div className="flex flex-row items-center">
+          <span
+            className={`text-right w-full block ${row?.original?.tagText === "Cancelled" ? "line-through" : ""
+              }`}
+          >
+            ₹{String(getValue())}
+          </span>
+        </div>
+      ),
+      enableSorting: true,
+    },
+    {
+      accessorFn: row => row.receiptDate,
+      id: "paymentDate",
+      header: ({ column }) => (
         <Button
           variant="ghost"
           className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Paid Amount
+          Payment Date
           {column.getIsSorted() === "asc" ? (
             <ArrowUp className="ml-2 h-4 w-4" />
           ) : column.getIsSorted() === "desc" ? (
             <ArrowDown className="ml-2 h-4 w-4" />
           ) : null}
         </Button>
-      </div>
-    ),
-    cell: ({ row, getValue }) => (
-      <div className="flex flex-row items-center">
+      ),
+      cell: ({ getValue }) => (
+        // <span
+        //   className={`text-center w-full block ${
+        //     row?.original?.tagText === "Cancelled" ? "line-through" : ""
+        //   }`}
+        // >
+        //   {String(getValue())}
+        // </span>
+        <RequisitionDateTimeCell getValue={getValue as () => string} />
+      ),
+      enableSorting: true,
+    },
+    {
+      accessorFn: row => row.modeOfPayment,
+      id: "paymentMode",
+      header: "Payment Mode",
+      cell: ({ row }) => <PaymentModeSelect row={row} />,
+    },
+    {
+      accessorFn: row => row.transactionnumber,
+      id: "transactionNo",
+      header: ({ column }) => (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold w-[104px]"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+              >
+                <span className="block truncate w-full">
+                  Transaction No/Cheque/Card
+                </span>
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : null}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-white text-sm font-medium bg-[#0090FF]">
+              <p>Transaction No/Cheque/Card</p>
+              <TooltipArrow className="fill-[#0090FF]" />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
+      cell: ({ row, getValue }) => (
         <span
-          className={`text-right w-full block ${
-            row?.original?.tagText === "Cancelled" ? "line-through" : ""
-          }`}
+          className={`text-center w-full block ${row?.original?.tagText === "Cancelled" ? "line-through" : ""
+            }`}
         >
-          ₹{String(getValue())}
+          {String(getValue())}
         </span>
-      </div>
-    ),
-    enableSorting: true,
-  },
-  {
-    accessorFn: row => row.receiptDate,
-    id: "paymentDate",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Payment Date
-        {column.getIsSorted() === "asc" ? (
-          <ArrowUp className="ml-2 h-4 w-4" />
-        ) : column.getIsSorted() === "desc" ? (
-          <ArrowDown className="ml-2 h-4 w-4" />
-        ) : null}
-      </Button>
-    ),
-    cell: ({ getValue }) => (
-      // <span
-      //   className={`text-center w-full block ${
-      //     row?.original?.tagText === "Cancelled" ? "line-through" : ""
-      //   }`}
-      // >
-      //   {String(getValue())}
-      // </span>
-      <RequisitionDateTimeCell getValue={getValue as () => string}/>
-    ),
-    enableSorting: true,
-  },
-  {
-    accessorFn: row => row.modeOfPayment,
-    id: "paymentMode",
-    header: "Payment Mode",
-    cell: ({ row }) => <PaymentModeSelect row={row} />,
-  },
-  {
-    accessorFn: row => row.transactionnumber,
-    id: "transactionNo",
-    header: ({ column }) => (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold w-[104px]"
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === "asc")
-              }
-            >
-              <span className="block truncate w-full">
-                Transaction No/Cheque/Card
-              </span>
-              {column.getIsSorted() === "asc" ? (
-                <ArrowUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ArrowDown className="ml-2 h-4 w-4" />
-              ) : null}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="text-white text-sm font-medium bg-[#0090FF]">
-            <p>Transaction No/Cheque/Card</p>
-            <TooltipArrow className="fill-[#0090FF]" />
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    ),
-    cell: ({ row, getValue }) => (
-      <span
-        className={`text-center w-full block ${
-          row?.original?.tagText === "Cancelled" ? "line-through" : ""
-        }`}
-      >
-        {String(getValue())}
-      </span>
-    ),
-    enableSorting: true,
-  },
-  {
-    accessorFn: row => row.bankname,
-    id: "bank",
-    header: ({ column }) => (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold w-[85px]"
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === "asc")
-              }
-            >
-              <span className="block truncate w-full">
-                Bank Name/Branch Name
-              </span>
-              {column.getIsSorted() === "asc" ? (
-                <ArrowUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ArrowDown className="ml-2 h-4 w-4" />
-              ) : null}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="text-white text-sm font-medium bg-[#0090FF]">
-            <p>Bank Name/Branch Name</p>
-            <TooltipArrow className="fill-[#0090FF]" />
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    ),
-    cell: ({ row, getValue }) => (
-      <span
-        className={`text-center w-full block ${
-          row?.original?.tagText === "Cancelled" ? "line-through" : ""
-        }`}
-      >
-        {String(getValue())}
-      </span>
-    ),
-    enableSorting: true,
-  },
-];
-export default function RecordPayments({selectedPatientBillReceipts}:{selectedPatientBillReceipts: GetBillReceiptPaymentDetails[] | null | undefined;}) {
+      ),
+      enableSorting: true,
+    },
+    {
+      accessorFn: row => row.bankname,
+      id: "bank",
+      header: ({ column }) => (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold w-[85px]"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+              >
+                <span className="block truncate w-full">
+                  Bank Name/Branch Name
+                </span>
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : null}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-white text-sm font-medium bg-[#0090FF]">
+              <p>Bank Name/Branch Name</p>
+              <TooltipArrow className="fill-[#0090FF]" />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
+      cell: ({ row, getValue }) => (
+        <span
+          className={`text-center w-full block ${row?.original?.tagText === "Cancelled" ? "line-through" : ""
+            }`}
+        >
+          {String(getValue())}
+        </span>
+      ),
+      enableSorting: true,
+    },
+  ];
+export default function RecordPayments({ selectedPatientBillReceipts }: { selectedPatientBillReceipts: GetBillReceiptPaymentDetails[] | null | undefined; }) {
   const [showNotification] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [data, setData] = useState(
     (selectedPatientBillReceipts ?? []).map((item) => ({
       ...item,
-      id: item.id , 
+      id: item.id,
     }))
   );
 
@@ -331,7 +328,7 @@ export default function RecordPayments({selectedPatientBillReceipts}:{selectedPa
           columns={getColumns()}
           initialData={(selectedPatientBillReceipts ?? []).map((item) => ({
             ...item,
-            id: item.id , 
+            id: item.id,
           }))}
           addButton={false}
           dataProps={{ data, setData }}

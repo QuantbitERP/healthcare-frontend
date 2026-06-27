@@ -30,7 +30,7 @@ const FilterContainer: React.FC = () => {
                 Filter
               </span>
               <Image
-                src={"/assets/icons/x.svg"}
+                src={"assets/icons/x.svg"}
                 width={20}
                 height={20}
                 alt="close icon"
@@ -52,7 +52,7 @@ const FilterContainer: React.FC = () => {
                     <option value="other">Other</option>
                   </select>
                   <Image
-                    src={"/assets/icons/CaretDownFilled.svg"}
+                    src={"assets/icons/CaretDownFilled.svg"}
                     width={16}
                     height={16}
                     alt="caret down icon"
@@ -72,7 +72,7 @@ const FilterContainer: React.FC = () => {
                     <option value="other">Other</option>
                   </select>
                   <Image
-                    src={"/assets/icons/CaretDownFilled.svg"}
+                    src={"assets/icons/CaretDownFilled.svg"}
                     width={16}
                     height={16}
                     alt="caret down icon"
@@ -92,7 +92,7 @@ const FilterContainer: React.FC = () => {
                     <option value="other">Other</option>
                   </select>
                   <Image
-                    src={"/assets/icons/CaretDownFilled.svg"}
+                    src={"assets/icons/CaretDownFilled.svg"}
                     width={16}
                     height={16}
                     alt="caret down icon"
@@ -112,7 +112,7 @@ const FilterContainer: React.FC = () => {
                     <option value="other">Other</option>
                   </select>
                   <Image
-                    src={"/assets/icons/CaretDownFilled.svg"}
+                    src={"assets/icons/CaretDownFilled.svg"}
                     width={16}
                     height={16}
                     alt="caret down icon"

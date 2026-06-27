@@ -481,7 +481,7 @@ export function DataTable<T extends { id: string | number }>({
                   </TooltipTrigger>
                   <TooltipContent className="bg-[#DC3E42] text-white text-sm font-medium flex flex-row gap-1 item">
                     <Image
-                      src={"/assets/icons/InfoCircleWhite.svg"}
+                      src={"assets/icons/InfoCircleWhite.svg"}
                       alt="Circle"
                       width={16}
                       height={16}
@@ -576,7 +576,7 @@ export function DataTable<T extends { id: string | number }>({
                 }}
               >
                 <Image
-                  src={"/assets/icons/PlusBlue.svg"}
+                  src={"assets/icons/PlusBlue.svg"}
                   width={20}
                   height={20}
                   alt="add"
@@ -816,7 +816,7 @@ export function DataTable<T extends { id: string | number }>({
             <SelectTrigger className="w-full h-10 rounded-t-none border-none">
               <SelectValue placeholder="Select Relation" />
               <Image
-                src="/assets/icons/CaretDownDark.svg"
+                src="assets/icons/CaretDownDark.svg"
                 height={16}
                 width={16}
                 alt="dropdown"
@@ -1184,7 +1184,7 @@ const EditableCell = <T extends { id: string | number }>({
               </TooltipTrigger>
               <TooltipContent className="bg-[#DC3E42] text-white text-sm font-medium flex flex-row gap-1">
                 <Image
-                  src={"/assets/icons/InfoCircleWhite.svg"}
+                  src={"assets/icons/InfoCircleWhite.svg"}
                   alt="Error"
                   width={16}
                   height={16}

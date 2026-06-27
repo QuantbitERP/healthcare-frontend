@@ -272,7 +272,7 @@ export default function DataTableComponent({
           />
         )}
         <TableUtilFilterButton
-          icon={"/assets/icons/FilterIcon.svg"}
+          icon={"assets/icons/FilterIcon.svg"}
           label="Filter"
           badgeCount={filterCount || 0}
           onClick={onFilterClick}
@@ -285,7 +285,7 @@ export default function DataTableComponent({
           <DropdownMenu onOpenChange={setOpenShowCols} open={openShowCols}>
             <DropdownMenuTrigger asChild>
               <UtilDropDownButton
-                leadingIcon={"/assets/icons/columns.svg"}
+                leadingIcon={"assets/icons/columns.svg"}
                 label="Show Columns"
               />
             </DropdownMenuTrigger>
@@ -552,7 +552,7 @@ export default function DataTableComponent({
         <TableCell colSpan={columns.length} className="h-24 text-center py-20">
           <div className="flex flex-col items-center justify-center w-full space-y-3">
             <Image
-              src={"/assets/icons/alert-circle.svg"}
+              src={"assets/icons/alert-circle.svg"}
               height={24}
               width={24}
               alt="no data found"

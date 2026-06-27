@@ -1,11 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {  Dialog,  DialogClose,  DialogContent,   DialogFooter,  DialogHeader,  DialogTitle,  DialogTrigger,} from "@/components/ui/dialog";
-import {  Select,  SelectContent,  SelectTrigger,  SelectValue,} from "@/components/ui/select";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectTrigger, SelectValue, } from "@/components/ui/select";
 // import CaretDown from "@/assets/icons/CaretDownDark.svg";
 import Image from "next/image";
-import {  Command,  CommandEmpty,  CommandGroup,  CommandInput,  CommandItem,  CommandList,} from "../ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, } from "../ui/command";
 //import FilterIcon from "@/assets/icons/FilterIcon.svg";
 // import { Switch } from "../ui/switch";
 // import { Label } from "../ui/label";
@@ -58,7 +58,7 @@ function FilterDialogue({
   const [localFilters, setLocalFilters] = useState(filters);
   const [service, setService] = useState<string[]>([]);
   const [chargeBillingClass, setChargeBillingClass] = useState<string[]>([]);
-  const [status, setStatus] =useState<string[]>([]);
+  const [status, setStatus] = useState<string[]>([]);
   const [priority, setPriority] = useState<string[]>([]);
   const [department, setDepartment] = useState<string[]>([]);
   const [doctor, setDoctor] = useState<string[]>([]);
@@ -111,7 +111,7 @@ function FilterDialogue({
       <DialogContent className="max-w-[640px] !p-0 [&>button]:!hidden gap-6">
         <DialogHeader>
           <div className="flex items-center justify-start space-x-xs border-b border-[#D9D9E0] px-6 py-4">
-            <Image src={"/assets/icons/FilterIcon.svg"} height={24} width={24} alt="filter" />
+            <Image src={"assets/icons/FilterIcon.svg"} height={24} width={24} alt="filter" />
             <DialogTitle>Filter</DialogTitle>
           </div>
         </DialogHeader>
@@ -127,7 +127,7 @@ function FilterDialogue({
                   <SelectValue placeholder="Created By">
                     {`${service.length !== 0 ? `${service.length} Selected` : "All"}`}
                   </SelectValue>
-                  <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
+                  <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
                 </SelectTrigger>
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!pb-2">
                   <Command>
@@ -181,7 +181,7 @@ function FilterDialogue({
                   <SelectValue placeholder="Created By">
                     {`${chargeBillingClass.length !== 0 ? `${chargeBillingClass.length} Selected` : "All"}`}
                   </SelectValue>
-                  <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
+                  <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
                 </SelectTrigger>
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!pb-2 [&>div]:!pt-0">
                   <Command>
@@ -237,7 +237,7 @@ function FilterDialogue({
                   <SelectValue placeholder="Created By">
                     {`${status.length !== 0 ? `${status.length} Selected` : "All"}`}
                   </SelectValue>
-                  <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
+                  <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
                 </SelectTrigger>
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!pb-2">
                   <Command>
@@ -291,7 +291,7 @@ function FilterDialogue({
                   <SelectValue placeholder="Created By">
                     {`${priority.length !== 0 ? `${priority.length} Selected` : "All"}`}
                   </SelectValue>
-                  <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
+                  <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
                 </SelectTrigger>
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!pb-2">
                   <Command>
@@ -347,7 +347,7 @@ function FilterDialogue({
                   <SelectValue placeholder="Created By">
                     {`${department.length !== 0 ? `${department.length} Selected` : "All"}`}
                   </SelectValue>
-                  <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
+                  <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
                 </SelectTrigger>
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!pb-2">
                   <Command>
@@ -401,7 +401,7 @@ function FilterDialogue({
                   <SelectValue placeholder="Created By">
                     {`${doctor.length !== 0 ? `${doctor.length} Selected` : "All"}`}
                   </SelectValue>
-                  <Image src={"/assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
+                  <Image src={"assets/icons/CaretDownDark.svg"} height={16} width={16} alt="dropdown" />
                 </SelectTrigger>
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!pb-2">
                   <Command>

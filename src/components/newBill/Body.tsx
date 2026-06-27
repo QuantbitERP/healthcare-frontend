@@ -90,8 +90,8 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
   const [lockCategoryAndCompany, setLockCategoryAndCompany] =
     useState<boolean>(false);
 
-    const placeholderValues = ["Package", "Services", "Profile"];
-    const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const placeholderValues = ["Package", "Services", "Profile"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [currentDate, setCurrentDate] = useState<string>(() =>
     formatDate(new Date())
   );
@@ -148,8 +148,8 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
   const serviceSearchRef = useRef<HTMLDivElement>(null);
   const [validationerror, setValidationError] = useState<string>("");
   const [serviceCalculations, setServiceCalculations] = useState<
-  Record<string, { rate: number; gstPercentage: number, concessionPercent: number ,mouDiscountAmt: number}>
->({});
+    Record<string, { rate: number; gstPercentage: number, concessionPercent: number, mouDiscountAmt: number }>
+  >({});
   const [isAddingService, setIsAddingService] = useState<boolean>(false);
 
   // Simple placeholder rotation - only when completely idle
@@ -157,9 +157,9 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
     let intervalId: NodeJS.Timeout;
 
     // Only rotate when input is completely idle
-    const shouldRotate = 
-      serviceSearchTerm.length === 0 && 
-      !showServiceResults && 
+    const shouldRotate =
+      serviceSearchTerm.length === 0 &&
+      !showServiceResults &&
       !isAddingService &&
       document.activeElement !== document.querySelector('input[type="text"]');
 
@@ -169,9 +169,9 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
         const hasOpenDialogs = document.querySelector('[data-state="open"]');
 
         if (!hasOpenDialogs &&
-            serviceSearchTerm.length === 0 &&
-            !showServiceResults &&
-            !isAddingService) {
+          serviceSearchTerm.length === 0 &&
+          !showServiceResults &&
+          !isAddingService) {
           setPlaceholderIndex((prev) => (prev + 1) % placeholderValues.length);
         }
       }, 10000); // Rotate every 10 seconds when idle
@@ -616,7 +616,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
         gstPercentage = res.payload?.data?.gstPercentage ?? 0;
         mouDiscountPercentage = res.payload?.data?.mouDiscountPercentage ?? 0;
         mouDiscountAmount = (rate * mouDiscountPercentage) / 100;
-        
+
       } else {
         console.log("Failed to fetch rate, action not fulfilled", res);
       }
@@ -657,8 +657,8 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
     setServiceCalculations((prev) => ({
       ...prev,
       [serviceObj.key ?? ""]: {
-        rate: rate, 
-        gstPercentage, 
+        rate: rate,
+        gstPercentage,
         mouDiscountAmt: mouDiscountAmount,
         concessionPercent: 0,
       },
@@ -704,11 +704,11 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
           delete updated[serviceId];
         }
       });
-  
+
       // Update or add entries for current services
       patientServicesTable.forEach((service) => {
         if (!service.serviceid) return;
-  
+
         updated[service.serviceid] = {
           rate: service.rate ?? 0,
           concessionPercent: service.concessionPercent ?? 0,
@@ -716,14 +716,14 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
           mouDiscountAmt: service.mouDiscountAmount ?? 0,
         };
       });
-  
+
       return updated;
     });
   }, [patientServicesTable]);
 
 
-  
-  
+
+
 
   // Show alert when patient is not selected
   useEffect(() => {
@@ -782,7 +782,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
           ) : (
             <div className="search-component relative" ref={serviceSearchRef}>
               <Image
-                src={"/assets/icons/Search.svg"}
+                src={"assets/icons/Search.svg"}
                 alt="Search"
                 width={24}
                 height={24}
@@ -799,11 +799,10 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
               />
               {showServiceResults && (
                 <div
-                  className={`w-[304px] h-fit max-h-[300px] rounded-lg z-50 border border-[#CDCED6] bg-white pb-3 flex flex-col absolute top-14 overflow-y-auto ${
-                    isAddingService ? 'pointer-events-none opacity-75' : ''
-                  }`}
+                  className={`w-[304px] h-fit max-h-[300px] rounded-lg z-50 border border-[#CDCED6] bg-white pb-3 flex flex-col absolute top-14 overflow-y-auto ${isAddingService ? 'pointer-events-none opacity-75' : ''
+                    }`}
                   onMouseEnter={() => setShowServiceResults(true)}
-                  // Remove onMouseLeave to prevent auto-closing when hovering over items
+                // Remove onMouseLeave to prevent auto-closing when hovering over items
                 >
                   <Command className="border-none">
                     <CommandList className="p-0">
@@ -817,7 +816,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         /* Show "No Service Found" if term >= 3 and no results */
                         <CommandEmpty className="w-full h-[144px] px-4 py-2 flex flex-col gap-2 items-center justify-center">
                           <Image
-                            src={"/assets/icons/Emoji.svg"}
+                            src={"assets/icons/Emoji.svg"}
                             alt="Sad"
                             width={32}
                             height={32}
@@ -974,7 +973,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
           {!data.length && (
             <div className="w-full h-fit rounded-lg flex flex-col gap-1 p-4 items-center">
               <Image
-                src={"/assets/icons/Frame.svg"}
+                src={"assets/icons/Frame.svg"}
                 width={48}
                 height={48}
                 alt="Icon"

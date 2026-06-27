@@ -10,7 +10,7 @@ import PosInfoCardDetails from '../posInfoCard/posInfoCardDetails';
 import { useFrappeApi } from "@/api/api";
 import { useAuth } from "@/context/AuthContext";
 import SelectInput from "@/components/form/Select";
-import Cash from "@/assets/icons/Cash.svg";
+// import Cash from "@/assets/icons/Cash.svg";
 import Dropdown from '../dropdownForPatientCard/Dropdown';
 import axios from "axios";
 import { debounce } from "lodash";
@@ -265,7 +265,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
             try {
                 const apiParam = searchType === "uhid" ? "UHID" : searchType === "aadharCardNo" ? "Aadhar No" : searchType === "mobile" ? "Mobile No" : searchType === "fullName" ? "Full Name" : "Aadhar No";
                 console.log("API call with param:", apiParam, "and value:", value);
-                
+
                 const response = await axios.get(PATIENT_API_BASE_URL, {
                     params: {
                         search_type: apiParam,
@@ -283,9 +283,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 setShowDropdown(patients.length > 0);
             } catch (error: any) {
                 console.error("Patient search failed:", error);
-                
+
                 // Handle authentication errors specifically
-                if (error.response?.status === 401 || 
+                if (error.response?.status === 401 ||
                     (error.response?.data?.exception && error.response?.data?.exception.includes("AuthenticationError"))) {
                     showAlert('danger', 'Authentication Error', 'Authentication failed. Please check your login credentials and try again.');
                 } else if (error.response?.data?.exception) {
@@ -293,7 +293,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 } else {
                     showAlert('danger', 'Error', 'Search failed. Please try again.');
                 }
-                
+
                 setSearchResults([]);
                 setShowDropdown(false);
             } finally {
@@ -424,7 +424,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
         if (setSelectedCustomer && customers.length > 0) {
             // If patient has a company, try to find matching customer
             if (newPatientData.company && newPatientData.company !== "N/A") {
-                const matchingCustomer = customers.find((customer: any) => 
+                const matchingCustomer = customers.find((customer: any) =>
                     customer.label === newPatientData.company || customer.value === newPatientData.company
                 );
                 if (matchingCustomer) {
@@ -503,7 +503,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     useEffect(() => {
         if (!isInitialized) return; // Wait for auth initialization
-        
+
         const loadWarehouses = async () => {
             setLoading(true);
             try {
@@ -526,9 +526,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     useEffect(() => {
         if (!isInitialized) return; // Wait for auth initialization
-        
+
         // Fetch and set default branch (hospital) from session
-        
+
         const loadBranches = async () => {
             setLoading(true);
             try {
@@ -635,7 +635,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         <div className="flex flex-col gap-2 w-full">
                             <div className='flex flex-row h-8 items-center justify-between'>
                                 <div className='flex flex-row gap-1'>
-                                    <Image src={Cash} width={16} height={16} alt='Cash' />
+                                    <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                     <span className='w-full text-[#1C2024] text-xs font-normal'>Patient</span>
                                 </div>
                                 <div className='flex flex-row h-8 items-center justify-between'>
@@ -740,7 +740,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Store / Department</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -759,7 +759,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         </div>
                     </div>
                     <InfoRow
-                        icon="pos/assets/icons/Cake.svg"
+                        icon="assets/icons/Cake.svg"
                         label="Gender"
                         value={editedPatient.age}
                         selectValue={editedPatient.sex}
@@ -769,25 +769,25 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     />
                     {/* This is the new row for Age only */}
                     <InfoRow
-                        icon="pos/assets/icons/Cake.svg"
+                        icon="assets/icons/Cake.svg"
                         label="Age"
                         value={editedPatient.age}
                         onChange={(value) => handleFieldChange('age', value)}
                     />
                     <InfoRow
-                        icon="pos/assets/icons/Phone.svg"
+                        icon="assets/icons/Phone.svg"
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
                     />
                     <InfoRow
-                        icon="pos/assets/icons/Id.svg"
+                        icon="assets/icons/Id.svg"
                         label="Visit No"
                         value={editedPatient.visitID || ''}
                         disabled={true}
                     />
                     <InfoRow
-                        icon="pos/assets/icons/Id.svg"
+                        icon="assets/icons/Id.svg"
                         label="ABHA ID"
                         value={editedPatient.ABHAID}
                         onChange={(value) => handleFieldChange('ABHAID', value)}
@@ -795,7 +795,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Customer</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -815,7 +815,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Company</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -835,21 +835,21 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Hospital</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
                                 {defaultBranch ? (
-    <div className="relative w-full">
-        
-        <input
-            value={defaultBranch}
-            disabled
-            className="text-xs font-semibold placeholder:text-[#B0B3B9] focus:outline-none cursor-not-allowed transition-all  text-right w-full"
-            style={{ textAlign: 'right' }}
-        />
-    </div>
-) : (
+                                    <div className="relative w-full">
+
+                                        <input
+                                            value={defaultBranch}
+                                            disabled
+                                            className="text-xs font-semibold placeholder:text-[#B0B3B9] focus:outline-none cursor-not-allowed transition-all  text-right w-full"
+                                            style={{ textAlign: 'right' }}
+                                        />
+                                    </div>
+                                ) : (
                                     <Dropdown
                                         reasons={branches.map(branch => ({
                                             key: branch.value,
@@ -867,7 +867,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Patient Department</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -886,19 +886,19 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     </div>
 
                     <InfoRow
-                        icon="pos/assets/icons/Building.svg"
+                        icon="assets/icons/Building.svg"
                         label="Customer Name"
                         value={editedPatient.name || ''}
                         onChange={(value) => handleFieldChange('name', value)}
                     />
                     <InfoRow
-                        icon="pos/assets/icons/DoorEnter.svg"
+                        icon="assets/icons/DoorEnter.svg"
                         label="Visit Type"
                         value={editedPatient.visitType || ''}
                         disabled={true} // <-- 1. THIS IS YOUR ORIGINAL GOAL
                     />
                     <InfoRow
-                        icon="pos/assets/icons/FirstAidKit.svg"
+                        icon="assets/icons/FirstAidKit.svg"
                         label="Consulting Doctor"
                         value={editedPatient.doctor}
                         onChange={(value) => handleFieldChange('doctor', value)}

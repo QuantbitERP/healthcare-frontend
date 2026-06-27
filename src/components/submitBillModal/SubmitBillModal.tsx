@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, UIEventHandler, useEffect, useMemo} from "react";
+import React, { useState, useRef, UIEventHandler, useEffect, useMemo } from "react";
 import Image from "next/image";
 
 
@@ -81,187 +81,187 @@ const quillTooltipStyles = `
 `;
 
 const modules = {
-    toolbar: { 
-        container: "#toolbar"
-    }
+  toolbar: {
+    container: "#toolbar"
+  }
 };
 
 const formats = [
-    'font',
-    'size',
-    'color',
-    'bold',
-    'italic',
-    'underline',
-    'link',
+  'font',
+  'size',
+  'color',
+  'bold',
+  'italic',
+  'underline',
+  'link',
 ];
 
 function CustomToolbar({ onUndo, onRedo, _onCut, _onCopy, onAttachment, onAddLink, onRemoveLink, _quillRef }: {
-    onUndo: () => void;
-    onRedo: () => void;
-    _onCut: () => void;
-    _onCopy: () => void;
-    onAttachment: () => void;
-    onAddLink: () => void;
-    onRemoveLink: () => void;
-    _quillRef: React.RefObject<any>;
+  onUndo: () => void;
+  onRedo: () => void;
+  _onCut: () => void;
+  _onCopy: () => void;
+  onAttachment: () => void;
+  onAddLink: () => void;
+  onRemoveLink: () => void;
+  _quillRef: React.RefObject<any>;
 }) {
 
-    return (
-        <TooltipProvider>
-            <div id="toolbar" className="flex items-center space-x-4 border p-2  rounded-md bg-white">
-                <div className="flex gap-2 border-r border-border " >
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button className="ql-bold p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <Image src="/assets/icons/fontBold.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Bold</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button className="ql-italic p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <Image src="/assets/icons/fontItalic.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Italic</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button className="ql-underline p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <Image src="/assets/icons/Underline.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Underline</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-                <div className="flex gap-2 border-r border-border">
-                    <span className="ql-formats">
-                        <select className="ql-size">
-                            <option value="small">Small</option>
-                            <option value="normal">Normal</option>
-                            <option value="large">Large</option>
-                            <option value="huge">Huge</option>
-                        </select>
-                    </span>
-                </div>
-                <div className="flex gap-2 border-r border-border ">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={onAttachment}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/UploadDoc.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Add Attachment</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={onAddLink}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/fontLink.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Add Link</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={onRemoveLink}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/fontUnlink.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Remove Link</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-                <div className="flex gap-2 border-r border-border ">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={() => document.execCommand('cut')}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/fontCut.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Cut</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={() => document.execCommand('copy')}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/fontCopy.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Copy</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-                <div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={onRedo}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/fontRedo.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Redo</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button 
-                                onClick={onUndo}
-                                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <Image src="/assets/icons/fontUndo.svg" alt={""} width={20} height={20} />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
-                            <p>Undo</p>
-                            <TooltipArrow className="fill-zinc-900" />
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-            </div>
-        </TooltipProvider>
-    );
+  return (
+    <TooltipProvider>
+      <div id="toolbar" className="flex items-center space-x-4 border p-2  rounded-md bg-white">
+        <div className="flex gap-2 border-r border-border " >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="ql-bold p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <Image src="assets/icons/fontBold.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Bold</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="ql-italic p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <Image src="assets/icons/fontItalic.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Italic</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="ql-underline p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <Image src="assets/icons/Underline.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Underline</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="flex gap-2 border-r border-border">
+          <span className="ql-formats">
+            <select className="ql-size">
+              <option value="small">Small</option>
+              <option value="normal">Normal</option>
+              <option value="large">Large</option>
+              <option value="huge">Huge</option>
+            </select>
+          </span>
+        </div>
+        <div className="flex gap-2 border-r border-border ">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onAttachment}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/UploadDoc.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Add Attachment</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onAddLink}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/fontLink.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Add Link</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onRemoveLink}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/fontUnlink.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Remove Link</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="flex gap-2 border-r border-border ">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => document.execCommand('cut')}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/fontCut.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Cut</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => document.execCommand('copy')}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/fontCopy.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Copy</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onRedo}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/fontRedo.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Redo</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onUndo}
+                className="p-1 rounded hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Image src="assets/icons/fontUndo.svg" alt={""} width={20} height={20} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-zinc-900 text-zinc-50 text-xs px-3 py-1.5 rounded-md">
+              <p>Undo</p>
+              <TooltipArrow className="fill-zinc-900" />
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
 }
 
 interface SubmitBillModalProps {
@@ -286,7 +286,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
     const style = document.createElement('style');
     style.textContent = quillTooltipStyles;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -303,7 +303,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
   const [submissionRefNo, _setSubmissionRefNo] = useState("");
   const [coverLetterContents, setCoverLetterContents] = useState("");
   const [submissionDate, setSubmissionDate] = useState(new Date().toISOString().split('T')[0]);
-  
+
   // ReactQuill specific state
   const quillRef = useRef<any>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -314,33 +314,33 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
 
   // Use submit bills hook
   const { submitBills, loading: submitLoading, error: submitError, success: submitSuccess } = useSubmitBills();
-  
+
   // Use cover letters hook
   const { coverLetters, loading: coverLetterLoading, error: coverLetterError } = useCoverLetters();
-  
+
   // Use cover letter content hook
   const { coverLetterContent, loading: contentLoading, error: contentError } = useCoverLetterContent(coverLetterId);
 
   // Validation function for selected bills
   const validateBillsForSubmission = (bills: TableDataType[]) => {
     if (bills.length === 0) return { valid: false, error: "No bills selected" };
-    
+
     const firstBill = bills[0];
     const allSameCompany = bills.every(bill => bill.company === firstBill.company);
-    
+
     if (!allSameCompany) return { valid: false, error: "All bills must be from the same company" };
-    
+
     return { valid: true };
   };
 
   // Use API data for cover letters, fallback to empty array if loading or error
   const coverLetterOptions: CoverLetterOption[] = useMemo(() => {
-    return coverLetterLoading || coverLetterError 
-      ? [] 
+    return coverLetterLoading || coverLetterError
+      ? []
       : coverLetters.map(coverLetter => ({
-          label: coverLetter.value,
-          value: coverLetter.key, // Using the key as value for API submission
-        }));
+        label: coverLetter.value,
+        value: coverLetter.key, // Using the key as value for API submission
+      }));
   }, [coverLetters, coverLetterLoading, coverLetterError]);
 
   const handleScroll: UIEventHandler<HTMLDivElement> = (e) => {
@@ -501,7 +501,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
       const fieldPicker = target.closest('.field-picker');
       const editor = target.closest('.ql-editor');
       const toolbar = target.closest('#toolbar');
-      
+
       // Close if clicked outside field picker, editor, and toolbar
       if (!fieldPicker && !editor && !toolbar) {
         setShowFieldPicker(false);
@@ -528,7 +528,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
         <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <Image
-              src={"/assets/icons/AlertCircle.svg"}
+              src={"assets/icons/AlertCircle.svg"}
               width={24}
               height={24}
               alt="error"
@@ -553,7 +553,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
         {/* Header */}
         <div className="w-full h-fit flex items-center px-6 py-4 border-b border-[#D9D9E0] gap-2">
           <Image
-            src={"/assets/icons/Notepad.svg"}
+            src={"assets/icons/Notepad.svg"}
             width={24}
             height={24}
             alt="notepad"
@@ -565,7 +565,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
             size="button-icon-small"
             type="secondary-button"
             variant="icon"
-            iconSrc={"/assets/icons/x.svg"}
+            iconSrc={"assets/icons/x.svg"}
             onClick={onClose}
             className={undefined}
           >
@@ -582,42 +582,42 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
           <div className="flex flex-col w-full border border-[#D9D9E0] rounded-md text-sm">
             <div className="flex w-full border-b border-[#D9D9E0]">
               <InfoRowItem
-                icon={"/assets/icons/Hashtag.svg"}
+                icon={"assets/icons/Hashtag.svg"}
                 label="Selected Bills"
                 value={`${selectedBills.length} bills selected`}
               />
               <InfoRowItem
-                icon={"/assets/icons/DateAdded.svg"}
+                icon={"assets/icons/DateAdded.svg"}
                 label="Invoice Date"
                 value={new Date().toLocaleDateString()}
               />
             </div>
             <div className="flex w-full border-b border-[#D9D9E0]">
               <InfoRowItem
-                icon={"/assets/icons/Company.svg"}
+                icon={"assets/icons/Company.svg"}
                 label="Company"
                 value={selectedBills[0]?.company || ''}
               />
               <InfoRowItem
-                icon={"/assets/icons/Hashtag.svg"}
+                icon={"assets/icons/Hashtag.svg"}
                 label="Total Amount"
                 value={`₹${selectedBills.reduce((sum, bill) => sum + bill.billAmount, 0).toLocaleString()}`}
               />
             </div>
-          
+
           </div>
 
           {/* Submission Date */}
-            <div className="w-1/2 flex flex-col gap-2">
-              <Label className="font-normal text-sm">Submission Date</Label>
-                <input
-                  type="date"
-                  value={submissionDate}
-                  onChange={(e) => setSubmissionDate(e.target.value)}
-                  className="w-full h-8 px-2 py-4 text-sm border border-[#D9D9E0] rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-      
+          <div className="w-1/2 flex flex-col gap-2">
+            <Label className="font-normal text-sm">Submission Date</Label>
+            <input
+              type="date"
+              value={submissionDate}
+              onChange={(e) => setSubmissionDate(e.target.value)}
+              className="w-full h-8 px-2 py-4 text-sm border border-[#D9D9E0] rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           {/* Submitted Bills Table */}
           <div className="flex flex-col gap-4">
             <div className="flex w-full gap-2 table-wrapper">
@@ -682,7 +682,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
             <div className="w-full p-4 bg-red-50 border border-red-200 rounded-md">
               <div className="flex items-center gap-2">
                 <Image
-                  src={"/assets/icons/AlertCircle.svg"}
+                  src={"assets/icons/AlertCircle.svg"}
                   width={20}
                   height={20}
                   alt="error"
@@ -699,7 +699,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
             <div className="w-full p-4 bg-green-50 border border-green-200 rounded-md">
               <div className="flex items-center gap-2">
                 <Image
-                  src={"/assets/icons/CheckCircle.svg"}
+                  src={"assets/icons/CheckCircle.svg"}
                   width={20}
                   height={20}
                   alt="success"
@@ -734,9 +734,9 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
               </div>
             ) : (
               <div className="bg-white border border-gray-300 rounded-md p-0 overflow-hidden relative">
-                <CustomToolbar 
-                  onUndo={handleUndo} 
-                  onRedo={handleRedo} 
+                <CustomToolbar
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
                   _onCut={() => document.execCommand('cut')}
                   _onCopy={() => document.execCommand('copy')}
                   onAttachment={handleAttachment}
@@ -766,10 +766,10 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
                             const range = editor.getSelection();
                             const currentIndex = range?.index || 0;
                             const bounds = editor.getBounds(currentIndex);
-                            
+
                             setCursorPosition(currentIndex);
-                            setFieldPickerPosition({ 
-                              x: bounds.left, 
+                            setFieldPickerPosition({
+                              x: bounds.left,
                               y: bounds.top + bounds.height
                             });
                             setShowFieldPicker(true);
@@ -789,7 +789,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
                   />
                 </div>
                 {showFieldPicker && (
-                  <div 
+                  <div
                     className="field-picker absolute z-50 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto min-w-64"
                     style={{
                       left: `${fieldPickerPosition.x}px`,
@@ -811,7 +811,7 @@ const SubmitBillModal: React.FC<SubmitBillModalProps> = ({
                       <div className="max-h-48 overflow-y-auto">
                         {coverLetterFilter.fields.length > 0 ? (
                           coverLetterFilter.fields
-                            .filter(field => 
+                            .filter(field =>
                               field.value?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               field.value?.toLowerCase() === searchTerm.toLowerCase()
                             )

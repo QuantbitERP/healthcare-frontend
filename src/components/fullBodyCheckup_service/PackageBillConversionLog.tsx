@@ -98,7 +98,7 @@ const columns: ColumnDef<PackageBillConversionLogSerachFilterResponseDto & { id:
         </Button>
       </div>
     ),
-    cell: ({getValue }) => (
+    cell: ({ getValue }) => (
       <span
         className={`w-full block h-10 py-3 `}
       >
@@ -231,13 +231,13 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
   };
 
   useEffect(() => {
-   
+
     const payload = buildPackageBillConversionPayload(
       filters,
       1,
       20
     );
-  
+
     dispatch(
       fetchPackageBillConversionLogFilterSearchList({
         version: "1",
@@ -245,9 +245,9 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
         requestBody: payload,
       })
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
-  
+
 
   useEffect(() => {
     if (!filters) return;
@@ -279,11 +279,11 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-  
-    
+
+
     const payload = buildPackageBillConversionPayload(
-      { ...filters, searchTerm: value }, 
-      1, 
+      { ...filters, searchTerm: value },
+      1,
       20
     );
     dispatch(
@@ -294,9 +294,9 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
       })
     );
   };
-  
 
-  
+
+
 
   return (
     <div className="w-full h-full flex flex-col rounded-lg bg-[#FFF] border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)]">
@@ -304,7 +304,7 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
       <div className="flex flex-row items-center justify-between  px-4 border-b border-b-[#D9D9E0]">
         <div className="w-full px-0 py-4  gap-2 flex flex-row">
           <Image
-            src={"/assets/icons/Camera.svg"}
+            src={"assets/icons/Camera.svg"}
             width={24}
             height={24}
             alt="Rupee"
@@ -314,7 +314,7 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
           </p>
         </div>
         <Buttons
-          iconSrc={"/assets/icons/X.svg"}
+          iconSrc={"assets/icons/X.svg"}
           size="sm"
           type="secondary-button"
           variant="icon"
@@ -329,29 +329,29 @@ const PackageBillConversionLog: React.FC<DiscountProps> = ({ setOpen }) => {
             Conversion Log
           </div>
           <div className="filters flex space-x-sm py-xs">
-          <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={20}
-          />
-          <Input
-            type="text"
-            placeholder={`Search`}
-            className="pl-10 min-w-80"
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-        </div>
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <Input
+                type="text"
+                placeholder={`Search`}
+                className="pl-10 min-w-80"
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+            </div>
             <FilterDialogue
               trigger={
                 <TableUtilFilterButton
-                  icon={"/assets/icons/FilterIcon.svg"}
+                  icon={"assets/icons/FilterIcon.svg"}
                   label={"Filters"}
                   badgeCount={Object.keys(filterCounts).length}
                 />
               }
               modalProps={{ openFilters, setOpenFilters }}
-              filterProps={{filterCounts, setFilterCounts}}
+              filterProps={{ filterCounts, setFilterCounts }}
             />
           </div>
         </div>

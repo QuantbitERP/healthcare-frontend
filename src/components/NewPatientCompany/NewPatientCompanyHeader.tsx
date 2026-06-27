@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <PageHeader
       title={isEdit ? t("common.editPatientCompany") : t("common.newPatientCompany")}
-      icon="/assets/icons/user-heart.svg"
+      icon="assets/icons/user-heart.svg"
       parentTitle={t("common.patientCompany")}
       parentLink="/patient_company"
     />

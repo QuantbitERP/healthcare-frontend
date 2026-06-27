@@ -114,7 +114,7 @@ export default function BillingTableFilters({
     <div className="flex justify-between items-center px-lg py-sm">
       <div className="relative">
         <Image
-          src="/assets/icons/Search.svg"
+          src="assets/icons/Search.svg"
           alt="Search"
           width={20}
           height={20}
@@ -135,7 +135,7 @@ export default function BillingTableFilters({
               {loading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
               ) : (
-                <Image src="/assets/icons/NotepadTimer.svg" alt="Build Report" width={16} height={16} />
+                <Image src="assets/icons/NotepadTimer.svg" alt="Build Report" width={16} height={16} />
               )}
               <span className="font-medium">{loading ? "Loading..." : "Build Report"}</span>
             </div>
@@ -161,7 +161,7 @@ export default function BillingTableFilters({
           <DropdownMenuTrigger asChild>
             <span>
               <UtilDropDownButton
-                leadingIcon={"/assets/icons/columns.svg"}
+                leadingIcon={"assets/icons/columns.svg"}
                 label={"Show Columns"}
                 className="text-xs"
               />

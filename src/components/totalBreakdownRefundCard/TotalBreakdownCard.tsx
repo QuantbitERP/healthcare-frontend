@@ -92,7 +92,7 @@ const TotalBreakdownCard: React.FC<TotalBreakdownCardProps> = ({
             </div>
           </div>
           <div>
-            <Image src={"/assets/icons/DividerHorizontal.svg"} width={224} height={220} alt='Divider' />
+            <Image src={"assets/icons/DividerHorizontal.svg"} width={224} height={220} alt='Divider' />
           </div>
           <div className='flex flex-row justify-between items-center'>
             <p className='w-full text-[#1C2024] text-sm font-medium'>

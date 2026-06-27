@@ -112,15 +112,13 @@ function PatientBillingFooter({
       await OpdBillService.postApiVOpdBillOpdbillsSave("1", "", command);
       setSaveSuccess(true);
       router.push(
-        `/opd_bills?status=success&billNumber=${
-          (billData as any)?.billDocumentNumber
+        `/opd_bills?status=success&billNumber=${(billData as any)?.billDocumentNumber
         }`
       );
     } catch (error) {
       console.error("Error finalizing bill:", error);
       router.push(
-        `/opd_bills?status=error&billNumber=${
-          (billData as any)?.billDocumentNumber
+        `/opd_bills?status=error&billNumber=${(billData as any)?.billDocumentNumber
         }`
       );
     } finally {
@@ -159,15 +157,13 @@ function PatientBillingFooter({
       await OpdBillService.postApiVOpdBillOpdbillsDraft("1", "", command);
       setSaveSuccess(true);
       router.push(
-        `/opd_bills?status=success&billNumber=${
-          (billData as any)?.tempDocumentNo
+        `/opd_bills?status=success&billNumber=${(billData as any)?.tempDocumentNo
         }`
       );
     } catch (error) {
       console.error("Error finalizing bill:", error);
       router.push(
-        `/opd_bills?status=error&billNumber=${
-          (billData as any)?.tempDocumentNo
+        `/opd_bills?status=error&billNumber=${(billData as any)?.tempDocumentNo
         }`
       );
     } finally {
@@ -265,7 +261,7 @@ function PatientBillingFooter({
     } catch (error) {
       console.error("Download failed:", error);
       alert("Error downloading file: " + (error as Error).message);
-    }finally {
+    } finally {
       setIsSaving(false);
     }
   };
@@ -299,7 +295,7 @@ function PatientBillingFooter({
           <Popover>
             <PopoverTrigger asChild>
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="Dots"
                 width={50}
                 height={50}

@@ -47,7 +47,7 @@ const RecordPayments: React.FC<RecordPaymentsProps> = ({
       {/* Header */}
       <div className="w-full px-6 py-4 flex items-center gap-2 border-b border-[#D9D9E0]">
         <Image
-          src="/assets/icons/Notepad.svg"
+          src="assets/icons/Notepad.svg"
           width={24}
           height={24}
           alt="Notepad"

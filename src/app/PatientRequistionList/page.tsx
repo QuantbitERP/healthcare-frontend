@@ -152,7 +152,7 @@ export default function PatientRequisitionList() {
       <div className="my-20">
         <PageHeader
           title="Patient Requisition"
-          icon="../assets/icons/BriefcaseIcon.svg"
+          icon="..assets/icons/BriefcaseIcon.svg"
           rightButtons={
             <div className="flex flex-row space-x-2">
               <Button type="primary-button" size="button-medium" onClick={handleClick}>
@@ -187,11 +187,10 @@ export default function PatientRequisitionList() {
               cell: ({ getValue }: any) => {
                 const isRequisition = getValue();
                 return (
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    isRequisition 
-                      ? 'bg-blue-100 text-blue-800' 
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${isRequisition
+                      ? 'bg-blue-100 text-blue-800'
                       : 'bg-purple-100 text-purple-800'
-                  }`}>
+                    }`}>
                     {isRequisition ? 'Patient Requisition' : 'Prescription'}
                   </span>
                 );

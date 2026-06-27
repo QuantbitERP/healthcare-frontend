@@ -121,7 +121,7 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
               <Button
                 type={"secondary-button"}
                 size={"button-small"}
-                onClick={() => {}}
+                onClick={() => { }}
               >
                 Edit Patient
               </Button>
@@ -144,16 +144,14 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
           {/* add content */}
           <div className="Details flex flex-col w-full">
             <div
-              className={`${
-                size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
-              } flex flex-row w-full pt-4`}
+              className={`${size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
+                } flex flex-row w-full pt-4`}
             >
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${
-                  size === "large"
-                    ? "border-l rounded-tl-lg"
-                    : "border-r-0 border-l-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${size === "large"
+                  ? "border-l rounded-tl-lg"
+                  : "border-r-0 border-l-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image src={Phone.src} alt="Phone" width={16} height={16} />
@@ -166,9 +164,8 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                 </div>
               </div>
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${
-                  size === "large" ? "border-l-0 rounded-tr-lg" : "border-r-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${size === "large" ? "border-l-0 rounded-tr-lg" : "border-r-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image src={Cake.src} alt="Cake" width={16} height={16} />
@@ -180,16 +177,14 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
               </div>
             </div>
             <div
-              className={`${
-                size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
-              } flex flex-row`}
+              className={`${size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
+                } flex flex-row`}
             >
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${
-                  size === "large"
-                    ? "border-l border-t-0 rounded-bl-lg"
-                    : "border-t-0 border-l-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${size === "large"
+                  ? "border-l border-t-0 rounded-bl-lg"
+                  : "border-t-0 border-l-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image src={Location.src} alt="Location" width={16} height={16} />
@@ -202,9 +197,8 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                 </div>
               </div>
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border-b border-[#D9D9E0] ${
-                  size === "large" ? "rounded-br-lg border-r" : "border-r-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border-b border-[#D9D9E0] ${size === "large" ? "rounded-br-lg border-r" : "border-r-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image src={Clock.src} alt="Clock" width={16} height={16} />
@@ -242,13 +236,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
           >
             <div
               ref={generalRef}
-              className={`${
-                size === "small"
-                  ? "px-6"
-                  : size === "medium"
+              className={`${size === "small"
+                ? "px-6"
+                : size === "medium"
                   ? "px-8"
                   : "px-[calc((100vw-960px)/2)]"
-              } generalInfo flex flex-col gap-4`}
+                } generalInfo flex flex-col gap-4`}
             >
               <div className="text-[#1C2024] font-semibold text-lg">
                 General Information
@@ -317,22 +310,21 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
 
             <div
               ref={lastVisitRef}
-              className={`${
-                size === "small"
-                  ? "px-6"
-                  : size === "medium"
+              className={`${size === "small"
+                ? "px-6"
+                : size === "medium"
                   ? "px-8"
                   : "px-[calc((100vw-960px)/2)]"
-              } lastInfo flex flex-col gap-4`}
+                } lastInfo flex flex-col gap-4`}
             >
-             <div className="flex flex-row items-center justify-between">
-             <div className="text-[#1C2024] font-semibold text-lg">
-                Last Visit Information
+              <div className="flex flex-row items-center justify-between">
+                <div className="text-[#1C2024] font-semibold text-lg">
+                  Last Visit Information
+                </div>
+                <div className="text-[#1C2024] font-normal text-md cursor-pointer border  border-[#D9D9E0] px-4 py-2 rounded-md">
+                  View All Last Visits
+                </div>
               </div>
-              <div className="text-[#1C2024] font-normal text-md cursor-pointer border  border-[#D9D9E0] px-4 py-2 rounded-md">
-                View All Last Visits
-              </div>
-             </div>
               <div className="flex flex-row gap-6">
                 <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">
@@ -402,13 +394,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
             {showInsuranceDetails && (
               <div
                 ref={insuranceRef}
-                className={`${
-                  size === "small"
-                    ? "px-6"
-                    : size === "medium"
+                className={`${size === "small"
+                  ? "px-6"
+                  : size === "medium"
                     ? "px-8"
                     : "px-[calc((100vw-960px)/2)]"
-                } insuranceInfo flex flex-col gap-4`}
+                  } insuranceInfo flex flex-col gap-4`}
               >
                 <div className="text-[#1C2024] font-semibold text-lg">
                   Insurance Details

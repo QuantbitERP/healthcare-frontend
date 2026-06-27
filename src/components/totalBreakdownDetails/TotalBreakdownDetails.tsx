@@ -24,27 +24,27 @@ const TotalBreakdownDetails: React.FC<TotalBreakdownDetailsProps> = ({
   serviceCalculations,
   concessionOnBill,
 }) => {
-  const { totalRate,             
-    totalConcessionAmount,   
-    totalMouDiscountAmount,  
-    totalDiscountAmount,              
-    totalGSTAmount,        
-    totalCGSTAmount,       
-    totalSGSTAmount,     
-    totalCGSTPercentage,   
-    totalSGSTPercentage,   
-    grandTotal,  } = useServiceTotals(serviceCalculations);
+  const { totalRate,
+    totalConcessionAmount,
+    totalMouDiscountAmount,
+    totalDiscountAmount,
+    totalGSTAmount,
+    totalCGSTAmount,
+    totalSGSTAmount,
+    totalCGSTPercentage,
+    totalSGSTPercentage,
+    grandTotal, } = useServiceTotals(serviceCalculations);
 
   return (
     <div className="w-[640px] bg-white max-h-screen rounded-lg border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)] flex flex-col">
       {/* Header */}
       <div className="w-full px-6 pt-6 pb-6 flex flex-row gap-2 items-center">
-        <Image src={ "/assets/icons/RupeeIcon.svg"} width={24} height={24} alt="Rupee" />
+        <Image src={"assets/icons/RupeeIcon.svg"} width={24} height={24} alt="Rupee" />
         <span className="flex-1 text-[#1C2024] text-base font-semibold">
           Total Breakdown
         </span>
         <Button
-          iconSrc={"/assets/icons/DotsHorizontal.svg"}
+          iconSrc={"assets/icons/DotsHorizontal.svg"}
           size="button-icon-small"
           type="secondary-button"
           variant="icon"
@@ -62,22 +62,22 @@ const TotalBreakdownDetails: React.FC<TotalBreakdownDetailsProps> = ({
             <div className="w-[196px] px-3 py-2 text-end">Amount</div>
           </div>
 
- 
+
 
           {/* Dynamic Rows */}
           {[
             ["Total Service Amount", selectedPatientBill?.totalServiceAmount ? selectedPatientBill?.totalServiceAmount : totalRate],
-            ["Total Service Discount", selectedPatientBill?.totalServiceDiscount? selectedPatientBill?.totalServiceDiscount : totalDiscountAmount],
-            ["MoU", selectedPatientBill?.totalServiceMouDiscount? selectedPatientBill?.totalServiceMouDiscount : totalMouDiscountAmount],
-            ["Inline", selectedPatientBill?.totalServiceInlineDiscount? selectedPatientBill?.totalServiceInlineDiscount: totalConcessionAmount],
-            ["Total Service GST Amount", selectedPatientBill?.totalServiceGstAmount? selectedPatientBill?.totalServiceGstAmount : totalGSTAmount.toFixed(2)],
+            ["Total Service Discount", selectedPatientBill?.totalServiceDiscount ? selectedPatientBill?.totalServiceDiscount : totalDiscountAmount],
+            ["MoU", selectedPatientBill?.totalServiceMouDiscount ? selectedPatientBill?.totalServiceMouDiscount : totalMouDiscountAmount],
+            ["Inline", selectedPatientBill?.totalServiceInlineDiscount ? selectedPatientBill?.totalServiceInlineDiscount : totalConcessionAmount],
+            ["Total Service GST Amount", selectedPatientBill?.totalServiceGstAmount ? selectedPatientBill?.totalServiceGstAmount : totalGSTAmount.toFixed(2)],
             [`CGST (${totalCGSTPercentage.toFixed(2)}%)`, selectedPatientBill?.totalServiceCGstAmount ? selectedPatientBill?.totalServiceCGstAmount : totalCGSTAmount.toFixed(2)],
             [`SGST (${totalSGSTPercentage.toFixed(2)}%)`, selectedPatientBill?.totalServiceSGstAmount ? selectedPatientBill?.totalServiceSGstAmount : totalSGSTAmount.toFixed(2)],
-            ["Net Service Amount", selectedPatientBill?.netServiceAmount? selectedPatientBill?.netServiceAmount : grandTotal],
-            ["Bill Concession", selectedPatientBill?.billDiscountAmount? selectedPatientBill?.billDiscountAmount : concessionOnBill],
-            ["Bill Level GST", selectedPatientBill?.billGstAmount? selectedPatientBill?.billGstAmount : (((grandTotal - concessionOnBill) * Number(selectedValue))/100).toFixed(2)],
-            [`CGST (${Number(selectedValue)/2}%)`, selectedPatientBill?.billCGstAmount? selectedPatientBill?.billCGstAmount : (((grandTotal - concessionOnBill) * Number(selectedValue)/2)/100).toFixed(2)],
-            [`SGST (${Number(selectedValue)/2}%)`, selectedPatientBill?.billSGstAmount? selectedPatientBill?.billSGstAmount : (((grandTotal - concessionOnBill) * Number(selectedValue)/2)/100).toFixed(2)],
+            ["Net Service Amount", selectedPatientBill?.netServiceAmount ? selectedPatientBill?.netServiceAmount : grandTotal],
+            ["Bill Concession", selectedPatientBill?.billDiscountAmount ? selectedPatientBill?.billDiscountAmount : concessionOnBill],
+            ["Bill Level GST", selectedPatientBill?.billGstAmount ? selectedPatientBill?.billGstAmount : (((grandTotal - concessionOnBill) * Number(selectedValue)) / 100).toFixed(2)],
+            [`CGST (${Number(selectedValue) / 2}%)`, selectedPatientBill?.billCGstAmount ? selectedPatientBill?.billCGstAmount : (((grandTotal - concessionOnBill) * Number(selectedValue) / 2) / 100).toFixed(2)],
+            [`SGST (${Number(selectedValue) / 2}%)`, selectedPatientBill?.billSGstAmount ? selectedPatientBill?.billSGstAmount : (((grandTotal - concessionOnBill) * Number(selectedValue) / 2) / 100).toFixed(2)],
             ["Patient Payable", selectedPatientBill?.billPatientPayableAmount],
             ["Company Payable", selectedPatientBill?.companyOutstandingAmount],
             ["Total Deposit Before Bill", selectedPatientBill?.totalDepositBeforeBill],
@@ -90,25 +90,24 @@ const TotalBreakdownDetails: React.FC<TotalBreakdownDetailsProps> = ({
             ["Company Outstanding", selectedPatientBill?.companyOutstandingAmount],
             ["Excess Collected Amount", selectedPatientBill?.excessCollectedAmount],
           ].map(([label, value], index) => {
-            const isChild = [2, 3, 5,6, 10, 11].includes(index);
-            const hasNoBottomBorder = [2,5,10].includes(index)
-            return(
-            <div
-              key={label}
-              className={`w-full h-10 flex flex-row items-center ${
-                  hasNoBottomBorder ? "" : "border-b border-[#D9D9E0]"
-                }`}
-              >
+            const isChild = [2, 3, 5, 6, 10, 11].includes(index);
+            const hasNoBottomBorder = [2, 5, 10].includes(index)
+            return (
               <div
-                  className={`px-3 py-3 border-r border-[#D9D9E0] ${
-                    isChild ? "pl-6 w-[396px]" : "w-[396px]"
+                key={label}
+                className={`w-full h-10 flex flex-row items-center ${hasNoBottomBorder ? "" : "border-b border-[#D9D9E0]"
                   }`}
+              >
+                <div
+                  className={`px-3 py-3 border-r border-[#D9D9E0] ${isChild ? "pl-6 w-[396px]" : "w-[396px]"
+                    }`}
                 >
-                {label}
+                  {label}
+                </div>
+                <div className="w-[196px] px-3 py-2 text-end">₹{value ?? 0}</div>
               </div>
-              <div className="w-[196px] px-3 py-2 text-end">₹{value ?? 0}</div>
-            </div>
-          )})}
+            )
+          })}
 
           {showInsuranceDetails && (
             <div className="w-full h-10 flex flex-row items-center border-b border-[#D9D9E0]">

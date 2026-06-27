@@ -49,7 +49,7 @@ type CloseDialogueBoxProps = {
   rows?: GetBillsResponseDto[];
 };
 
- const CloseDialogueBox: React.FC<CloseDialogueBoxProps> = ({
+const CloseDialogueBox: React.FC<CloseDialogueBoxProps> = ({
   title = "Cancel Bill?",
   label = "Bill cancellation is irreversible.",
   showDropdown = false,
@@ -62,13 +62,13 @@ type CloseDialogueBoxProps = {
       text: "Cancel",
       type: "secondary-button",
       size: "button-medium",
-      onClick: () => {},
+      onClick: () => { },
     },
     {
       text: "Cancel Bill(s)",
       type: "danger-button",
       size: "button-medium",
-      onClick: () => {},
+      onClick: () => { },
     },
   ],
   open,
@@ -77,7 +77,7 @@ type CloseDialogueBoxProps = {
   deselectRows,
   setAlertType,
   rows,
-}: CloseDialogueBoxProps)=> {
+}: CloseDialogueBoxProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
@@ -204,7 +204,7 @@ type CloseDialogueBoxProps = {
           <div className="flex justify-between text-[#1C2024] text-base font-semibold">
             <span>{title}</span>
             <Image
-              src="/assets/icons/x.svg"
+              src="assets/icons/x.svg"
               width={24}
               height={24}
               alt="Close Icon"
@@ -231,7 +231,7 @@ type CloseDialogueBoxProps = {
                           {selectedReason?.label}
                         </button>
                         <Image
-                          src="/assets/icons/CaretDownFilled.svg"
+                          src="assets/icons/CaretDownFilled.svg"
                           width={16}
                           height={16}
                           alt="Caret Down Icon"
@@ -247,7 +247,7 @@ type CloseDialogueBoxProps = {
                           <DropdownMenuItem
                             key={reasonObj.id}
                             onClick={() =>
-                              setSelectedReason({ id: reasonObj.id ?? "", label: reasonObj.reason ?? ""})
+                              setSelectedReason({ id: reasonObj.id ?? "", label: reasonObj.reason ?? "" })
                             }
                             className="hover:bg-[#E6F4FE] hover:text-[#0D74CE] data-[highlighted]:!bg-[#E6F4FE] data-[highlighted]:!text-[#0D74CE] rounded-none"
                           >
@@ -284,7 +284,7 @@ type CloseDialogueBoxProps = {
                     type={btn.type}
                     size={btn.size}
                     onClick={btn.onClick}
-                    disabled={!selectedReason && loading} 
+                    disabled={!selectedReason && loading}
                   >
                     {btn.text}
                   </Button>
@@ -298,7 +298,7 @@ type CloseDialogueBoxProps = {
                     await handleCancelBills();
                     btn.onClick();
                   }}
-                  disabled={!selectedReason && loading} 
+                  disabled={!selectedReason && loading}
                 >
                   {loading ? (
                     <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

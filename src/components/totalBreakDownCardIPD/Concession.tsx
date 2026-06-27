@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchConcessionCategoryTypes,
 } from "@/store/concession_category/thunk";
-import {fetchConcessionCategoryTypeById} from "@/store/slices/financeAuthority";
+import { fetchConcessionCategoryTypeById } from "@/store/slices/financeAuthority";
 import type { RootState, AppDispatch } from "@/store";
 import Buttons from "../buttons/Button";
 import { DataTable } from "@/components/EditableCellsTable/TableTry";
@@ -148,7 +148,7 @@ function Concession({
 
   useEffect(() => {
     dispatch(fetchConcessionCategoryTypes(""));
-  },[dispatch])
+  }, [dispatch])
 
   const columns: CustomColumnDef<RowType>[] = [
     {
@@ -218,9 +218,8 @@ function Concession({
                 textSizeRatio={2}
               /> */}
               <span
-                className={` ${
-                  row?.original?.tagText === "Cancelled" ? "line-through" : ""
-                } ${isTotalAmount ? "font-semibold" : ""}`} // Apply bold & larger text for Total Amount
+                className={` ${row?.original?.tagText === "Cancelled" ? "line-through" : ""
+                  } ${isTotalAmount ? "font-semibold" : ""}`} // Apply bold & larger text for Total Amount
               >
                 {matchedOption?.value}
               </span>
@@ -267,7 +266,7 @@ function Concession({
       },
       enableSorting: true,
       isDropdown: true,
-      meta:{ noneditable: false, isNumeric: false },
+      meta: { noneditable: false, isNumeric: false },
     },
     {
       accessorKey: "concessionPercent",
@@ -309,9 +308,8 @@ function Concession({
         }
         return (
           <span
-            className={`text-right w-full block ${
-              row?.original?.tagText === "Cancelled" ? "line-through" : ""
-            }`} // Apply bold & larger text for Total Amount
+            className={`text-right w-full block ${row?.original?.tagText === "Cancelled" ? "line-through" : ""
+              }`} // Apply bold & larger text for Total Amount
           >
             {value}%
           </span>
@@ -346,7 +344,7 @@ function Concession({
         </div>
       ),
       cell: (props: CellContext<RowType, unknown>) => {
-        const {} = props;
+        const { } = props;
         // const isNewRow = !row.original.id;
         // const value = getValue() as string;
         return (
@@ -385,15 +383,14 @@ function Concession({
         const calculatedConcession = ((row.original.concessionPercent ?? 0) * totalAmountforConcession) / 100;
         if (!value || isNaN(value) || value === 0) {
           const newConcession = Number(calculatedConcession.toFixed(2));
-          row.original.concessionamount = newConcession; 
+          row.original.concessionamount = newConcession;
           value = newConcession;
-        }        
+        }
         return (
           <div className="border-l border-[#D9D9E0] -ml-3">
             <span
-              className={`text-right w-full block h-10 py-3 ${
-                row?.original?.tagText === "Cancelled" ? "line-through" : ""
-              } ${row?.original?.concessionamount ? "font-bold text-lg" : ""}`} // Apply bold & larger text for Total Amount
+              className={`text-right w-full block h-10 py-3 ${row?.original?.tagText === "Cancelled" ? "line-through" : ""
+                } ${row?.original?.concessionamount ? "font-bold text-lg" : ""}`} // Apply bold & larger text for Total Amount
             >
               ₹{value ? value : calculatedConcession}
             </span>
@@ -425,10 +422,10 @@ function Concession({
 
   return (
     <div className="w-full h-full rounded-lg flex flex-col bg-[#FFF] border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)]">
-     <div className="flex flex-row items-center justify-between  px-4 border-b border-b-[#D9D9E0]">
+      <div className="flex flex-row items-center justify-between  px-4 border-b border-b-[#D9D9E0]">
         <div className="w-full px-0 py-4  gap-2 flex flex-row">
           <Image
-            src={"/assets/icons/Concession.svg"}
+            src={"assets/icons/Concession.svg"}
             width={24}
             height={24}
             alt="Rupee"
@@ -436,7 +433,7 @@ function Concession({
           <p className="text-[#1C2024] text-base font-semibold">Concession</p>
         </div>
         <Buttons
-          iconSrc={"/assets/icons/X.svg"}
+          iconSrc={"assets/icons/X.svg"}
           size="sm"
           type="secondary-button"
           variant="icon"
