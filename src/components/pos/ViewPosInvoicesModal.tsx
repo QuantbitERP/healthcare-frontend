@@ -55,7 +55,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const [itemsForModal, setItemsForModal] = useState<any[]>([]);
   
   const { } = useAuth();
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchInvoices = async (invoiceNumber: string, patientName: string, dates: { from: Date | undefined, to: Date | undefined }) => {
@@ -215,7 +215,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     const invoiceName = invoice.name;
     const company = invoice.company;
     console.log('Printing invoice:', invoiceName);
-    const url = 'https://demohims.quantcloud.in/printview?' +
+    const url = 'https://gmcerp.quantcloud.in/printview?' +
       'doctype=Sale Bill&' +
       'name=' + encodeURIComponent(invoiceName) + '&' +
       'format=' + encodeURIComponent(invoice.status === 'Return' ? 'IP SALE RETURN INVOICE' : 'Pos Invoice print Format') + '&' +
@@ -239,7 +239,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       // Submit the draft invoice
-      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Sale%20Bill/${invoice.name}`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${invoice.name}`, {
         method: 'PUT',
         headers,
         credentials: 'include',

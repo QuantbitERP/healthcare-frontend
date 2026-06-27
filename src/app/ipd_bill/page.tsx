@@ -182,7 +182,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
 
   const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean, selectedCompany?: string): Promise<Item[]> => {
     try {
@@ -430,7 +430,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   // Function to fetch batch MRP
   const fetchBatchMRP = async (batchName: string): Promise<number> => {
     try {
-      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchName}`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Batch/${batchName}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -984,9 +984,9 @@ export default function NewBill() {
   const { logout, isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-  const ITEM_DETAILS_API_URL = 'https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+  const ITEM_DETAILS_API_URL = 'https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
   // Function to fetch item batches filtered by warehouse and company
   const fetchItemBatches = async (itemCode: string) => {
@@ -1007,7 +1007,7 @@ export default function NewBill() {
       };
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1053,7 +1053,7 @@ export default function NewBill() {
       };
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1091,7 +1091,7 @@ export default function NewBill() {
         'Content-Type': 'application/json',
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
-      const resp = await fetch('https://demohims.quantcloud.in/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+      const resp = await fetch('https://gmcerp.quantcloud.in/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1288,7 +1288,7 @@ export default function NewBill() {
       let stockQty = 0;
       if (selectedWarehouse) {
         try {
-          const batchQtyResponse = await fetch(`https://demohims.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
+          const batchQtyResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
             method: 'POST',
             headers: {
               'Authorization': `token ${apiKey}:${apiSecret}`,
@@ -2053,7 +2053,7 @@ export default function NewBill() {
           'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
-        const taxTemplateResponse = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+        const taxTemplateResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
           headers: taxTemplateHeaders,
           credentials: 'include',
@@ -2075,7 +2075,7 @@ export default function NewBill() {
           'Content-Type': 'application/json',
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
-        const taxAccountsResponse = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+        const taxAccountsResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
           method: 'POST',
           headers: taxAccountsHeaders,
           credentials: 'include',
@@ -2113,7 +2113,7 @@ export default function NewBill() {
           'Authorization': `token ${apiKey}:${apiSecret}`,
         };
 
-        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+        const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2155,7 +2155,7 @@ export default function NewBill() {
         };
 
         const response = await fetch(
-          'https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+          'https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
           {
             method: 'POST',
             headers,
@@ -2217,7 +2217,7 @@ export default function NewBill() {
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -2792,7 +2792,7 @@ export default function NewBill() {
         }
       } else {
         // Create new draft invoice using POST request
-        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_ipd_invoice_draft`, {
+        const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_ipd_invoice_draft`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -4122,13 +4122,13 @@ export default function NewBill() {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
         }
 
@@ -4425,7 +4425,7 @@ export default function NewBill() {
         console.log("Final payload for creating submitted invoice:", finalPayload);
         console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
         console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_ipd_invoice_draft`, {
+        const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_ipd_invoice_draft`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -4490,13 +4490,13 @@ export default function NewBill() {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(invoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(invoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
             window.open(printUrl, '_blank');
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(invoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(invoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
           window.open(printUrl, '_blank');
         }
 
@@ -4523,7 +4523,7 @@ export default function NewBill() {
         'Authorization': `token ${apiKey}:${apiSecret}`,
       };
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -4933,12 +4933,12 @@ export default function NewBill() {
                       console.error("Network printing failed:", error);
                       showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                       // Fallback to browser print
-                      window.open(`https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                      window.open(`https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
                     }
                   } else {
                     // Fallback to browser print if network printer not available
                     console.warn('Network printer not available, using browser print');
-                    window.open(`https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                    window.open(`https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
                   }
                 }}
               >
@@ -5046,7 +5046,7 @@ export default function NewBill() {
           invoice={selectedInvoiceForReturn}
           onSubmit={async (returnData) => {
             try {
-              const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+              const response = await fetch('https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -5062,7 +5062,7 @@ export default function NewBill() {
                 // Print the return invoice
                 const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
                 if (returnInvoiceName) {
-                  const printUrl = `https://demohims.quantcloud.in/printview?doctype=IPD%20BIll&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+                  const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
                   window.open(printUrl, '_blank');
                 }
               } else {

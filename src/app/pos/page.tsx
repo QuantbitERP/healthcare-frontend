@@ -13,7 +13,7 @@ import { authenticatedFetch } from "@/utils/apiHelper";
 import { FRAPPE_BASE_URL } from "@/config/frappe";
 
 export default function POS() {
-  // const API_BASE_URL = "https://demohims.quantcloud.in/api/resource";
+  // const API_BASE_URL = "https://gmcerp.quantcloud.in/api/resource";
   const selectOptions = [
     { label: "Invoice ID", value: "name" },
     { label: "Customer Name", value: "customer" },
@@ -192,13 +192,13 @@ export default function POS() {
               <Button
                 type="primary-button"
                 size="button-medium"
-                onClick={() => handleClick("/new_bill")}
+                onClick={() => handleClick("/opd-sale-bill")}
               > + New OPD Sale Bill
               </Button>
               <Button
                 type="primary-button"
                 size="button-medium"
-                onClick={() => handleClick("/ipd-bill")}
+                onClick={() => handleClick("/sale_bill")}
               > + New IPD Bill
               </Button>
 

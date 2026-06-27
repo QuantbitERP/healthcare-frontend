@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Button as UIButton } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAuthHeaders } from "@/utils/sessionAuth";
 import BulkAction from "../bulkAction/BulkAction";
 import AlternativeItemsPopover from "../itemAlternative/ItemAlternative";
@@ -53,6 +54,11 @@ interface Item {
   coPayPercentage?: number; // Add co-pay percentage field
   patientAmount?: number; // Add patient amount field
   payerAmount?: number; // Add payer amount field
+  covered?: boolean; // Add covered checkbox field
+  preAuthRequired?: boolean; // Add pre-auth required field
+  preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
+  preAuthNo?: string; // Add pre-auth number field
+  preAuthDateTime?: string; // Add pre-auth date and time field
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   mrp?: number; // Add MRP field for batch custom_mrp
@@ -184,7 +190,7 @@ const DEFAULT_COLUMN_ORDER = [
   'select', 'alternateBatches', 'substituteItem', 'itemCode', 'itemName', 'batchNo',
   'expiryDate', 'stockQty', 'orderedQty', 'saleQty', 'returnQty', 'alreadyGivenQty', 'rate', 'mrp', 'uom', 'itemAmount',
   'discountPercent', 'discountAmt', 'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt',
-  'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'kitName', 'totalPckgAmt',
+  'igstPercent', 'igstAmt', 'taxableAmount', 'totalAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'covered', 'preAuthRequired', 'preAuthStatus', 'preAuthNo', 'preAuthDateTime', 'kitName', 'totalPckgAmt',
   'packageName', 'binLocation', 'actions'
 ];
 
@@ -224,6 +230,11 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     coPayPercentage: "Co-Pay %",
     patientAmount: "Patient Amount",
     payerAmount: "Payer Amount",
+    covered: "Covered",
+    preAuthRequired: "Pre-auth Req.",
+    preAuthStatus: "Pre-auth Status",
+    preAuthNo: "Pre-auth No.",
+    preAuthDateTime: "Pre-auth Date & Time",
     kitName: "Kit Name",
     totalPckgAmt: "Total Pckg Amt.",
     packageName: "Package Name",
@@ -444,6 +455,7 @@ interface EditableTableProps {
   selectedCustomer?: string; // Add selected customer for pricing rules
   hideInsuranceFields?: boolean; // Add prop to hide insurance related fields
   showInsuranceFields?: boolean; // Add prop to show insurance related fields (for sales bill)
+  showPreAuthFields?: boolean; // Add prop to show pre-auth fields (for sale_bill page)
   isLoadingFromPosInvoice?: boolean; // Add prop to prevent recalculation when loading invoice data
 }
 
@@ -479,6 +491,7 @@ const EditableTable = ({
   selectedCustomer, // Selected customer for pricing rules
   hideInsuranceFields = false, // Default to false (show insurance fields)
   showInsuranceFields = false, // Default to false (hide insurance fields)
+  showPreAuthFields = false, // Default to false (hide pre-auth fields)
   isLoadingFromPosInvoice = false, // Default to false (allow recalculation)
 }: EditableTableProps) => {
   // const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
@@ -645,6 +658,10 @@ const EditableTable = ({
             [columnId]: parsedValue,
           };
 
+          if (columnId === 'covered' && !parsedValue) {
+            updatedRow.preAuthStatus = 'Pending';
+          }
+
           if (columnId === 'discountAmt') {
             const rate = updatedRow.rate !== null ? updatedRow.rate : 0;
             // Use returnQty for return invoices, saleQty for regular invoices
@@ -710,7 +727,7 @@ const EditableTable = ({
           }
 
           if (['rate', 'orderedQty', 'saleQty', 'returnQty', 'discountPercent', 'discountAmt',
-            'cgstPercent', 'sgstPercent', 'igstPercent', 'cgstAmt', 'sgstAmt', 'igstAmt', 'coPayPercentage'].includes(columnId)) {
+            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'covered', 'preAuthStatus'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow, true);
             }
@@ -798,7 +815,7 @@ const EditableTable = ({
                 Object.fromEntries(authHeaders) :
                 authHeaders;
 
-            const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchName}`, {
+            const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Batch/${batchName}`, {
               method: 'GET',
               headers,
               credentials: 'include',
@@ -1133,7 +1150,7 @@ const EditableTable = ({
                     Object.fromEntries(authHeaders) :
                     authHeaders;
 
-                const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchNo}`, {
+                const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Batch/${batchNo}`, {
                   method: 'GET',
                   headers,
                   credentials: 'include',
@@ -1604,7 +1621,10 @@ const EditableTable = ({
         const baseAmount = quantity * rate;
         const discountAmount = baseAmount * (item.discountPercent / 100);
         const itemAmountAfterDiscount = baseAmount - discountAmount;
-        const coPayPercent = item.coPayPercentage || 0;
+        
+        // Co-pay calculations apply if pre-auth fields are not shown, OR if they are shown and covered & approved
+        const copayApplies = !showPreAuthFields || (item.covered && item.preAuthStatus === 'Approved');
+        const coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
         const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
 
         return (
@@ -1624,7 +1644,10 @@ const EditableTable = ({
         const baseAmount = quantity * rate;
         const discountAmount = baseAmount * (item.discountPercent / 100);
         const itemAmountAfterDiscount = baseAmount - discountAmount;
-        const coPayPercent = item.coPayPercentage || 0;
+        
+        // Co-pay calculations apply if pre-auth fields are not shown, OR if they are shown and covered & approved
+        const copayApplies = !showPreAuthFields || (item.covered && item.preAuthStatus === 'Approved');
+        const coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
         const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
         const payerAmount = itemAmountAfterDiscount - patientAmount;
 
@@ -1635,6 +1658,93 @@ const EditableTable = ({
         );
       },
     },
+    ...(showPreAuthFields ? [{
+      accessorKey: "covered",
+      header: "Covered",
+      cell: ({ getValue, row, column, table }: { getValue: any, row: any, column: any, table: any }) => (
+        <div className="px-2 py-1 min-h-[32px] flex items-center justify-center">
+          <Checkbox
+            checked={getValue() || false}
+            onCheckedChange={(checked) => {
+              const value = checked === true;
+              table.options.meta?.updateCell(row.index, column.id, value);
+            }}
+          />
+        </div>
+      ),
+    }] : []),
+    ...(showPreAuthFields ? [{
+      accessorKey: "preAuthRequired",
+      header: "Pre-auth Req.",
+      cell: ({ row }: { row: any }) => {
+        const item = row.original as Item;
+        return (
+          <div className="px-2 py-1 min-h-[32px] flex items-center">
+            {item.preAuthRequired ? 'Yes' : 'No'}
+          </div>
+        );
+      },
+    }] : []),
+    ...(showPreAuthFields ? [{
+      accessorKey: "preAuthStatus",
+      header: "Pre-auth Status",
+      cell: ({ getValue, row, column, table }: { getValue: any, row: any, column: any, table: any }) => {
+        const value = getValue() || 'Pending';
+        const statusColors: { [key: string]: string } = {
+          'Approved': 'text-green-600',
+          'Pending': 'text-yellow-600',
+          'Rejected': 'text-red-600',
+          'Initiated': 'text-blue-600'
+        };
+        const statusColor = statusColors[value] || 'text-gray-600';
+
+        return (
+          <div className="px-2 py-1 min-h-[32px] flex items-center">
+            <Select
+              value={value}
+              onValueChange={(selectedValue) => {
+                table.options.meta?.updateCell(row.index, column.id, selectedValue);
+              }}
+              disabled={!row.original.covered}
+            >
+              <SelectTrigger className={`h-8 w-full ${statusColor}`}>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
+                <SelectItem value="Initiated">Initiated</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      },
+    }] : []),
+    ...(showPreAuthFields ? [{
+      accessorKey: "preAuthNo",
+      header: "Pre-auth No.",
+      cell: ({ row }: { row: any }) => {
+        const item = row.original as Item;
+        return (
+          <div className="px-2 py-1 min-h-[32px] flex items-center">
+            {item.preAuthNo || '-'}
+          </div>
+        );
+      },
+    }] : []),
+    ...(showPreAuthFields ? [{
+      accessorKey: "preAuthDateTime",
+      header: "Pre-auth Date & Time",
+      cell: ({ row }: { row: any }) => {
+        const item = row.original as Item;
+        return (
+          <div className="px-2 py-1 min-h-[32px] flex items-center">
+            {item.preAuthDateTime || '-'}
+          </div>
+        );
+      },
+    }] : []),
     {
       accessorKey: "kitName",
       header: "KIT Name",
@@ -1796,6 +1906,8 @@ const EditableTable = ({
       binLocation: '',
       marginType: 'Standard', // Add marginType for new item
       includedInPrintRate: true, // Always consider included_in_print_rate as true for new items
+      preAuthStatus: 'Pending',
+      covered: false,
     };
     setItems(prev => [...prev, newItem]);
   };

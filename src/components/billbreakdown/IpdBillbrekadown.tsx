@@ -10,6 +10,8 @@ interface BillBreakdownProps {
   totalCgstAmount: number;
   totalSgstAmount: number;
   totalIgstAmount: number;
+  totalPayerAmount?: number;
+  totalPatientAmount?: number;
   posProfile?: string;
   employeeId?: string; // Added
   employeeBalance?: number; // Added
@@ -38,6 +40,8 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
   totalCgstAmount,
   totalSgstAmount,
   totalIgstAmount,
+  totalPayerAmount = 0,
+  totalPatientAmount = 0,
   posProfile,
   employeeId = '', // Default to empty string
   employeeBalance = 0, // Default to 0
@@ -64,7 +68,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
     transactions: '0',
   });
 
-  const FRAPPE_BASE_URL = 'https://demohims.quantcloud.in';
+  const FRAPPE_BASE_URL = 'https://gmcerp.quantcloud.in';
 
   // Fetch concession types and users (unchanged)
   useEffect(() => {
@@ -256,7 +260,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
           ) : (
             <>
               <span className="text-[#1C2024] text-xs font-semibold">
-                {isCurrency ? '₹' : ''}{fieldData.value.toLocaleString()}
+                {isCurrency ? '' : ''}{fieldData.value.toLocaleString()}
               </span>
               <button
                 onClick={() => handleEditToggle(field)}
@@ -292,13 +296,25 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Taxable Amount</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{truncateToTwoDecimals(calculateNetTotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {truncateToTwoDecimals(calculateNetTotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Grand Total</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{truncateToTwoDecimals(totalBillAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {truncateToTwoDecimals(totalBillAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[#1C2024] text-xs font-normal">Payer Amount</span>
+            <span className="text-[#1C2024] text-xs font-semibold">
+              {truncateToTwoDecimals(totalPayerAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[#1C2024] text-xs font-normal">Patient Amount</span>
+            <span className="text-[#1C2024] text-xs font-semibold">
+              {truncateToTwoDecimals(totalPatientAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           {/* <div className="flex items-center justify-between">
@@ -314,8 +330,8 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
             {isRoundedOff && (
               <span className="text-[#60646C] text-xs font-normal">
                 {calculateRoundOffValues().rounding_adjustment >= 0
-                  ? `+ ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
-                  : `- ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
+                  ? `+ ${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
+                  : `- ${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
             )}
           </div> */}
@@ -324,7 +340,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
 
               <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                ₹{calculateRoundOffValues().grand_total.toLocaleString()}
+                {calculateRoundOffValues().grand_total.toLocaleString()}
               </span>
             </div>
           )} */}
@@ -394,7 +410,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
             <div className="flex justify-between items-center">
               <h3 className="text-[#1C2024] text-xs font-semibold">Outstanding Amount</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                ₹{calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
             </div>
 

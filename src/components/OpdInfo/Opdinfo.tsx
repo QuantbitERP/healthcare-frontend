@@ -62,9 +62,19 @@ type SelectedPatient = {
     visitType?: string;
     company?: string;
     visitID?: string;
+    payerType?: string;
+    payerName?: string;
+    network?: string;
+    insuranceNo?: string;
+    subInsurance?: string;
+    otherNo?: string;
+    validityFrom?: string;
+    expiryValidityTo?: string;
+    hospitalId?: string;
+    coPay?: number;
 };
 
-const PATIENT_API_BASE_URL = "https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
 
 const OpdCard: React.FC<PatientCardProps> = ({
     name = '',
@@ -117,6 +127,14 @@ const OpdCard: React.FC<PatientCardProps> = ({
         displayNo: patientData?.displayNo,
         dept: patientData?.dept,
         visitID: patientData?.visitID ?? '',
+        payerType: patientData?.payerType ?? '',
+        payerName: patientData?.payerName ?? '',
+        network: patientData?.network ?? '',
+        insuranceNo: patientData?.insuranceNo ?? '',
+        subInsurance: patientData?.subInsurance ?? '',
+        otherNo: patientData?.otherNo ?? '',
+        validityFrom: patientData?.validityFrom ?? '',
+        expiryValidityTo: patientData?.expiryValidityTo ?? '',
     });
 
     const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
@@ -174,6 +192,14 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 displayNo: patientData.displayNo,
                 dept: patientData.dept,
                 visitID: patientData.visitID,
+                payerType: patientData.payerType ?? '',
+                payerName: patientData.payerName ?? '',
+                network: patientData.network ?? '',
+                insuranceNo: patientData.insuranceNo ?? '',
+                subInsurance: patientData.subInsurance ?? '',
+                otherNo: patientData.otherNo ?? '',
+                validityFrom: patientData.validityFrom ?? '',
+                expiryValidityTo: patientData.expiryValidityTo ?? '',
             });
             setSearchValue(`${patientData.name} (${patientData.mrn})`);
         } else {
@@ -182,6 +208,14 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 name: '', age: '', sex: '', phone: '', ABHAID: '',
                 category: '', doctor: '', company: '', visitType: '',
                 visitID: '',
+                payerType: '',
+                payerName: '',
+                network: '',
+                insuranceNo: '',
+                subInsurance: '',
+                otherNo: '',
+                validityFrom: '',
+                expiryValidityTo: '',
             });
             setSearchValue('');
         }
@@ -339,6 +373,18 @@ const OpdCard: React.FC<PatientCardProps> = ({
     }, []);
 
     const handleSelectPatient = (patient: any) => {
+        console.log('Selected patient from search:', patient);
+        console.log('Payer details in search response:', {
+            payerType: patient.payerType,
+            payerName: patient.payerName,
+            network: patient.network,
+            insurnaceNo: patient.insurnaceNo,
+            subInsurance: patient.subInsurance,
+            otherNo: patient.otherNo,
+            validateFrom: patient.validateFrom,
+            expiryDate: patient.expiryDate
+        });
+
         const newPatientData = {
             name: patient.patientFullName || "N/A",
             age: patient.ageDisplay || "N/A",
@@ -354,7 +400,21 @@ const OpdCard: React.FC<PatientCardProps> = ({
             company: patient.patientCompany || "N/A",
             Bed: patient.bedName || "N/A",
             visitID: patient.visitID || "N/A",
+            // Payer details from search response
+            payerType: patient.payerType || "",
+            payerName: patient.payerName || "",
+            network: patient.network || "",
+            insuranceNo: patient.insurnaceNo || "",
+            subInsurance: patient.subInsurance || "",
+            otherNo: patient.otherNo || "",
+            validityFrom: patient.validateFrom || "",
+            expiryValidityTo: patient.expiryDate || "",
+            hospitalId: patient.hospitalId || "",
+            coPay: patient.co_Pay || 0,
         };
+
+        console.log('New patient data being set:', newPatientData);
+
         setEditedPatient(newPatientData);
         if (onPatientChange) {
             onPatientChange(newPatientData);

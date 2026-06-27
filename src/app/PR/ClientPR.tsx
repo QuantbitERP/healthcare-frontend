@@ -132,7 +132,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const suggestionsRef = useRef<HTMLUListElement>(null);
   const { } = useAuth();
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
 
   const searchItems = async (query: string = '', classification: string = '', generic: boolean = false, company: string = ''): Promise<Item[]> => {
     try {
@@ -481,7 +481,7 @@ const useStockQty = () => {
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
 
         const response = await fetch(
-          `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
+          `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
           {
             method: "POST",
             headers,
@@ -508,7 +508,7 @@ const useStockQty = () => {
 };
 
 export default function ClientPR({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-    const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+    const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
 
   const router = useRouter();
   const params = use(searchParams);
@@ -585,7 +585,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       //     Object.fromEntries(authHeaders) : 
       //     authHeaders;
 
-      const batchQtyResponse = await fetch(`https://demohims.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
+      const batchQtyResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -763,7 +763,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
         {
           method: 'GET',
           headers,
@@ -809,7 +809,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
         {
           method: 'GET',
           headers,
@@ -1148,7 +1148,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const FRAPPE_API_BASE_URL = "https://demohims.quantcloud.in/api/resource";
+  const FRAPPE_API_BASE_URL = "https://gmcerp.quantcloud.in/api/resource";
 
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
@@ -1426,7 +1426,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const handleFinalize = async () => {
     const docName = await savePatientRequisition(true);
     if (docName) {
-      const printUrl = `https://demohims.quantcloud.in/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+      const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
       window.location.href = printUrl;
     }
   };
@@ -1993,7 +1993,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -2087,7 +2087,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       // First, check if an amendment already exists
       const checkAmendResponse = await fetch(
-        `https://demohims.quantcloud.in/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -2112,7 +2112,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         } else {
           // Fetch the cancelled document
           const fetchResponse = await fetch(
-            `https://demohims.quantcloud.in/api/resource/Patient%20Requisition/${requisitionNo}`,
+            `https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition/${requisitionNo}`,
             {
               method: 'GET',
               headers,
@@ -2167,7 +2167,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
           // Create the new amended document
           const createResponse = await fetch(
-            `https://demohims.quantcloud.in/api/resource/Patient%20Requisition`,
+            `https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition`,
             {
               method: 'POST',
               headers,
@@ -2213,7 +2213,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     }
 
     try {
-      const printUrl = 'https://demohims.quantcloud.in/printview?' +
+      const printUrl = 'https://gmcerp.quantcloud.in/printview?' +
         'doctype=Patient%20Requisition&' +
         'name=' + encodeURIComponent(requisitionNo) + '&' +
         'trigger_print=1&' +

@@ -321,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           authHeaders;
 
       const response = await fetch(
-        "https://demohims.quantcloud.in/api/method/frappe.auth.get_logged_user",
+        "https://gmcerp.quantcloud.in/api/method/frappe.auth.get_logged_user",
         {
           method: "GET",
           headers,
@@ -353,7 +353,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/resource/Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"],["user","=","${user}"]]`,
+        `https://gmcerp.quantcloud.in/api/resource/Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"],["user","=","${user}"]]`,
         {
           method: "GET",
           headers,
@@ -384,7 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/resource/Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"]]&fields=["name","user"]`,
+        `https://gmcerp.quantcloud.in/api/resource/Opening Entry?filters=[["pos_profile","=","${posProfile}"],["status","=","Open"]]&fields=["name","user"]`,
         {
           method: "GET",
           headers,
@@ -428,7 +428,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/resource/User/${currentUser}?fields=["name","roles"]`,
+        `https://gmcerp.quantcloud.in/api/resource/User/${currentUser}?fields=["name","roles"]`,
         {
           method: "GET",
           headers,

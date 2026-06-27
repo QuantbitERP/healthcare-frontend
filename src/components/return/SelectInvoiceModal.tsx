@@ -253,7 +253,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
 
     //           setLoading(true);
     //           try {
-    //             const res = await fetch(`https://demohims.quantcloud.in/api/resource/POS Invoice/${row.original.name}`, {
+    //             const res = await fetch(`https://gmcerp.quantcloud.in/api/resource/POS Invoice/${row.original.name}`, {
     //               headers: {
     //                 'Authorization': `token ${apiKey}:${apiSecret}`,
     //               }
@@ -285,7 +285,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Sale%20Bill/${invoiceName}`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${invoiceName}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -305,7 +305,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
             Object.fromEntries(returnAuthHeaders) :
             returnAuthHeaders;
 
-        const returnResponse = await fetch(`https://demohims.quantcloud.in/api/resource/Sale%20Bill?filters=[["return_against","=","${invoiceName}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`, {
+        const returnResponse = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill?filters=[["return_against","=","${invoiceName}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`, {
           method: 'GET',
           headers: returnHeaders,
           credentials: 'include',
@@ -328,7 +328,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
                   Object.fromEntries(returnInvAuthHeaders) :
                   returnInvAuthHeaders;
 
-              const returnInvResponse = await fetch(`https://demohims.quantcloud.in/api/resource/Sale%20Bill/${returnInv.name}`, {
+              const returnInvResponse = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${returnInv.name}`, {
                 method: 'GET',
                 headers: returnInvHeaders,
                 credentials: 'include',
@@ -370,7 +370,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/resource/HIS%20Settings/HIS%20Settings`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/HIS%20Settings/HIS%20Settings`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -436,7 +436,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         limit_page_length: '100'
       });
 
-      const fullUrl = `https://demohims.quantcloud.in/api/resource/Sale%20Bill?${queryParams.toString()}`;
+      const fullUrl = `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill?${queryParams.toString()}`;
       console.log('Fetching invoices from URL:', fullUrl);
       console.log('Filters being used:', apiFilters);
 
@@ -569,7 +569,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
                         Object.fromEntries(authHeaders) :
                         authHeaders;
 
-                    const res = await fetch(`https://demohims.quantcloud.in/api/resource/Sale Bill/${invoiceName}`, {
+                    const res = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale Bill/${invoiceName}`, {
                       method: 'GET',
                       headers,
                       credentials: 'include',

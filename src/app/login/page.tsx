@@ -20,7 +20,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.login",
+        "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.login",
         {
           method: "POST",
           headers: {

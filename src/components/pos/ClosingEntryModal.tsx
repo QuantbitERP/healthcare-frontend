@@ -92,8 +92,8 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const {  } = useAuth();
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
-  const API_METHOD_URL = 'https://demohims.quantcloud.in/api/method';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
+  const API_METHOD_URL = 'https://gmcerp.quantcloud.in/api/method';
 
   useEffect(() => {
     if (isOpen && posProfile) {

@@ -135,7 +135,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(true); // Default collapsed
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Default open
   const { isAuthenticated, isInitialized, currentUser } = useAuth();
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate summary counts

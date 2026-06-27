@@ -9,7 +9,7 @@
     try {
         // Step 1: Check current session
         console.log("1. Checking current session...");
-        const sessionResponse = await fetch("https://demohims.quantcloud.in/api/method/frappe.auth.get_logged_user", {
+        const sessionResponse = await fetch("https://gmcerp.quantcloud.in/api/method/frappe.auth.get_logged_user", {
             method: "GET",
             credentials: "include",
             headers: {
@@ -29,7 +29,7 @@
 
         // Step 2: Generate API keys
         console.log("2. Generating API keys...");
-        const generateResponse = await fetch("https://demohims.quantcloud.in/api/method/frappe.core.doctype.user.user.generate_keys", {
+        const generateResponse = await fetch("https://gmcerp.quantcloud.in/api/method/frappe.core.doctype.user.user.generate_keys", {
             method: "POST",
             credentials: "include",
             headers: {
@@ -53,7 +53,7 @@
 
         // Step 4: Fetch user record with API keys
         console.log("4. Fetching complete API keys...");
-        const userResponse = await fetch(`https://demohims.quantcloud.in/api/resource/User/${encodeURIComponent(user)}?fields=["api_key","api_secret"]`, {
+        const userResponse = await fetch(`https://gmcerp.quantcloud.in/api/resource/User/${encodeURIComponent(user)}?fields=["api_key","api_secret"]`, {
             method: "GET",
             credentials: "include",
             headers: {
@@ -96,7 +96,7 @@
 
         // Step 6: Test the keys
         console.log("6. Testing API keys...");
-        const testResponse = await fetch("https://demohims.quantcloud.in/api/method/frappe.auth.get_logged_user", {
+        const testResponse = await fetch("https://gmcerp.quantcloud.in/api/method/frappe.auth.get_logged_user", {
             method: "GET",
             headers: {
                 "Accept": "application/json",

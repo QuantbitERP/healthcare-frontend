@@ -20,7 +20,7 @@ async function testPatientRequisitionAPI() {
     try {
         console.log('🌐 Testing Patient Requisition API call...');
 
-        const response = await fetch('https://demohims.quantcloud.in/api/resource/Patient%20Requisition?limit_page_length=10', {
+        const response = await fetch('https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition?limit_page_length=10', {
             method: 'GET',
             credentials: 'include',
             headers: {

@@ -31,7 +31,10 @@ const PrescriptionStatusTooltip: React.FC<{
   // Filter prescriptions based on search term
   const filteredPrescriptions = statusPrescriptions.filter(pres =>
     pres.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pres.prescription_number.toLowerCase().includes(searchTerm.toLowerCase())
+    pres.prescription_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (pres.patient_id && pres.patient_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (pres.mobile_number && pres.mobile_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (pres.aadhar_no && pres.aadhar_no.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -51,7 +54,7 @@ const PrescriptionStatusTooltip: React.FC<{
           <div className="mb-2">
             <input
               type="text"
-              placeholder="Search by patient name or prescription ID..."
+              placeholder="Search by name, ID, mobile or Aadhar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -105,6 +108,8 @@ interface Prescription {
   prescription_status?: "Pending" | "Completed";
   total_qty?: number;
   invoiced_qty?: number;
+  mobile_number?: string;
+  aadhar_no?: string;
 }
 
 interface PrescriptionListProps {
@@ -128,7 +133,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(true); // Default collapsed
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Default open
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate summary counts
@@ -156,7 +161,9 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
           "doctor",
           "department",
           "visit_id",
-          "requisition_from"
+          "requisition_from",
+          "mobile_number",
+          "aadhar_no"
         ]),
         limit_page_length: "2000000",
         order_by: "creation desc"
@@ -168,7 +175,12 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       ];
 
       if (search?.trim()) {
-        filters.push(["full_name", "like", `%${search.trim()}%`]);
+        params.or_filters = JSON.stringify([
+          ["full_name", "like", `%${search.trim()}%`],
+          ["patient_id", "like", `%${search.trim()}%`],
+          ["mobile_number", "like", `%${search.trim()}%`],
+          ["aadhar_no", "like", `%${search.trim()}%`]
+        ]);
       }
 
       if (dateRange?.from) {
@@ -212,6 +224,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         visit_id: item.visit_id || "",
         start_date: item.start_date || "",
         end_date: item.end_date || "",
+        mobile_number: item.mobile_number || "",
+        aadhar_no: item.aadhar_no || "",
       }));
 
       // Filter out completed prescriptions if showCompleted is false
@@ -233,6 +247,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         visit_id: item.visit_id || "",
         start_date: item.start_date || "",
         end_date: item.end_date || "",
+        mobile_number: item.mobile_number || "",
+        aadhar_no: item.aadhar_no || "",
       }));
 
       setAllPrescriptions(allTransformedData);
@@ -339,6 +355,14 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       header: "Patient ID",
     },
     {
+      accessorKey: "mobile_number",
+      header: "Mobile Number",
+    },
+    {
+      accessorKey: "aadhar_no",
+      header: "Aadhar No",
+    },
+    {
       accessorKey: "doctor_id",
       header: "Doctor Name",
       cell: ({ getValue }: any) => (
@@ -384,6 +408,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     department: "Department",
     patient_name: "Patient Name",
     patient_id: "Patient ID",
+    mobile_number: "Mobile Number",
+    aadhar_no: "Aadhar No",
     doctor_id: "Doctor Name",
     prescription_status: "Status",
   };
@@ -510,7 +536,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
             <DataTableComponent
               pageName="Prescription"
               isRowSelectable={false}
-              searchPlaceholder="Search by Patient Name..."
+              searchPlaceholder="Search by Patient Name, UHID, Mobile, Aadhar..."
               data={prescriptions}
               loading={loading}
               columns={columns}

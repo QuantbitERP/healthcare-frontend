@@ -43,7 +43,7 @@ export class NetworkPrinter {
       }
 
       // Fetch network printer settings from Frappe
-      const response = await fetch('https://demohims.quantcloud.in/api/resource/Network%20Printer%20Settings/test', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/resource/Network%20Printer%20Settings/test', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ export class NetworkPrinter {
 
     try {
       // Generate PDF content from Frappe print view
-      const printUrl = `https://demohims.quantcloud.in/printview?` +
+      const printUrl = `https://gmcerp.quantcloud.in/printview?` +
         `doctype=${encodeURIComponent(doctype)}&` +
         `name=${encodeURIComponent(documentName)}&` +
         `format=${encodeURIComponent(format)}&` +
@@ -125,7 +125,7 @@ export class NetworkPrinter {
     }
   }
 
-  async printDocument(documentName: string, doctype: string = 'POS Invoice', format: string = 'Pos Invoice print Format'): Promise<void> {
+  async printDocument(documentName: string, doctype: string = 'Sale Bill', format: string = 'Pos Invoice print Format'): Promise<void> {
     try {
       // Send directly to network printer
       await this.sendToPrinter(documentName, doctype, format);
@@ -141,7 +141,7 @@ export class NetworkPrinter {
 
   private fallbackToBrowserPrint(documentName: string, doctype: string, format: string): void {
     console.log('Falling back to browser print');
-    const printUrl = `https://demohims.quantcloud.in/printview?` +
+    const printUrl = `https://gmcerp.quantcloud.in/printview?` +
       `doctype=${encodeURIComponent(doctype)}&` +
       `name=${encodeURIComponent(documentName)}&` +
       `format=${encodeURIComponent(format)}&` +
