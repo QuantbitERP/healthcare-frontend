@@ -29,7 +29,7 @@ interface PatientCardProps {
     visitType?: string;
     doctor?: string;
     patientData?: SelectedPatient | null;
-    onPatientChange?: (p: SelectedPatient) => void;
+    onPatientChange?: (p: SelectedPatient, rawPatient?: any) => void;
     selectedWarehouse?: string;
     setSelectedWarehouse?: (value: string) => void;
     selectedCustomer?: string;
@@ -417,7 +417,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
         setEditedPatient(newPatientData);
         if (onPatientChange) {
-            onPatientChange(newPatientData);
+            onPatientChange(newPatientData, patient);
         }
 
         // Auto-set customer based on patient's company or default to self-paid

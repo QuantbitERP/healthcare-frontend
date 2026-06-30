@@ -55,6 +55,7 @@ interface AlertState {
 // Define types
 export interface Item {
   id: string;
+  custom_his_item_id?: string; // Returned by item_details API, used for preauth matching
   alternateBatches: string;
   substituteItem: string;
   itemCode: string;
@@ -1892,6 +1893,11 @@ export default function IPDBill() {
   const [globalCoPayPercent, setGlobalCoPayPercent] = useState(0);
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
+
+  // Holds the preauth-eligible item IDs for the currently selected patient.
+  // Pure lookup data read during item search — never rendered, so a ref
+  // avoids triggering a re-render every time a patient is selected.
+  const preauthItemIdsRef = useRef<Set<string>>(new Set());
   const [payerDetailsFromSearch, setPayerDetailsFromSearch] = useState(false);
   const [selectedPayerCompanyId, setSelectedPayerCompanyId] = useState<string>('');
   // const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -2562,6 +2568,7 @@ export default function IPDBill() {
     setSourceDocumentType('');
     setItems([]);
     setPatientData(null);
+    preauthItemIdsRef.current = new Set();
     setShowDropdown(false);
     setShowPosProfileSelector(false);
     setShowPatientRequisitionList(false);
@@ -2700,6 +2707,7 @@ export default function IPDBill() {
 
   const clearPatient = () => {
     setPatientData(null);
+    preauthItemIdsRef.current = new Set();
     // setSearchValue("");
     // setSearchResults([]);
     setShowDropdown(false);
@@ -3572,6 +3580,11 @@ export default function IPDBill() {
         }
       }
 
+      // Check if this item is in the patient's preauth pharmacy list
+      const hisItemId = item.custom_his_item_id || taxDetails.custom_his_item_id;
+      const isPreAuthItem = !!hisItemId &&
+        preauthItemIdsRef.current.has(hisItemId);
+
       setItems(prevItems => {
         // Always add as a new item, as each batch-specific item has a unique ID now
         const newItemWithCalculations = calculateItemTaxAndTotals({
@@ -3586,9 +3599,13 @@ export default function IPDBill() {
           sgstPercent: taxDetails.sgstRate,
           igstPercent: taxDetails.igstRate,
           taxTemplate: taxDetails.taxTemplate,
+          custom_his_item_id: hisItemId,
+
           // Add alternateBatches only if it's an alternative item
           alternateBatches: item.substituteItem ? "1" : "",
           includedInPrintRate: true, // Always consider included_in_print_rate as true
+          covered: isPreAuthItem ? true : item.covered,
+          preAuthRequired: isPreAuthItem ? true : item.preAuthRequired,
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         if (newItemWithCalculations) {
@@ -5065,6 +5082,7 @@ export default function IPDBill() {
         igstRate: result.igst_rate || 0,
         itemRate: result.rate || rate, // Use fetched rate if available, otherwise original rate
         taxTemplate: result.item_tax_template || '',
+        custom_his_item_id: result.custom_his_item_id || '',
       };
     } catch (error: any) {
       console.error('Error fetching item details:', error);
@@ -5075,6 +5093,7 @@ export default function IPDBill() {
         igstRate: 0,
         itemRate: rate,
         taxTemplate: '',
+        custom_his_item_id: '',
       };
     }
   };
@@ -6563,7 +6582,15 @@ export default function IPDBill() {
             <div>
               <OpdCard
                 patientData={patientData}
-                onPatientChange={(p) => setPatientData(p)}
+                onPatientChange={(p, rawPatient) => {
+                  setPatientData(p);
+
+                  const itemIds =
+                    rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO?.map(
+                      (d: any) => d.itemId
+                    ) ?? [];
+                  preauthItemIdsRef.current = new Set(itemIds);
+                }}
                 selectedWarehouse={selectedWarehouse}
                 setSelectedWarehouse={setSelectedWarehouse}
                 selectedCustomer={selectedCustomer}
