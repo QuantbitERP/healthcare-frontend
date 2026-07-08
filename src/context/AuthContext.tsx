@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { setupFetchInterceptor } from "@/utils/fetchInterceptor";
 
@@ -23,9 +23,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-
-import { checkFrappeSession, getAuthHeaders } from "@/utils/sessionAuth";
+import { checkFrappeSession, getAuthHeaders, setSessionAuthPreference } from "@/utils/sessionAuth";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -39,18 +37,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const router = useRouter();
 
+  // Ref mirrors isAuthenticated so the visibilitychange listener (registered
+  // once on mount) always reads the latest value instead of a stale closure.
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   useEffect(() => {
     const initializeAuth = async () => {
-      // Setup global fetch interceptor to handle auth systemiclyaries.
+      // Setup global fetch interceptor to handle auth systemically.
       setupFetchInterceptor();
 
-      // Check localStorage for existing authentication dataaries.
+      // Check localStorage for existing authentication data.
       const storedApiKey = localStorage.getItem("apiKey");
       const storedApiSecret = localStorage.getItem("apiSecret");
       const storedPosProfile = localStorage.getItem("posProfile");
       const storedUser = localStorage.getItem("currentUser");
       const storedCsrfToken = localStorage.getItem('csrfToken');
-      // const storedUseSessionAuth = localStorage.getItem('useSessionAuth');
 
       const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
 
@@ -71,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (sessionUser && sessionUser.user) {
           console.log("AuthContext: Active Frappe session found for user:", sessionUser.user);
-          
+
           // If session is found, try to get API keys
           if (sessionUser.api_key && sessionUser.api_secret && !isMasked(sessionUser.api_secret)) {
             console.log("AuthContext: Session found with valid API keys!");
@@ -82,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("apiKey", sessionUser.api_key);
             localStorage.setItem("apiSecret", sessionUser.api_secret);
             localStorage.setItem("currentUser", sessionUser.user);
-            localStorage.removeItem("useSessionAuth");
+            setSessionAuthPreference(false);
           } else {
             console.log("AuthContext: Session found but API keys are missing or masked, attempting to generate...");
             setCurrentUser(sessionUser.user);
@@ -94,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.removeItem("apiSecret");
             setApiKey(null);
             setApiSecret(null);
-            
+
             // Try to generate new API keys for the user
             try {
               const { getApiKeys } = await import("@/utils/sessionAuth");
@@ -105,14 +109,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 setApiSecret(newKeys.api_secret);
                 localStorage.setItem("apiKey", newKeys.api_key);
                 localStorage.setItem("apiSecret", newKeys.api_secret);
-                localStorage.removeItem("useSessionAuth");
+                setSessionAuthPreference(false);
               } else {
                 console.warn("AuthContext: Failed to generate valid API keys, using session-based auth");
-                localStorage.setItem("useSessionAuth", "true");
+                setSessionAuthPreference(true);
               }
             } catch (error) {
               console.error("AuthContext: Error generating API keys:", error);
-              localStorage.setItem("useSessionAuth", "true");
+              setSessionAuthPreference(true);
             }
 
             // Refresh CSRF token
@@ -125,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           console.log("AuthContext: No active Frappe session found, checking localStorage...");
-          
+
           // If no session, fall back to localStorage
           if (storedApiKey && storedApiSecret && !isMasked(storedApiSecret)) {
             console.log("AuthContext: Using stored API keys from localStorage");
@@ -143,18 +147,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           } else {
             console.log("AuthContext: No valid authentication found");
+            setSessionAuthPreference(true);
           }
         }
       } catch (error) {
         console.error("AuthContext: Error checking session during init:", error);
-        
+
         // Fallback to localStorage if session check fails
         if (storedApiKey && storedApiSecret && !isMasked(storedApiSecret)) {
           console.log("AuthContext: Fallback to localStorage API keys");
           setApiKey(storedApiKey);
           setApiSecret(storedApiSecret);
           setIsAuthenticated(true);
-          
+
           if (!storedUser) {
             const user = await getCurrentUser(storedApiKey, storedApiSecret);
             if (user) {
@@ -170,29 +175,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     initializeAuth();
 
-    // Add beforeunload handler to clear API keys when leaving the app
-    const handleBeforeUnload = () => {
-      console.log("User is leaving the app, clearing sensitive data from localStorage");
-      localStorage.removeItem("apiKey");
-      localStorage.removeItem("apiSecret");
-      localStorage.removeItem("csrfToken");
-    };
+    // NOTE: A `beforeunload` handler that cleared apiKey/apiSecret/csrfToken
+    // from localStorage used to live here. It was removed because
+    // `beforeunload` fires on ordinary page reloads, some client-side
+    // navigations, and tab backgrounding on mobile — not just real tab
+    // closes. That meant the tokens this effect just wrote to localStorage
+    // were being wiped moments later, so on the next load `initializeAuth`
+    // found nothing and the user appeared logged out immediately after
+    // logging in. Sensitive data is cleared explicitly in `logout()`
+    // instead, which is the only place that should do it.
 
     // Add visibility change handler to re-check session when tab becomes visible
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && !isAuthenticated) {
+      if (document.visibilityState === 'visible' && !isAuthenticatedRef.current) {
         console.log("AuthContext: Tab became visible, re-checking session...");
         const sessionUser = await checkFrappeSession();
         if (sessionUser && sessionUser.user) {
           setCurrentUser(sessionUser.user);
           setIsAuthenticated(true);
           localStorage.setItem("currentUser", sessionUser.user);
-          
+
           // Try to get API keys
           const { getApiKeys } = await import("@/utils/sessionAuth");
           const newKeys = await getApiKeys(sessionUser.user);
           const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
-          
+
           if (newKeys && newKeys.api_key && newKeys.api_secret && !isMasked(newKeys.api_secret)) {
             setApiKey(newKeys.api_key);
             setApiSecret(newKeys.api_secret);
@@ -200,9 +207,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("apiSecret", newKeys.api_secret);
             localStorage.removeItem("useSessionAuth");
           } else {
-            localStorage.setItem("useSessionAuth", "true");
+            setSessionAuthPreference(true);
           }
-          
+
           // Refresh CSRF token
           const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
           const token = await getFrappeCSRFToken();
@@ -214,11 +221,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
@@ -229,7 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsAuthenticated(true);
     localStorage.setItem("apiKey", apiKey);
     localStorage.setItem("apiSecret", apiSecret);
-    localStorage.removeItem("useSessionAuth"); // Clear session auth flag when using API keys
+    setSessionAuthPreference(false); // Clear session auth flag when using API keys
+
     // Fetch current user after login
     getCurrentUser(apiKey, apiSecret).then((user) => {
       if (user) {
@@ -237,6 +243,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.setItem("currentUser", user);
       }
     });
+
+    // Also refresh the CSRF token so write requests made right after login
+    // (before any session-based flow has run) have a valid token available.
+    (async () => {
+      try {
+        const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
+        const token = await getFrappeCSRFToken();
+        if (token) {
+          setCsrfToken(token);
+          localStorage.setItem('csrfToken', token);
+        }
+      } catch (error) {
+        console.error("AuthContext: Error fetching CSRF token after login:", error);
+      }
+    })();
   }, []);
 
   const loginWithSession = useCallback((user: string, apiKey?: string, apiSecret?: string) => {
@@ -253,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } else {
       // If no API keys provided, we'll rely on session-based authentication
       console.log("Session-based authentication for user:", user);
-      localStorage.setItem("useSessionAuth", "true");
+      setSessionAuthPreference(true);
     }
   }, []);
 
@@ -264,14 +285,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentUser(null);
     setIsAuthenticated(false);
     setCsrfToken(null);
-    
+
     // Clear all authentication-related localStorage items
     localStorage.removeItem("apiKey");
     localStorage.removeItem("apiSecret");
     localStorage.removeItem("posProfile");
     localStorage.removeItem("currentUser");
     localStorage.removeItem("csrfToken");
-    localStorage.removeItem("useSessionAuth");
+    setSessionAuthPreference(false);
 
     // Clear all Frappe API cache from localStorage
     const cacheKeys = [
@@ -314,10 +335,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(
@@ -346,10 +367,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(
@@ -377,10 +398,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(
@@ -421,10 +442,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ? 
-        JSON.parse(authHeaders) : 
-        Array.isArray(authHeaders) ? 
-          Object.fromEntries(authHeaders) : 
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
           authHeaders;
 
       const response = await fetch(

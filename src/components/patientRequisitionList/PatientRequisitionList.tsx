@@ -16,7 +16,7 @@ import { X, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp } from "luci
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useAuth } from "@/context/AuthContext";
-import { getAuthHeaders } from "@/utils/sessionAuth";
+import { getAuthHeaders, setSessionAuthPreference } from "@/utils/sessionAuth";
 
 // Tooltip component
 const StatusTooltip: React.FC<{
@@ -175,7 +175,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
     const apiSecret = localStorage.getItem("apiSecret");
     if (!apiKey || !apiSecret) {
       console.log("No API keys found, enabling session-based authentication");
-      localStorage.setItem("useSessionAuth", "true");
+      setSessionAuthPreference(true);
     }
 
     setLoading(true);
