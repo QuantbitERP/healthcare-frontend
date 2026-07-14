@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+// import "react-toastify/dist/ReactToastify.css";
 import Button from "@/components/buttons/Button";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/context/AuthContext';
 import { redirectToFrappeLogin, getAuthHeaders } from "@/utils/sessionAuth";
+// Removed unused OpenAPI imports
 import {
   Card,
   CardContent,
@@ -31,8 +32,8 @@ import Image from "next/image";
 import BillBreakdown from "@/components/billbreakdown/billbreakdown";
 import { networkPrinter } from "@/utils/networkPrinter";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
-import { Search, X, Plus } from 'lucide-react';
-import OpdCard from "@/components/OpdInfo/Opdinfo";
+import { Search, X, Plus, UploadCloud } from 'lucide-react';
+import OpdCard, { OpdCardRef } from "@/components/OpdInfo/Opdinfo";
 import HorizontallyScrollableTable from "@/components/editableTablePos/editable";
 import PatientRequisitionList from "@/components/patientRequisitionList/PatientRequisitionList";
 import PrescriptionList from "@/components/prescriptionList/PrescriptionList";
@@ -1893,11 +1894,14 @@ export default function IPDBill() {
   const [globalCoPayPercent, setGlobalCoPayPercent] = useState(0);
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
+  const [rawPatientData, setRawPatientData] = useState<any | null>(null);
 
   // Holds the preauth-eligible item IDs for the currently selected patient.
   // Pure lookup data read during item search — never rendered, so a ref
   // avoids triggering a re-render every time a patient is selected.
   const preauthItemIdsRef = useRef<Set<string>>(new Set());
+  const opdCardRef = useRef<OpdCardRef>(null);
+  const prescriptionVisitIdRef = useRef<string>("");
   const [payerDetailsFromSearch, setPayerDetailsFromSearch] = useState(false);
   const [selectedPayerCompanyId, setSelectedPayerCompanyId] = useState<string>('');
   // const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -2542,7 +2546,78 @@ export default function IPDBill() {
   };
   // --- END: File upload function ---
 
+  const handleCheckPreAuthStatus = async () => {
+    const visitIdToCheck = prescriptionVisitIdRef.current || patientData?.visitID;
+    if (!visitIdToCheck) {
+      showAlert("danger", "Error", "No visit ID found");
+      return;
+    }
+
+    try {
+      const authHeaders = getAuthHeaders();
+      const headers = typeof authHeaders === 'string' ?
+        JSON.parse(authHeaders) :
+        Array.isArray(authHeaders) ?
+          Object.fromEntries(authHeaders) :
+          authHeaders;
+
+      console.log('Selected visit_id:', visitIdToCheck);
+      const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${visitIdToCheck}`;
+      console.log('Backend API endpoint being called:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      console.log('HTTP response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('Complete backend response:', responseData);
+
+      const statuses = responseData?.message?.data || responseData?.data || [];
+      console.log('Number of status records received:', statuses.length);
+
+      if (statuses.length > 0) {
+        setItems((prevItems: any) => {
+          const newItems = prevItems.map((item: any) => {
+            console.log(`Checking match for item: itemId=${item.custom_his_item_id}, qbItemId=${item.itemCode}`);
+            const matchedStatus = statuses.find((s: any) =>
+              s.itemId === item.custom_his_item_id ||
+              s.qbItemId === item.itemCode
+            );
+
+            if (matchedStatus && matchedStatus.statusName) {
+              console.log(`Match found for item ${item.itemCode}. Updating PreAuth Status to: ${matchedStatus.statusName}`);
+              return {
+                ...item,
+                preAuthStatus: matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase(),
+                preAuthNo: matchedStatus.preAuthNumber || item.preAuthNo,
+                preAuthDateTime: matchedStatus.preAuthDate || item.preAuthDateTime
+              };
+            }
+            return item;
+          });
+          console.log('Final table state after update:', newItems);
+          return newItems;
+        });
+        showAlert("success", "Success", "Pre-auth statuses updated successfully.");
+      } else {
+        showAlert("warning", "Notice", "No pre-auth statuses found for this visit.");
+      }
+    } catch (error: any) {
+      console.error('GetServiceStatusByVisitId API error response:', error);
+      showAlert("danger", "Error", "Failed to fetch pre-auth status.");
+    }
+  };
+
   const handleReset = () => {
+    prescriptionVisitIdRef.current = "";
     setRemarks('');
     setShowDocumentUpload(false);
     setSelectedDocument(null);
@@ -3770,6 +3845,7 @@ export default function IPDBill() {
 
     const payload = {
       doctype: "Sale Bill",
+      currency: "QAR",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -4408,22 +4484,33 @@ export default function IPDBill() {
       }
     }
 
-    // Set patient data
-    const newPatientData = {
-      name: fullRequisitionData.full_name || "N/A",
-      age: fullRequisitionData.age || "N/A",
-      sex: fullRequisitionData.gender || "N/A",
-      phone: fullRequisitionData.mobile_number || "N/A",
-      ABHAID: fullRequisitionData.patient_id || "N/A",
-      category: fullRequisitionData.patient_category || "N/A",
-      doctor: fullRequisitionData.consulting_doctor || "N/A",
-      mrn: fullRequisitionData.patient_id || "N/A",
-      displayNo: fullRequisitionData.patient_id || "N/A",
-      dept: fullRequisitionData.department || "N/A",
-      visitType: fullRequisitionData.visit_type || "N/A",
-      company: fullRequisitionData.patient_company || "N/A",
-    };
-    setPatientData(newPatientData);
+    try {
+      const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+      const fetchHeaders: any = { 'Content-Type': 'application/json' };
+      if (apiKey && apiSecret) {
+        fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
+      }
+
+      console.log("Patient Search API request for requisition patient_id:", fullRequisitionData.patient_id);
+      const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullRequisitionData.patient_id}&PageIndex=1&PageSize=10&IsExpired=false`, {
+        method: 'GET',
+        headers: fetchHeaders,
+        credentials: 'include',
+      });
+
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const patients = searchData.message || [];
+        if (patients.length > 0) {
+          const fetchedPatient = patients[0];
+          if (opdCardRef.current) {
+            opdCardRef.current.handleSelectPatient(fetchedPatient);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch patient details:", e);
+    }
 
     // Auto-set customer based on requisition's patient company or default to self-paid
     console.log('Customer population - requisition data:', fullRequisitionData);
@@ -4706,22 +4793,46 @@ export default function IPDBill() {
       return;
     }
 
-    // Set patient data (assuming prescription object has similar patient fields)
-    const newPatientData = {
-      name: fullPrescriptionData.full_name || "N/A",
-      age: fullPrescriptionData.age || "N/A",
-      sex: fullPrescriptionData.gender || "N/A",
-      phone: fullPrescriptionData.mobile_number || "N/A",
-      ABHAID: fullPrescriptionData.patient_id || "N/A",
-      category: fullPrescriptionData.patient_category || "N/A",
-      doctor: fullPrescriptionData.doctor || "N/A",
-      mrn: fullPrescriptionData.patient_id || "N/A",
-      displayNo: fullPrescriptionData.patient_id || "N/A",
-      dept: fullPrescriptionData.department || "N/A",
-      visitType: fullPrescriptionData.visit_type || "N/A",
-      company: fullPrescriptionData.patient_company || "N/A",
-    };
-    setPatientData(newPatientData);
+    // Store prescription visit_id for Check Status API
+    if (fullPrescriptionData.visit_id) {
+      prescriptionVisitIdRef.current = fullPrescriptionData.visit_id;
+    } else if (prescription.visit_id) {
+      prescriptionVisitIdRef.current = prescription.visit_id;
+    } else {
+      prescriptionVisitIdRef.current = "";
+    }
+
+    try {
+      const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+      const fetchHeaders: any = { 'Content-Type': 'application/json' };
+      if (apiKey && apiSecret) {
+        fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
+      }
+
+      console.log("Patient Search API request for prescription patient_id:", fullPrescriptionData.patient_id);
+      const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullPrescriptionData.patient_id}&PageIndex=1&PageSize=10&IsExpired=false`, {
+        method: 'GET',
+        headers: fetchHeaders,
+        credentials: 'include',
+      });
+
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        console.log("Patient Search API response:", searchData);
+        const patients = searchData.message || [];
+        if (patients.length > 0) {
+          const fetchedPatient = patients[0];
+          console.log("The function that populates the patient state: opdCardRef.current.handleSelectPatient");
+          if (opdCardRef.current) {
+            opdCardRef.current.handleSelectPatient(fetchedPatient);
+          } else {
+            console.error("opdCardRef is null! Cannot populate patient data.");
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch patient details:", e);
+    }
 
     // Auto-set customer based on prescription's patient company or default to self-paid
     if (customers && customers.length > 0) {
@@ -5451,24 +5562,33 @@ export default function IPDBill() {
       // Load attachments for this invoice
       await loadInvoiceAttachments(fullInvoice.name);
 
-      // Set patient data from invoice
-      const newPatientData = {
-        name: fullInvoice.custom_patient_name || fullInvoice.customer || "N/A",
-        age: fullInvoice.custom_age || "N/A",
-        sex: fullInvoice.custom_sex || "N/A",
-        phone: fullInvoice.custom_phone || "N/A",
-        ABHAID: fullInvoice.custom_abha_id || "N/A",
-        category: fullInvoice.custom_category || "N/A",
-        doctor: fullInvoice.custom_doctor_name || "N/A",
-        mrn: fullInvoice.custom_uhid || "N/A",
-        displayNo: fullInvoice.custom_uhid || "N/A",
-        dept: fullInvoice.custom_department || "N/A",
-        visitType: fullInvoice.custom_visit_type || "N/A",
-        company: fullInvoice.company || "N/A",
-        visitID: fullInvoice.custom_visit_code || "N/A",
-        bed: fullInvoice.custom_bed_no || "N/A",
-      };
-      setPatientData(newPatientData);
+      try {
+        const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+        const fetchHeaders: any = { 'Content-Type': 'application/json' };
+        if (apiKey && apiSecret) {
+          fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
+        }
+
+        console.log("Patient Search API request for invoice patient_id:", fullInvoice.custom_uhid);
+        const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullInvoice.custom_uhid}&PageIndex=1&PageSize=10&IsExpired=false`, {
+          method: 'GET',
+          headers: fetchHeaders,
+          credentials: 'include',
+        });
+
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const patients = searchData.message || [];
+          if (patients.length > 0) {
+            const fetchedPatient = patients[0];
+            if (opdCardRef.current) {
+              opdCardRef.current.handleSelectPatient(fetchedPatient);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch patient details:", e);
+      }
 
       // Set other form fields
       setSelectedCustomer(fullInvoice.customer || '');
@@ -5754,11 +5874,26 @@ export default function IPDBill() {
       return;
     }
 
-    // Restrict submitting if any covered item has pre-auth status as Pending or Initiated (or not set, defaulting to Pending)
-    const pendingOrInitiatedItems = items.filter(item => item.covered && (item.preAuthStatus === 'Pending' || item.preAuthStatus === 'Initiated' || !item.preAuthStatus));
-    if (pendingOrInitiatedItems.length > 0) {
-      const itemNames = pendingOrInitiatedItems.map(item => item.itemName).join(', ');
-      showAlert("danger", "Validation Error", `Cannot submit bill. Pre-auth Status is Pending or Initiated for covered items: ${itemNames}`);
+    // Restrict submitting based on pre-auth rules
+    const invalidPreAuthItems = items.filter(item => {
+      const isCovered = item.covered === true;
+      const isPreAuthRequired = item.preAuthRequired === true;
+
+      // If both covered and preAuthRequired are true, then check preAuthStatus
+      if (isCovered && isPreAuthRequired) {
+        const status = item.preAuthStatus;
+        // Only allow if status is explicitly Approved or Rejected
+        if (status !== 'Approved' && status !== 'Rejected') {
+          return true; // Block submission
+        }
+      }
+      // If preAuthRequired is false, or covered is false, don't check preAuthStatus and allow submit
+      return false;
+    });
+
+    if (invalidPreAuthItems.length > 0) {
+      const itemNames = invalidPreAuthItems.map(item => item.itemName).join(', ');
+      showAlert("danger", "Validation Error", `Cannot submit bill. Pre-auth Status must be Approved or Rejected for items requiring pre-auth: ${itemNames}`);
       return;
     }
 
@@ -6009,6 +6144,7 @@ export default function IPDBill() {
 
       const payload = {
         doctype: "Sale Bill",
+      currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -6344,6 +6480,36 @@ export default function IPDBill() {
           return;
         }
 
+        if (transactionType === 'credit' && rawPatientData) {
+          try {
+            const patientCreateResponse = await fetch(
+              "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_patient_from_his_data",
+              {
+                method: 'POST',
+                headers,
+                credentials: 'include',
+                body: JSON.stringify({ patient_data: rawPatientData }),
+              }
+            );
+
+            if (!patientCreateResponse.ok) {
+              const patientError = await patientCreateResponse.text();
+              console.warn("Patient creation API warning:", patientError);
+              showAlert("warning", "Patient Creation", "Invoice submitted successfully, but patient master creation failed.");
+            } else {
+              const patientResult = await patientCreateResponse.json();
+              if (patientResult.status === 'created' || patientResult.message?.status === 'created') {
+                console.log("Patient created from HIMS data:", patientResult.message?.patient || patientResult.patient);
+              } else if (patientResult.status === 'exists' || patientResult.message?.status === 'exists') {
+                console.log("Patient already exists, no action needed:", patientResult.message?.patient || patientResult.patient);
+              }
+            }
+          } catch (patientError) {
+            console.warn("Patient creation request failed:", patientError);
+            showAlert("warning", "Patient Creation", "Invoice submitted successfully, but patient master creation failed.");
+          }
+        }
+
         showAlert("success", "Success", `Invoice ${invoiceName} created and submitted successfully!`);
         console.log("Invoice created and submitted:", result);
 
@@ -6468,6 +6634,7 @@ export default function IPDBill() {
     }
   };
 
+
   return (
     <>
       {/* Splash Screen */}
@@ -6581,9 +6748,12 @@ export default function IPDBill() {
 
             <div>
               <OpdCard
+                ref={opdCardRef}
                 patientData={patientData}
                 onPatientChange={(p, rawPatient) => {
+                  console.log("Final patientData:", p);
                   setPatientData(p);
+                  setRawPatientData(rawPatient || null);
 
                   const itemIds =
                     rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO?.map(
@@ -6795,6 +6965,15 @@ export default function IPDBill() {
                         'Upload'
                       )}
                     </Button>
+                    <Button
+                      type="button-primary"
+                      size="button-medium"
+                      onClick={handleCheckPreAuthStatus}
+                      className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:text-white"
+                    >
+                      <UploadCloud className="h-4 w-4 text-white cursor-pointer" /> Check Status
+                    </Button>
+
                     {/* --- END: Modified Upload Button --- */}
 
                     {/* --- START: Loaded Attachments Display --- */}

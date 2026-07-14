@@ -3182,6 +3182,7 @@ export default function SalesBill() {
 
     const payload = {
       doctype: "POS Invoice",
+      currency: "QAR",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -5245,6 +5246,7 @@ export default function SalesBill() {
 
       const payload = {
         doctype: "POS Invoice",
+      currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,

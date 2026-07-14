@@ -3274,6 +3274,7 @@ export default function IPDBill() {
 
     const payload = {
       doctype: "Sale Bill",
+      currency: "QAR",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -5458,6 +5459,7 @@ export default function IPDBill() {
 
       const payload = {
         doctype: "Sale Bill",
+      currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,

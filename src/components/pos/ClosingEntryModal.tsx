@@ -319,8 +319,8 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
               <div className="border rounded-lg p-4 bg-blue-50">
                 <h3 className="font-semibold text-lg mb-3 text-gray-800">Financial Summary</h3>
                 <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div><span className="font-medium">Net Total:</span> ₹{closingEntryData.net_total.toFixed(2)}</div>
-                  <div><span className="font-medium">Grand Total:</span> ₹{closingEntryData.grand_total.toFixed(2)}</div>
+                  <div><span className="font-medium">Net Total:</span> ﷼{closingEntryData.net_total.toFixed(2)}</div>
+                  <div><span className="font-medium">Grand Total:</span> ﷼{closingEntryData.grand_total.toFixed(2)}</div>
                   <div><span className="font-medium">Total Quantity:</span> {closingEntryData.total_quantity}</div>
                 </div>
               </div>
@@ -336,7 +336,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                           <th className="px-4 py-2 text-left">#</th>
                           <th className="px-4 py-2 text-left">Account Head</th>
                           <th className="px-4 py-2 text-right">Rate (%)</th>
-                          <th className="px-4 py-2 text-right">Amount (₹)</th>
+                          <th className="px-4 py-2 text-right">Amount (﷼)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -345,7 +345,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                             <td className="px-4 py-2">{index + 1}</td>
                             <td className="px-4 py-2">{tax.account_head}</td>
                             <td className="px-4 py-2 text-right">{tax.rate.toFixed(3)}</td>
-                            <td className="px-4 py-2 text-right">₹{tax.amount.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right">﷼{tax.amount.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -366,7 +366,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                           <th className="px-4 py-2 text-left">Invoice</th>
                           <th className="px-4 py-2 text-left">Customer</th>
                           <th className="px-4 py-2 text-left">Date</th>
-                          <th className="px-4 py-2 text-right">Amount (₹)</th>
+                          <th className="px-4 py-2 text-right">Amount (﷼)</th>
                           <th className="px-4 py-2 text-center">Return</th>
                         </tr>
                       </thead>
@@ -377,7 +377,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                             <td className="px-4 py-2">{txn.pos_invoice}</td>
                             <td className="px-4 py-2">{txn.customer}</td>
                             <td className="px-4 py-2">{txn.posting_date}</td>
-                            <td className="px-4 py-2 text-right">₹{txn.grand_total.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right">﷼{txn.grand_total.toFixed(2)}</td>
                             <td className="px-4 py-2 text-center">{txn.is_return ? 'Yes' : 'No'}</td>
                           </tr>
                         ))}
@@ -397,10 +397,10 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                         <tr>
                           <th className="px-4 py-2 text-left">#</th>
                           <th className="px-4 py-2 text-left">Mode of Payment</th>
-                          <th className="px-4 py-2 text-right">Opening (₹)</th>
-                          <th className="px-4 py-2 text-right">Expected (₹)</th>
-                          <th className="px-4 py-2 text-right">Closing (₹)</th>
-                          <th className="px-4 py-2 text-right">Difference (₹)</th>
+                          <th className="px-4 py-2 text-right">Opening (﷼)</th>
+                          <th className="px-4 py-2 text-right">Expected (﷼)</th>
+                          <th className="px-4 py-2 text-right">Closing (﷼)</th>
+                          <th className="px-4 py-2 text-right">Difference (﷼)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -408,11 +408,11 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                           <tr key={payment.name} className="border-t">
                             <td className="px-4 py-2">{index + 1}</td>
                             <td className="px-4 py-2">{payment.mode_of_payment}</td>
-                            <td className="px-4 py-2 text-right">₹{payment.opening_amount.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-right">₹{payment.expected_amount.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-right">₹{payment.closing_amount.toFixed(2)}</td>
-                            <td className={`px-4 py-2 text-right ${payment.difference !== 0 ? 'text-red-600 font-semibold' : ''}`}>
-                              ₹{payment.difference.toFixed(2)}
+                            <td className="px-4 py-2 text-right">﷼{payment.opening_amount.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right">﷼{payment.expected_amount.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right">﷼{payment.closing_amount.toFixed(2)}</td>
+                            <td className={`px-4 py-2 text-right font-medium ${payment.difference < 0 ? 'text-red-600' : payment.difference > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                              ﷼{payment.difference.toFixed(2)}
                             </td>
                           </tr>
                         ))}

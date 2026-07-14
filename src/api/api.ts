@@ -443,7 +443,7 @@ export const useFrappeApi = () => {
       return localBranches;
     }
 
-    const BRANCH_API_URL = buildFrappeApiUrl("Branch", ["name"]);
+    const BRANCH_API_URL = buildFrappeApiUrl("Branch", ["name", "custom_hospital_id"]);
 
     try {
       const data = await makeFrappeApiCall(BRANCH_API_URL, "Branch", apiKey!, apiSecret!, csrfToken);
@@ -451,6 +451,7 @@ export const useFrappeApi = () => {
         name: branch.name,
         label: branch.name,
         value: branch.name,
+        custom_hospital_id: branch.custom_hospital_id,
       }));
       console.log("Branches loaded successfully:", branchData);
       setLocalBranches(branchData);

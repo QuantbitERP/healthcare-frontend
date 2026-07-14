@@ -39,8 +39,8 @@ function PageHeader(props: PageHeaderProps) {
 
   // Define available pages for search
   const availablePages: SearchSuggestion[] = [
-    { label: 'OPD', route: '/new_bill', icon: '🏥', type: 'page' },
-    { label: 'IPD', route: '/ipd-bill', icon: '🛏️', type: 'page' },
+    { label: 'OPD', route: '/opd-sale-bill', icon: '🏥', type: 'page' },
+    { label: 'IPD', route: '/sale_bill', icon: '🛏️', type: 'page' },
     { label: 'Patient Requisition', route: '/PR', icon: '📋', type: 'page' },
     { label: 'Patient Requisition List', route: '/PatientRequistionList', icon: '📑', type: 'page' },
     { label: 'Return', route: '/return', icon: '↩️', type: 'page' },

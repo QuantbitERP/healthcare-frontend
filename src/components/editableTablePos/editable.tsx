@@ -145,7 +145,7 @@ const EditableCell = ({
     >
       {type === 'number' && typeof value === 'number'
         ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
-          ? `₹${truncateToTwoDecimals(value).toFixed(2)}`
+          ? `﷼${truncateToTwoDecimals(value).toFixed(2)}`
           : value.toString()
         : value || '-'
       }
@@ -1034,7 +1034,7 @@ const EditableTable = ({
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">{batch.expiry_date || '-'}</td>
-                                <td className="border border-gray-300 px-2 py-2 text-xs">₹{batchMRPs[batch.name] || item.rate || 0}</td>
+                                <td className="border border-gray-300 px-2 py-2 text-xs">﷼{batchMRPs[batch.name] || item.rate || 0}</td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">{batch.batch_qty || 0}</td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.cgstRate || '0.00'}%</td>
                                 <td className="border border-gray-300 px-2 py-2 text-xs">{itemTaxDetails?.sgstRate || '0.00'}%</td>
@@ -1384,7 +1384,7 @@ const EditableTable = ({
         // Otherwise, show as readonly
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(rate).toFixed(2)}
+            ﷼{truncateToTwoDecimals(rate).toFixed(2)}
           </div>
         );
       },
@@ -1425,7 +1425,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 text-sm">
-            ₹{truncateToTwoDecimals(discountedTaxableAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(discountedTaxableAmount).toFixed(2)}
           </div>
         );
       },
@@ -1484,7 +1484,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(cgstAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(cgstAmount).toFixed(2)}
           </div>
         );
       },
@@ -1520,7 +1520,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(sgstAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(sgstAmount).toFixed(2)}
           </div>
         );
       },
@@ -1556,7 +1556,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(igstAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(igstAmount).toFixed(2)}
           </div>
         );
       },
@@ -1568,7 +1568,7 @@ const EditableTable = ({
         const item = row.original as Item;
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(item.itemAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(item.itemAmount).toFixed(2)}
           </div>
         );
       },
@@ -1593,7 +1593,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(totalAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(totalAmount).toFixed(2)}
           </div>
         );
       },
@@ -1629,7 +1629,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(patientAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(patientAmount).toFixed(2)}
           </div>
         );
       },
@@ -1653,7 +1653,7 @@ const EditableTable = ({
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(payerAmount).toFixed(2)}
+            ﷼{truncateToTwoDecimals(payerAmount).toFixed(2)}
           </div>
         );
       },
@@ -1764,7 +1764,7 @@ const EditableTable = ({
         const item = row.original as Item;
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ₹{truncateToTwoDecimals(item.totalPckgAmt).toFixed(2)}
+            ﷼{truncateToTwoDecimals(item.totalPckgAmt).toFixed(2)}
           </div>
         );
       },

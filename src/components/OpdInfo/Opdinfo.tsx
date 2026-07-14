@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import Image from 'next/image';
 import Avatar from 'react-avatar';
 import Button from '../buttons/Button';
@@ -62,6 +62,7 @@ type SelectedPatient = {
     visitType?: string;
     company?: string;
     visitID?: string;
+    visitNo?: string;
     payerType?: string;
     payerName?: string;
     network?: string;
@@ -76,7 +77,11 @@ type SelectedPatient = {
 
 const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
 
-const OpdCard: React.FC<PatientCardProps> = ({
+export interface OpdCardRef {
+    handleSelectPatient: (patient: any) => void;
+}
+
+const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     name = '',
     age = '22',
     sex = 'Male',
@@ -102,7 +107,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
     // setSelectedSubDepartment,
     isReturn,
     onReturnStatusChange,
-}) => {
+}, ref) => {
     const [open, setOpen] = useState<boolean>(false);
     const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors } = useFrappeApi();
     const { apiKey, apiSecret, isInitialized } = useAuth();
@@ -127,6 +132,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
         displayNo: patientData?.displayNo,
         dept: patientData?.dept,
         visitID: patientData?.visitID ?? '',
+        visitNo: patientData?.visitNo ?? '',
         payerType: patientData?.payerType ?? '',
         payerName: patientData?.payerName ?? '',
         network: patientData?.network ?? '',
@@ -138,7 +144,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
     });
 
     const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
-    const [branches, setBranches] = useState<{ label: string; value: string }[]>([]);
+    const [branches, setBranches] = useState<{ label: string; value: string; custom_hospital_id?: string }[]>([]);
     const [defaultBranch] = useState<string>("");
     // const [selectedWarehouse, setSelectedWarehouse] = useState<string>(''); // Removed
     // const [selectedCustomer, setSelectedCustomer] = useState<string>(''); // Removed
@@ -192,6 +198,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 displayNo: patientData.displayNo,
                 dept: patientData.dept,
                 visitID: patientData.visitID,
+                visitNo: patientData.visitNo,
                 payerType: patientData.payerType ?? '',
                 payerName: patientData.payerName ?? '',
                 network: patientData.network ?? '',
@@ -207,7 +214,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
             setEditedPatient({
                 name: '', age: '', sex: '', phone: '', ABHAID: '',
                 category: '', doctor: '', company: '', visitType: '',
-                visitID: '',
+                visitID: '', visitNo: '',
                 payerType: '',
                 payerName: '',
                 network: '',
@@ -361,6 +368,12 @@ const OpdCard: React.FC<PatientCardProps> = ({
         );
     };
 
+    useImperativeHandle(ref, () => ({
+        handleSelectPatient: (patient: any) => {
+            handleSelectPatient(patient);
+        }
+    }));
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -400,6 +413,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
             company: patient.patientCompany || "N/A",
             Bed: patient.bedName || "N/A",
             visitID: patient.visitID || "N/A",
+            visitNo: patient.visitNo || patient.visitNumber || patient.patientVisitNo || patient.visitID || "N/A",
             // Payer details from search response
             payerType: patient.payerType || "",
             payerName: patient.payerName || "",
@@ -418,6 +432,16 @@ const OpdCard: React.FC<PatientCardProps> = ({
         setEditedPatient(newPatientData);
         if (onPatientChange) {
             onPatientChange(newPatientData, patient);
+        }
+
+        // Auto-set hospital based on patient's hospitalId
+        if (patient.hospitalId && setSelectedBranch) {
+            // Find the branch where custom_hospital_id matches patient.hospitalId
+            // Branches might not be populated if this is called early, so we also use a useEffect
+            const matchingBranch = branches.find((b: any) => b.custom_hospital_id === patient.hospitalId);
+            if (matchingBranch) {
+                setSelectedBranch(matchingBranch.value);
+            }
         }
 
         // Auto-set customer based on patient's company or default to self-paid
@@ -536,6 +560,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 const branchOptions = branchData.map((branch: any) => ({
                     label: branch.name || 'Unnamed Branch',
                     value: branch.name,
+                    custom_hospital_id: branch.custom_hospital_id,
                 }));
                 setBranches(branchOptions);
             } catch (error) {
@@ -608,6 +633,17 @@ const OpdCard: React.FC<PatientCardProps> = ({
             showAlert('danger', 'Error', 'Invalid search field selected.');
         }
     };
+
+
+    // Auto-select hospital when branches load if a patient with hospitalId is already selected
+    useEffect(() => {
+        if (editedPatient.hospitalId && branches.length > 0 && setSelectedBranch && !selectedBranch) {
+            const matchingBranch = branches.find(b => b.custom_hospital_id === editedPatient.hospitalId);
+            if (matchingBranch) {
+                setSelectedBranch(matchingBranch.value);
+            }
+        }
+    }, [editedPatient.hospitalId, branches, setSelectedBranch, selectedBranch]);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -783,7 +819,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <InfoRow
                         icon="assets/icons/Id.svg"
                         label="Visit No"
-                        value={editedPatient.visitID || ''}
+                        value={editedPatient.visitNo || editedPatient.visitID || ''}
                         disabled={true}
                     />
                     <InfoRow
@@ -941,7 +977,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
             </DialogContent>
         </Dialog>
     );
-};
+});
+
+OpdCard.displayName = "OpdCard";
 
 export default OpdCard;
 
@@ -977,7 +1015,7 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, selectValue, onCh
                 value={value || ''}
                 onChange={(e) => onChange && onChange(e.target.value)}
                 className='text-[#1C2024] text-xs font-semibold w-[120px]'
-                disabled={disabled} // <-- 4. FIXED: CHANGED FROM 'true' TO 'disabled'
+                disabled={disabled}
             />
         )}
     </div>

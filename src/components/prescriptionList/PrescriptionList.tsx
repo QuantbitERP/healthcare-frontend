@@ -324,10 +324,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
 
   // Define columns for DataTableComponent
   const columns = [
-    {
-      accessorKey: "prescription_number",
-      header: "Prescription Number",
-    },
+    // {
+    //   accessorKey: "prescription_number",
+    //   header: "Prescription Number",
+    // },
     {
       accessorKey: "prescription_date",
       header: "Prescription Date",
@@ -335,10 +335,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         <TableCellComponents type="date" value={getValue()} />
       ),
     },
-    {
-      accessorKey: "visit_id",
-      header: "Visit ID",
-    },
+    // {
+    //   accessorKey: "visit_id",
+    //   header: "Visit ID",
+    // },
     {
       accessorKey: "department",
       header: "Department",
