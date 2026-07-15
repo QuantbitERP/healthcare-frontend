@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+// import "react-toastify/dist/ReactToastify.css";
 import Button from "@/components/buttons/Button";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/context/AuthContext';
@@ -2829,6 +2829,7 @@ export default function Return() {
 
     const payload = {
       doctype: "Sale Bill",
+      currency: "QAR",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -5206,6 +5207,7 @@ export default function Return() {
 
       const payload = {
         doctype: "Sale Bill",
+      currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,

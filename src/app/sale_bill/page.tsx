@@ -1899,7 +1899,7 @@ export default function IPDBill() {
   // Holds the preauth-eligible item IDs for the currently selected patient.
   // Pure lookup data read during item search — never rendered, so a ref
   // avoids triggering a re-render every time a patient is selected.
-  const preauthItemIdsRef = useRef<Set<string>>(new Set());
+  const preauthItemIdsRef = useRef<Map<string, { isIncluded: boolean, isPreAuthRequired: boolean }>>(new Map());
   const opdCardRef = useRef<OpdCardRef>(null);
   const prescriptionVisitIdRef = useRef<string>("");
   const [payerDetailsFromSearch, setPayerDetailsFromSearch] = useState(false);
@@ -2562,7 +2562,7 @@ export default function IPDBill() {
           authHeaders;
 
       console.log('Selected visit_id:', visitIdToCheck);
-      const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${visitIdToCheck}`;
+      const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${encodeURIComponent(visitIdToCheck)}`;
       console.log('Backend API endpoint being called:', url);
 
       const response = await fetch(url, {
@@ -2587,10 +2587,12 @@ export default function IPDBill() {
         setItems((prevItems: any) => {
           const newItems = prevItems.map((item: any) => {
             console.log(`Checking match for item: itemId=${item.custom_his_item_id}, qbItemId=${item.itemCode}`);
-            const matchedStatus = statuses.find((s: any) =>
-              s.itemId === item.custom_his_item_id ||
-              s.qbItemId === item.itemCode
-            );
+            const matchedStatus = statuses.find((s: any) => {
+              const hasValidItemId = s.itemId && s.itemId !== "00000000-0000-0000-0000-000000000000";
+              const matchesItemId = hasValidItemId && s.itemId === item.custom_his_item_id;
+              const matchesQbItemId = s.qbItemId && (s.qbItemId === item.itemCode || s.qbItemId === item.itemName);
+              return matchesItemId || matchesQbItemId;
+            });
 
             if (matchedStatus && matchedStatus.statusName) {
               console.log(`Match found for item ${item.itemCode}. Updating PreAuth Status to: ${matchedStatus.statusName}`);
@@ -2643,7 +2645,7 @@ export default function IPDBill() {
     setSourceDocumentType('');
     setItems([]);
     setPatientData(null);
-    preauthItemIdsRef.current = new Set();
+    preauthItemIdsRef.current = new Map();
     setShowDropdown(false);
     setShowPosProfileSelector(false);
     setShowPatientRequisitionList(false);
@@ -2782,7 +2784,7 @@ export default function IPDBill() {
 
   const clearPatient = () => {
     setPatientData(null);
-    preauthItemIdsRef.current = new Set();
+    preauthItemIdsRef.current = new Map();
     // setSearchValue("");
     // setSearchResults([]);
     setShowDropdown(false);
@@ -3657,8 +3659,7 @@ export default function IPDBill() {
 
       // Check if this item is in the patient's preauth pharmacy list
       const hisItemId = item.custom_his_item_id || taxDetails.custom_his_item_id;
-      const isPreAuthItem = !!hisItemId &&
-        preauthItemIdsRef.current.has(hisItemId);
+      const preAuthDetails = !!hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null;
 
       setItems(prevItems => {
         // Always add as a new item, as each batch-specific item has a unique ID now
@@ -3679,8 +3680,8 @@ export default function IPDBill() {
           // Add alternateBatches only if it's an alternative item
           alternateBatches: item.substituteItem ? "1" : "",
           includedInPrintRate: true, // Always consider included_in_print_rate as true
-          covered: isPreAuthItem ? true : item.covered,
-          preAuthRequired: isPreAuthItem ? true : item.preAuthRequired,
+          covered: preAuthDetails ? !!preAuthDetails.isIncluded : item.covered,
+          preAuthRequired: preAuthDetails ? !!preAuthDetails.isPreAuthRequired : item.preAuthRequired,
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         if (newItemWithCalculations) {
@@ -6755,11 +6756,17 @@ export default function IPDBill() {
                   setPatientData(p);
                   setRawPatientData(rawPatient || null);
 
-                  const itemIds =
-                    rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO?.map(
-                      (d: any) => d.itemId
-                    ) ?? [];
-                  preauthItemIdsRef.current = new Set(itemIds);
+                  const itemMap = new Map();
+                  const pharmacyDetails = rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO || [];
+                  pharmacyDetails.forEach((d: any) => {
+                    if (d.itemId) {
+                      itemMap.set(d.itemId, {
+                        isIncluded: d.isIncluded,
+                        isPreAuthRequired: d.isPreAuthRequired
+                      });
+                    }
+                  });
+                  preauthItemIdsRef.current = itemMap;
                 }}
                 selectedWarehouse={selectedWarehouse}
                 setSelectedWarehouse={setSelectedWarehouse}

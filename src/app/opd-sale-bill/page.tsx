@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+// import "react-toastify/dist/ReactToastify.css";
 import Button from "@/components/buttons/Button";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/context/AuthContext';
@@ -113,6 +113,7 @@ export interface Item {
   custom_stent?: number;
   custom_consignment_items?: number;
   custom_narcotic_drug?: number;
+  custom_his_item_id?: string;
   custom_tb_drug?: number;
   custom_lasa?: number;
   custom_emergency_drug?: number;
@@ -1895,8 +1896,10 @@ export default function IPDBill() {
   const [globalCoPayPercent, setGlobalCoPayPercent] = useState(0);
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
+  const [rawPatientData, setRawPatientData] = useState<any | null>(null);
   const [payerDetailsFromSearch, setPayerDetailsFromSearch] = useState(false);
   const [selectedPayerCompanyId, setSelectedPayerCompanyId] = useState<string>('');
+  const preauthItemIdsRef = useRef<Map<string, { isIncluded: boolean, isPreAuthRequired: boolean }>>(new Map());
   // const [searchResults, setSearchResults] = useState<any[]>([]);
   const [_showDropdown, setShowDropdown] = useState(false);
   const [showPosProfileSelector, setShowPosProfileSelector] = useState(false);
@@ -2558,7 +2561,7 @@ export default function IPDBill() {
           authHeaders;
 
       console.log('Selected visit_id:', visitIdToCheck);
-      const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${visitIdToCheck}`;
+      const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${encodeURIComponent(visitIdToCheck)}`;
       console.log('Backend API endpoint being called:', url);
 
       const response = await fetch(url, {
@@ -2583,10 +2586,12 @@ export default function IPDBill() {
         setItems((prevItems: any) => {
           const newItems = prevItems.map((item: any) => {
             console.log(`Checking match for item: itemId=${item.custom_his_item_id}, qbItemId=${item.itemCode}`);
-            const matchedStatus = statuses.find((s: any) =>
-              s.itemId === item.custom_his_item_id ||
-              s.qbItemId === item.itemCode
-            );
+            const matchedStatus = statuses.find((s: any) => {
+              const hasValidItemId = s.itemId && s.itemId !== "00000000-0000-0000-0000-000000000000";
+              const matchesItemId = hasValidItemId && s.itemId === item.custom_his_item_id;
+              const matchesQbItemId = s.qbItemId && (s.qbItemId === item.itemCode || s.qbItemId === item.itemName);
+              return matchesItemId || matchesQbItemId;
+            });
 
             if (matchedStatus && matchedStatus.statusName) {
               console.log(`Match found for item ${item.itemCode}. Updating PreAuth Status to: ${matchedStatus.statusName}`);
@@ -2639,6 +2644,7 @@ export default function IPDBill() {
     setSourceDocumentType('');
     setItems([]);
     setPatientData(null);
+    preauthItemIdsRef.current = new Map();
     setShowDropdown(false);
     setShowPosProfileSelector(false);
     setShowPatientRequisitionList(false);
@@ -2777,7 +2783,8 @@ export default function IPDBill() {
 
   const clearPatient = () => {
     setPatientData(null);
-    // setSearchValue("");
+    preauthItemIdsRef.current = new Map();
+    setRawPatientData(null); // setSearchValue("");
     // setSearchResults([]);
     setShowDropdown(false);
     setItems([]);
@@ -3648,6 +3655,9 @@ export default function IPDBill() {
           return; // Don't add expired batch
         }
       }
+      // Check if this item is in the patient's preauth pharmacy list
+      const hisItemId = item.custom_his_item_id || taxDetails.custom_his_item_id;
+      const preAuthDetails = !!hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null;
 
       setItems(prevItems => {
         // Always add as a new item, as each batch-specific item has a unique ID now
@@ -3663,9 +3673,12 @@ export default function IPDBill() {
           sgstPercent: taxDetails.sgstRate,
           igstPercent: taxDetails.igstRate,
           taxTemplate: taxDetails.taxTemplate,
+          custom_his_item_id: hisItemId,
           // Add alternateBatches only if it's an alternative item
           alternateBatches: item.substituteItem ? "1" : "",
           includedInPrintRate: true, // Always consider included_in_print_rate as true
+          covered: preAuthDetails ? !!preAuthDetails.isIncluded : item.covered,
+          preAuthRequired: preAuthDetails ? !!preAuthDetails.isPreAuthRequired : item.preAuthRequired,
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
         if (newItemWithCalculations) {
@@ -3842,7 +3855,7 @@ export default function IPDBill() {
       remarks: remarks,
       included_in_print_rate: 1, // Always consider included_in_print_rate as true
       custom_is_ipd_invoice: 0, // Mark as IPD invoice
-      custom_ipd_effect: isIpdEffect ? 1 : 0, // IPD Effect checkbox value
+      custom_opd_effect: isIpdEffect ? 1 : 0, // OPD Effect checkbox value
 
       // Add invoice-level discount fields
       // apply_discount_on: hasAnyDiscount ? "Grand Total" : "",
@@ -5179,6 +5192,7 @@ export default function IPDBill() {
         igstRate: result.igst_rate || 0,
         itemRate: result.rate || rate, // Use fetched rate if available, otherwise original rate
         taxTemplate: result.item_tax_template || '',
+        custom_his_item_id: result.custom_his_item_id || '',
       };
     } catch (error: any) {
       console.error('Error fetching item details:', error);
@@ -5189,6 +5203,7 @@ export default function IPDBill() {
         igstRate: 0,
         itemRate: rate,
         taxTemplate: '',
+        custom_his_item_id: '',
       };
     }
   };
@@ -5587,7 +5602,7 @@ export default function IPDBill() {
       }
       setSelectedSaleType(fullInvoice.custom_sale_type || '');
       setIsReturn(fullInvoice.is_return === 1);
-      setIsIpdEffect(fullInvoice.custom_ipd_effect === 1); // Set isIpdEffect from invoice's custom_ipd_effect field
+      setIsIpdEffect(fullInvoice.custom_opd_effect === 1); // Set isIpdEffect from invoice's custom_opd_effect field
 
       // Populate payer fields from invoice
       setPayerCategory(fullInvoice.custom_payer_category || '');
@@ -5888,7 +5903,7 @@ export default function IPDBill() {
           credentials: 'include',
           body: JSON.stringify({
             docstatus: 1,
-            custom_ipd_effect: isIpdEffect ? 1 : 0
+            custom_opd_effect: isIpdEffect ? 1 : 0
           }),
         });
 
@@ -6125,7 +6140,7 @@ export default function IPDBill() {
         remarks: remarks,
         included_in_print_rate: 1, // Always consider included_in_print_rate as true
         custom_is_ipd_invoice: 0, // Mark as IPD invoice
-        custom_ipd_effect: isIpdEffect ? 1 : 0, // IPD Effect checkbox value
+        custom_opd_effect: isIpdEffect ? 1 : 0, // OPD Effect checkbox value
 
         // Payer details
         custom_payer_category: payerCategory,
@@ -6438,7 +6453,7 @@ export default function IPDBill() {
           credentials: 'include',
           body: JSON.stringify({
             docstatus: 1,
-            custom_ipd_effect: isIpdEffect ? 1 : 0
+            custom_opd_effect: isIpdEffect ? 1 : 0
           }),
         });
 
@@ -6447,6 +6462,36 @@ export default function IPDBill() {
           showAlert("danger", "Error", `Failed to submit invoice: ${errorData.message || 'Unknown error'}`);
           // Optionally, you might want to handle the case where submission fails after draft save
           return;
+        }
+
+        if (transactionType === 'credit' && rawPatientData) {
+          try {
+            const patientCreateResponse = await fetch(
+              "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_patient_from_his_data",
+              {
+                method: 'POST',
+                headers,
+                credentials: 'include',
+                body: JSON.stringify({ patient_data: rawPatientData }),
+              }
+            );
+
+            if (!patientCreateResponse.ok) {
+              const patientError = await patientCreateResponse.text();
+              console.warn("Patient creation API warning:", patientError);
+              showAlert("warning", "Patient Creation", "Invoice submitted successfully, but patient master creation failed.");
+            } else {
+              const patientResult = await patientCreateResponse.json();
+              if (patientResult.status === 'created' || patientResult.message?.status === 'created') {
+                console.log("Patient created from HIMS data:", patientResult.message?.patient || patientResult.patient);
+              } else if (patientResult.status === 'exists' || patientResult.message?.status === 'exists') {
+                console.log("Patient already exists, no action needed:", patientResult.message?.patient || patientResult.patient);
+              }
+            }
+          } catch (patientError) {
+            console.warn("Patient creation request failed:", patientError);
+            showAlert("warning", "Patient Creation", "Invoice submitted successfully, but patient master creation failed.");
+          }
         }
 
         showAlert("success", "Success", `Invoice ${invoiceName} created and submitted successfully!`);
@@ -6688,7 +6733,22 @@ export default function IPDBill() {
               <OpdCard
                 ref={opdCardRef}
                 patientData={patientData}
-                onPatientChange={(p) => setPatientData(p)}
+                onPatientChange={(p, rawPatient) => {
+                  setPatientData(p);
+                  setRawPatientData(rawPatient || null);
+                  
+                  const itemMap = new Map();
+                  const pharmacyDetails = rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO || [];
+                  pharmacyDetails.forEach((d: any) => {
+                    if (d.itemId) {
+                      itemMap.set(d.itemId, {
+                        isIncluded: d.isIncluded,
+                        isPreAuthRequired: d.isPreAuthRequired
+                      });
+                    }
+                  });
+                  preauthItemIdsRef.current = itemMap;
+                }}
                 selectedWarehouse={selectedWarehouse}
                 setSelectedWarehouse={setSelectedWarehouse}
                 selectedCustomer={selectedCustomer}
