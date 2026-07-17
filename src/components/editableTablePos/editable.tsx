@@ -1624,7 +1624,10 @@ const EditableTable = ({
         
         // Co-pay calculations apply if pre-auth fields are not shown, OR if they are shown and covered & approved
         const copayApplies = !showPreAuthFields || (item.covered && item.preAuthStatus === 'Approved');
-        const coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+        let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+        if (!item.covered) {
+          coPayPercent = 0;
+        }
         const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
 
         return (
@@ -1647,7 +1650,10 @@ const EditableTable = ({
         
         // Co-pay calculations apply if pre-auth fields are not shown, OR if they are shown and covered & approved
         const copayApplies = !showPreAuthFields || (item.covered && item.preAuthStatus === 'Approved');
-        const coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+        let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+        if (!item.covered) {
+          coPayPercent = 0;
+        }
         const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
         const payerAmount = itemAmountAfterDiscount - patientAmount;
 
@@ -1932,7 +1938,7 @@ const EditableTable = ({
             className="w-full"
           />
         </div>
-        <div className="w-1/2 max-w-xs">
+        {/* <div className="w-1/2 max-w-xs">
           <Input
             placeholder="Req ID"
             value={reqId || ""}
@@ -1944,7 +1950,7 @@ const EditableTable = ({
             className={`w-full ${isReqIdReadonly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
             readOnly={isReqIdReadonly}
           />
-        </div>
+        </div> */}
       </div>
 
       <div className="flex justify-between items-center mb-6">

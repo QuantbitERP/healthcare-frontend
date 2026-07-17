@@ -179,10 +179,10 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
                   <div className="text-[#60646C] text-sm font-normal">Name</div>
                   <div className="text-[#1C2024] text-sm font-medium">{fullName || name}</div>
                 </div>
-                <div className="flex flex-col gap-2 w-full">
+                {/* <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">UHID/ABHA ID</div>
                   <div className="text-[#1C2024] text-sm font-medium">{uhid || ABHAID}</div>
-                </div>
+                </div> */}
               </div>
               <div className="flex flex-row gap-6">
                 <div className="flex flex-col gap-2 w-full">
@@ -206,10 +206,10 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
                 </div>
               </div>
               <div className="flex flex-row gap-6">
-                <div className="flex flex-col gap-2 w-full">
+                {/* <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">ABHA ID</div>
                   <div className="text-[#1C2024] text-sm font-medium">{ABHAID}</div>
-                </div>
+                </div> */}
                 <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">Registration Date</div>
                   <div className="text-[#1C2024] text-sm font-medium">{registrationDate || "N/A"}</div>

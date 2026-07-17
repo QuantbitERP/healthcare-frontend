@@ -119,7 +119,7 @@ export default function SelectInput({
       ? `${selValues.length} Selected`
       : placeholder
     : value
-      ? getLabelForValue(value as string, options)
+      ? (getLabelForValue(value as string, options) || (value as string))
       : placeholder;
 
   return (
@@ -154,7 +154,7 @@ export default function SelectInput({
           </span>
         ) : (
           <SelectValue placeholder={placeholder}>
-            {value ? getLabelForValue(value as string, options) : placeholder}
+            {value ? (getLabelForValue(value as string, options) || value) : placeholder}
           </SelectValue>
         )}
         <Image src={'assets/icons/CaretDownDark.svg'} height={16} width={16} alt="caret icon" />

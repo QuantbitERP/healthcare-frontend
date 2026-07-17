@@ -3017,12 +3017,9 @@ export default function IPDBill() {
       }
     };
 
-    // Only fetch if options are empty to prevent infinite loops
-    // Note: Sub insurance is not fetched here as it requires schema_id and hospital_id
-    if (payerCategoryOptions.length === 0 && networkOptions.length === 0) {
-      fetchPayerDropdownOptions();
-    }
-  }, []); // Empty dependency array to run only once on mount
+    // Always fetch — triggered by selectedCompany so auth credentials are ready
+    fetchPayerDropdownOptions();
+  }, [selectedCompany]); // Re-run when company changes (ensures auth headers are available)
 
   // Sync payerNameOptions with customers when customers change
   useEffect(() => {
@@ -3085,6 +3082,37 @@ export default function IPDBill() {
           setExpiryValidityTo(new Date(patientData.expiryValidityTo));
         }
 
+        // Seed dropdown options from patient data as fallback when HIS API is unavailable
+        // This ensures the selected value is always visible in the dropdown
+        if (patientData.payerType) {
+          setPayerCategoryOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.payerType);
+            if (!exists) return [...prev, { label: patientData.payerType || '', value: patientData.payerType || '' }];
+            return prev;
+          });
+        }
+        if (patientData.network) {
+          setNetworkOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.network);
+            if (!exists) return [...prev, { label: patientData.network || '', value: patientData.network || '' }];
+            return prev;
+          });
+        }
+        if (patientData.payerName) {
+          setPayerNameOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.payerName);
+            if (!exists) return [...prev, { label: patientData.payerName || '', value: patientData.payerName || '' }];
+            return prev;
+          });
+        }
+        if (patientData.subInsurance) {
+          setSubInsuranceOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.subInsurance);
+            if (!exists) return [...prev, { label: patientData.subInsurance || '', value: patientData.subInsurance || '' }];
+            return prev;
+          });
+        }
+
         // Set a flag to indicate payer details came from patient search
         // This prevents visit details from overwriting them
         setPayerDetailsFromSearch(true);
@@ -3099,6 +3127,48 @@ export default function IPDBill() {
       }
     }
   }, [patientData]);
+
+
+  // Case correction for payer fields to match dropdown options exactly (case-sensitive Select input)
+  useEffect(() => {
+    if (payerCategory && payerCategoryOptions.length > 0) {
+      const match = payerCategoryOptions.find(o => (o.value || '').toLowerCase().trim() === payerCategory.toLowerCase().trim());
+      if (match && match.value !== payerCategory) {
+        console.log(`Case correcting payerCategory from ${payerCategory} to ${match.value}`);
+        setPayerCategory(match.value);
+      }
+    }
+  }, [payerCategory, payerCategoryOptions]);
+
+  useEffect(() => {
+    if (network && networkOptions.length > 0) {
+      const match = networkOptions.find(o => (o.value || '').toLowerCase().trim() === network.toLowerCase().trim());
+      if (match && match.value !== network) {
+        console.log(`Case correcting network from ${network} to ${match.value}`);
+        setNetwork(match.value);
+      }
+    }
+  }, [network, networkOptions]);
+
+  useEffect(() => {
+    if (payerName && payerNameOptions.length > 0) {
+      const match = payerNameOptions.find(o => (o.value || '').toLowerCase().trim() === payerName.toLowerCase().trim());
+      if (match && match.value !== payerName) {
+        console.log(`Case correcting payerName from ${payerName} to ${match.value}`);
+        setPayerName(match.value);
+      }
+    }
+  }, [payerName, payerNameOptions]);
+
+  useEffect(() => {
+    if (subInsurance && subInsuranceOptions.length > 0) {
+      const match = subInsuranceOptions.find(o => (o.value || '').toLowerCase().trim() === subInsurance.toLowerCase().trim());
+      if (match && match.value !== subInsurance) {
+        console.log(`Case correcting subInsurance from ${subInsurance} to ${match.value}`);
+        setSubInsurance(match.value);
+      }
+    }
+  }, [subInsurance, subInsuranceOptions]);
 
   // Log state changes to detect if values are being cleared
   useEffect(() => {
@@ -6128,7 +6198,7 @@ export default function IPDBill() {
 
       const payload = {
         doctype: "Sale Bill",
-      currency: "QAR",
+        currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -6736,7 +6806,7 @@ export default function IPDBill() {
                 onPatientChange={(p, rawPatient) => {
                   setPatientData(p);
                   setRawPatientData(rawPatient || null);
-                  
+
                   const itemMap = new Map();
                   const pharmacyDetails = rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO || [];
                   pharmacyDetails.forEach((d: any) => {

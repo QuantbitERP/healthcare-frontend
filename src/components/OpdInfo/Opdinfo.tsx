@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Avatar from 'react-avatar';
 import Button from '../buttons/Button';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import Tags from '@/components/statusTags/Tags';
+// import Tags from '@/components/statusTags/Tags';
 
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import PosInfoCardDetails from '../posInfoCard/posInfoCardDetails';
@@ -164,7 +164,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
 
     const selectOptions: SelectOption[] = [
         { label: "UHID", value: "uhid" },
-        { label: "Aadhaar No", value: "aadharCardNo" },
+        // { label: "Aadhaar No", value: "aadharCardNo" },
         { label: "Mobile No", value: "mobile" },
         { label: "Full Name", value: "fullName" },
     ];
@@ -661,10 +661,10 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                             /> */}
                         </div>
                     </div>
-                    <div className='flex flex-row gap-2'>
+                    {/* <div className='flex flex-row gap-2'>
                         <Tags variant="tag" tagText="Medical Legal Case" type="cyan" border />
                         <Tags variant="tag" tagText="No Coverage" type="warning" border />
-                    </div>
+                    </div> */}
                 </div>
                 <div className="flex flex-col items-center space-y-4">
                     <div className="w-full">
@@ -802,6 +802,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         // onChange={(value) => handleFieldChange('age', value)}
                         onSelectChange={(value) => handleFieldChange('sex', value)}
                         selectOptions={sexOptions}
+                        disabled={true}
                     />
                     {/* This is the new row for Age only */}
                     <InfoRow
@@ -809,12 +810,14 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         label="Age"
                         value={editedPatient.age}
                         onChange={(value) => handleFieldChange('age', value)}
+                        disabled={true}
                     />
                     <InfoRow
                         icon="assets/icons/Phone.svg"
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
+                        disabled={true}
                     />
                     <InfoRow
                         icon="assets/icons/Id.svg"
@@ -822,12 +825,12 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         value={editedPatient.visitNo || editedPatient.visitID || ''}
                         disabled={true}
                     />
-                    <InfoRow
+                    {/* <InfoRow
                         icon="assets/icons/Id.svg"
                         label="ABHA ID"
                         value={editedPatient.ABHAID}
                         onChange={(value) => handleFieldChange('ABHAID', value)}
-                    />
+                    /> */}
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
@@ -843,7 +846,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                     value={selectedCustomer}
                                     onChange={handleCustomerChange}
                                     placeholder="Self Paid"
-                                    disabled={customers.length === 0}
+                                    disabled={true}
                                 />
                             </div>
                         </div>
@@ -863,7 +866,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                     value={selectedCompany}
                                     onChange={handleCompanyChange}
                                     placeholder="Select company"
-                                    disabled={companies.length === 0}
+                                    disabled={true}
                                 />
                             </div>
                         </div>
@@ -894,7 +897,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                         value={selectedBranch}
                                         onChange={handleBranchChange}
                                         placeholder="Select Hospital"
-                                        disabled={branches.length === 0}
+                                        disabled={true}
                                     />
                                 )}
                             </div>
@@ -915,7 +918,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                     value={selectedDepartment}
                                     onChange={handleDepartmentChange}
                                     placeholder="Select department"
-                                    disabled={departments.length === 0}
+                                    disabled={true}
                                 />
                             </div>
                         </div>
@@ -926,6 +929,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         label="Customer Name"
                         value={editedPatient.name || ''}
                         onChange={(value) => handleFieldChange('name', value)}
+                        disabled={true}
                     />
                     <InfoRow
                         icon="assets/icons/DoorEnter.svg"
@@ -941,6 +945,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         selectOptions={localDoctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
                         selectValue={editedPatient.doctor}
                         onSelectChange={(value) => handleFieldChange('doctor', value)}
+                        disabled={true}
                     />
                     <DialogTrigger asChild>
                         <div className='w-fit h-fit flex justify-start'>

@@ -1014,12 +1014,17 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   // Calculate payer and patient amounts based on co-pay percentage and pre-auth status
   const copayApplies = item.covered && item.preAuthStatus === 'Approved';
-  const coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+  let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+  if (!item.covered) {
+    coPayPercent = 0;
+  }
+  
   const patientAmount = totalAmount * (coPayPercent / 100);
   const payerAmount = totalAmount - patientAmount;
 
   return {
     ...item,
+    coPayPercentage: !item.covered ? 0 : item.coPayPercentage,
     itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
     discountAmt: truncateToTwoDecimals(discountAmount), // Discount amount calculated on MRP
     cgstAmt: truncateToTwoDecimals(cgstAmount),
@@ -3018,12 +3023,9 @@ export default function IPDBill() {
       }
     };
 
-    // Only fetch if options are empty to prevent infinite loops
-    // Note: Sub insurance is not fetched here as it requires schema_id and hospital_id
-    if (payerCategoryOptions.length === 0 && networkOptions.length === 0) {
-      fetchPayerDropdownOptions();
-    }
-  }, []); // Empty dependency array to run only once on mount
+    // Always fetch — triggered by selectedCompany so auth credentials are ready
+    fetchPayerDropdownOptions();
+  }, [selectedCompany]); // Re-run when company changes (ensures auth headers are available)
 
   // Sync payerNameOptions with customers when customers change
   useEffect(() => {
@@ -3086,6 +3088,37 @@ export default function IPDBill() {
           setExpiryValidityTo(new Date(patientData.expiryValidityTo));
         }
 
+        // Seed dropdown options from patient data as fallback when HIS API is unavailable
+        // This ensures the selected value is always visible in the dropdown
+        if (patientData.payerType) {
+          setPayerCategoryOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.payerType);
+            if (!exists) return [...prev, { label: patientData.payerType || '', value: patientData.payerType || '' }];
+            return prev;
+          });
+        }
+        if (patientData.network) {
+          setNetworkOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.network);
+            if (!exists) return [...prev, { label: patientData.network || '', value: patientData.network || '' }];
+            return prev;
+          });
+        }
+        if (patientData.payerName) {
+          setPayerNameOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.payerName);
+            if (!exists) return [...prev, { label: patientData.payerName || '', value: patientData.payerName || '' }];
+            return prev;
+          });
+        }
+        if (patientData.subInsurance) {
+          setSubInsuranceOptions(prev => {
+            const exists = prev.some(o => o.value === patientData.subInsurance);
+            if (!exists) return [...prev, { label: patientData.subInsurance || '', value: patientData.subInsurance || '' }];
+            return prev;
+          });
+        }
+
         // Set a flag to indicate payer details came from patient search
         // This prevents visit details from overwriting them
         setPayerDetailsFromSearch(true);
@@ -3100,6 +3133,47 @@ export default function IPDBill() {
       }
     }
   }, [patientData]);
+
+  // Case correction for payer fields to match dropdown options exactly (case-sensitive Select input)
+  useEffect(() => {
+    if (payerCategory && payerCategoryOptions.length > 0) {
+      const match = payerCategoryOptions.find(o => (o.value || '').toLowerCase().trim() === payerCategory.toLowerCase().trim());
+      if (match && match.value !== payerCategory) {
+        console.log(`Case correcting payerCategory from ${payerCategory} to ${match.value}`);
+        setPayerCategory(match.value);
+      }
+    }
+  }, [payerCategory, payerCategoryOptions]);
+
+  useEffect(() => {
+    if (network && networkOptions.length > 0) {
+      const match = networkOptions.find(o => (o.value || '').toLowerCase().trim() === network.toLowerCase().trim());
+      if (match && match.value !== network) {
+        console.log(`Case correcting network from ${network} to ${match.value}`);
+        setNetwork(match.value);
+      }
+    }
+  }, [network, networkOptions]);
+
+  useEffect(() => {
+    if (payerName && payerNameOptions.length > 0) {
+      const match = payerNameOptions.find(o => (o.value || '').toLowerCase().trim() === payerName.toLowerCase().trim());
+      if (match && match.value !== payerName) {
+        console.log(`Case correcting payerName from ${payerName} to ${match.value}`);
+        setPayerName(match.value);
+      }
+    }
+  }, [payerName, payerNameOptions]);
+
+  useEffect(() => {
+    if (subInsurance && subInsuranceOptions.length > 0) {
+      const match = subInsuranceOptions.find(o => (o.value || '').toLowerCase().trim() === subInsurance.toLowerCase().trim());
+      if (match && match.value !== subInsurance) {
+        console.log(`Case correcting subInsurance from ${subInsurance} to ${match.value}`);
+        setSubInsurance(match.value);
+      }
+    }
+  }, [subInsurance, subInsuranceOptions]);
 
   // Log state changes to detect if values are being cleared
   useEffect(() => {
@@ -6145,7 +6219,7 @@ export default function IPDBill() {
 
       const payload = {
         doctype: "Sale Bill",
-      currency: "QAR",
+        currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -6822,6 +6896,7 @@ export default function IPDBill() {
                     onChange={(value) => setPayerCategory(value)}
                     data={payerCategoryOptions}
                     placeholder="Select Payer Category"
+                    readonly={_isItemsLoadedFromRequisitionOrPrescription}
                   />
 
                   <RenderFormElement
@@ -6831,6 +6906,7 @@ export default function IPDBill() {
                     onChange={(value) => setPayerName(value)}
                     data={payerNameOptions}
                     placeholder="Select Payer Name"
+                    readonly={_isItemsLoadedFromRequisitionOrPrescription}
                   />
 
                   <RenderFormElement
@@ -6840,6 +6916,7 @@ export default function IPDBill() {
                     onChange={(value) => setSubInsurance(value)}
                     data={subInsuranceOptions}
                     placeholder="Select Sub Insurance"
+                    readonly={_isItemsLoadedFromRequisitionOrPrescription}
                   />
 
                   <RenderFormElement
@@ -6849,6 +6926,7 @@ export default function IPDBill() {
                     onChange={(value) => setNetwork(value)}
                     data={networkOptions}
                     placeholder="Select Network"
+                    readonly={_isItemsLoadedFromRequisitionOrPrescription}
                   />
 
                   <div className="space-y-1">
@@ -6859,6 +6937,7 @@ export default function IPDBill() {
                       value={insuranceNo}
                       onChange={(e) => setInsuranceNo(e.target.value)}
                       placeholder="Enter Insurance No"
+                      readOnly={_isItemsLoadedFromRequisitionOrPrescription}
                     />
                   </div>
 
@@ -6869,6 +6948,7 @@ export default function IPDBill() {
                       type="date"
                       value={validityFrom ? validityFrom.toISOString().split('T')[0] : ''}
                       onChange={(e) => setValidityFrom(e.target.value ? new Date(e.target.value) : undefined)}
+                      readOnly={_isItemsLoadedFromRequisitionOrPrescription}
                     />
                   </div>
 
@@ -6879,6 +6959,7 @@ export default function IPDBill() {
                       type="date"
                       value={expiryValidityTo ? expiryValidityTo.toISOString().split('T')[0] : ''}
                       onChange={(e) => setExpiryValidityTo(e.target.value ? new Date(e.target.value) : undefined)}
+                      readOnly={_isItemsLoadedFromRequisitionOrPrescription}
                     />
                   </div>
 
@@ -7202,10 +7283,14 @@ export default function IPDBill() {
                       type="primary-button"
                       size="button-small"
                       onClick={() => {
-                        const updatedItems = items.map(item => ({
-                          ...item,
-                          coPayPercentage: globalCoPayPercent
-                        }));
+                        const updatedItems = items.map(item => {
+                          const updatedItem = {
+                            ...item,
+                            coPayPercentage: !item.covered ? 0 : globalCoPayPercent
+                          };
+                          // Apply the same recalculation used throughout the system for consistency
+                          return calculateItemTaxAndTotals(updatedItem, true);
+                        });
                         setItems(updatedItems);
                         showAlert("success", "Success", `Co-Pay % applied to all items.`);
                       }}

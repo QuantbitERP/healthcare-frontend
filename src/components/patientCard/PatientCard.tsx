@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import Tags from "@/components/statusTags/Tags";
+// import Tags from "@/components/statusTags/Tags";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Patient } from "@/store/slices/patientSlice";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -324,7 +324,7 @@ function PatientCard({
               </span>
             </div>
           </div>
-          <div className="flex flex-row gap-2">
+          {/* <div className="flex flex-row gap-2">
             <Tags
               variant="tag"
               tagText="Medical Legal Case"
@@ -332,7 +332,7 @@ function PatientCard({
               border
             />
             <Tags variant="tag" tagText="No Coverage" type="warning" border />
-          </div>
+          </div> */}
         </div>
 
         {/* Rest of the patient information */}
@@ -372,7 +372,7 @@ function PatientCard({
               {patientMobile}
             </span>
           </div>
-          <div className="flex flex-row h-8 items-center justify-between">
+          {/* <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
                 src={"assets/icons/Id.svg"}
@@ -387,7 +387,7 @@ function PatientCard({
             <span className="text-[#1C2024] text-xs font-semibold">
               {patient && "abhaId" in patient ? patient.abhaId : "-"}
             </span>
-          </div>
+          </div> */}
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
