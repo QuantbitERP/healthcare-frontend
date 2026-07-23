@@ -9,7 +9,7 @@ import {
   RowData,
 } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+
 import { Button as UIButton } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -228,8 +228,8 @@ const ColumnVisibilityDropdown = ({ table }: { table: any }) => {
     taxableAmount: "Item Amt",
     totalAmt: "Total Amt.",
     coPayPercentage: "Co-Pay %",
-    patientAmount: "Patient Amount",
-    payerAmount: "Payer Amount",
+    patientAmount: "Patient Payer",
+    payerAmount: "Customer Payer",
     covered: "Covered",
     preAuthRequired: "Pre-auth Req.",
     preAuthStatus: "Pre-auth Status",
@@ -1613,7 +1613,7 @@ const EditableTable = ({
     },
     {
       accessorKey: "patientAmount",
-      header: "Patient Amount",
+      header: "Patient Payer",
       cell: ({ row }) => {
         const item = row.original as Item;
         const rate = item.rate !== null ? item.rate : 0;
@@ -1628,7 +1628,8 @@ const EditableTable = ({
         if (!item.covered) {
           coPayPercent = 0;
         }
-        const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
+        const payerAmount = itemAmountAfterDiscount * (coPayPercent / 100);
+        const patientAmount = itemAmountAfterDiscount - payerAmount;
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
@@ -1639,7 +1640,7 @@ const EditableTable = ({
     },
     {
       accessorKey: "payerAmount",
-      header: "Payer Amount",
+      header: "Customer Payer",
       cell: ({ row }) => {
         const item = row.original as Item;
         const rate = item.rate !== null ? item.rate : 0;
@@ -1654,8 +1655,7 @@ const EditableTable = ({
         if (!item.covered) {
           coPayPercent = 0;
         }
-        const patientAmount = itemAmountAfterDiscount * (coPayPercent / 100);
-        const payerAmount = itemAmountAfterDiscount - patientAmount;
+        const payerAmount = itemAmountAfterDiscount * (coPayPercent / 100);
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
@@ -1920,43 +1920,9 @@ const EditableTable = ({
 
   return (
     <div className="p-2 max-w-7xl mx-auto">
-      {/* Barcode and Complete Section */}
-      <div className="flex gap-4 mb-4">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="isComplete"
-            checked={isComplete || false}
-            onCheckedChange={(checked) => setIsComplete?.(checked === true)}
-          />
-          <Label htmlFor="isComplete" className="text-sm">Complete</Label>
-        </div>
-        <div className="w-1/2 max-w-xs">
-          <Input
-            placeholder="Barcode"
-            value={barcode || ""}
-            onChange={(e) => setBarcode?.(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        {/* <div className="w-1/2 max-w-xs">
-          <Input
-            placeholder="Req ID"
-            value={reqId || ""}
-            onChange={(e) => {
-              if (!isReqIdReadonly) {
-                setReqId?.(e.target.value);
-              }
-            }}
-            className={`w-full ${isReqIdReadonly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-            readOnly={isReqIdReadonly}
-          />
-        </div> */}
-      </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800"></h2>
-        <ColumnVisibilityDropdown table={table} />
-      </div>
+
+
 
       <div className="flex justify-center items-center mb-2">
         <BulkAction
@@ -2029,7 +1995,8 @@ const EditableTable = ({
       </Button>
 
       <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
           <Button
             onClick={() => table.setPageIndex(0)}
             type="secondary-button"
@@ -2058,6 +2025,8 @@ const EditableTable = ({
           >
             {'>>'}
           </Button>
+          </div>
+          <ColumnVisibilityDropdown table={table} />
         </div>
 
         <div className="flex items-center space-x-4">

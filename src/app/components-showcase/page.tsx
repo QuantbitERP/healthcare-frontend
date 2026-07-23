@@ -41,7 +41,7 @@ export default function ComponentsShowcase() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-4">
-                <Button type="primary-button" size="button-small">Primary Small</Button>
+                <Button type="primary-button" size="button-medium">Primary Small</Button>
                 <Button type="primary-button" size="button-medium">Primary Medium</Button>
                 <Button type="primary-button" size="button-large">Primary Large</Button>
                 <Button type="secondary-button" size="button-medium">Secondary</Button>

@@ -290,7 +290,7 @@ function PageHeader(props: PageHeaderProps) {
       <div className="flex items-center gap-4">
         {/* Search Input */}
         <div className="relative">
-          <div className="relative flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div className="relative flex items-center gap-2 bg-white rounded-lg px-2 py-1 border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -302,7 +302,7 @@ function PageHeader(props: PageHeaderProps) {
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               onFocus={() => searchQuery && setShowSuggestions(true)}
-              className="w-64 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
+              className="w-48 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
             />
             {isSearching && (
               <div className="animate-spin">

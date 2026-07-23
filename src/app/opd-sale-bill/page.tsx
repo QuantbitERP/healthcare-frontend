@@ -164,6 +164,8 @@ type SelectedPatient = {
   company?: string;
   visitID?: string;
   bed?: string;
+  bedName?: string;
+  wardName?: string;
   payerType?: string;
   payerName?: string;
   network?: string;
@@ -1042,9 +1044,12 @@ export default function IPDBill() {
   // --- START: Added state for file upload ---
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadedAttachments, setLoadedAttachments] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hoveredAttachment, setHoveredAttachment] = useState<string | null>(null);
-  const [_previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   // --- END: Added state for file upload ---
 
   // Critical category dialog state
@@ -2449,6 +2454,7 @@ export default function IPDBill() {
   };
 
   // --- START: Added function to clear file ---
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleClearFile = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the modal from opening
     setSelectedDocument(null);
@@ -5526,6 +5532,7 @@ export default function IPDBill() {
   };
 
   // --- START: Function to get full file URL ---
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getFullFileUrl = (fileUrl: string) => {
     // If it's already a full URL, return as is
     if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
@@ -6728,13 +6735,19 @@ export default function IPDBill() {
             warehouse={selectedWarehouse || undefined}
             rightButtons={
               <div className="flex flex-row space-x-2">
-                <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
+                <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
+                  Patient Requisition
+                </Button>
+                <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
+                  Prescription
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
                   View Sale Bills
                 </Button>
-                <Button type="secondary-button" size="button-medium" onClick={() => { window.location.href = "https://gmcerp.quantcloud.in/app/home"; }}>
+                <Button type="secondary-button" size="button-small" onClick={() => { window.location.href = "https://gmcerp.quantcloud.in/app/home"; }}>
                   Home
                 </Button>
-                <Button type="secondary-button" size="button-medium" onClick={handleChangePOSProfile}>
+                <Button type="secondary-button" size="button-small" onClick={handleChangePOSProfile}>
                   Change POS Profile
                 </Button>
                 {/* <Button type="secondary-button" size="button-medium" onClick={logout}>
@@ -6858,14 +6871,14 @@ export default function IPDBill() {
           </div>
 
           {/* Right Panel - Item Details */}
-          <div className="flex-1 min-w-0 space-y-6">
+          <div className="flex-1 min-w-0 space-y-2 text-sm">
             {/* Insurance Information */}
             <Card>
-              <CardHeader>
+              <CardHeader className="py-2 px-3">
                 <CardTitle>Insurance Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 overflow-x-auto">
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <CardContent className="space-y-2 overflow-x-auto p-3 pt-0">
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 [&_.mb-2]:!mb-1">
                   <RenderFormElement
                     label="Payer Category"
                     inputType="select"
@@ -6948,382 +6961,172 @@ export default function IPDBill() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="py-2 px-3">
                 <CardTitle>Item Details</CardTitle>
               </CardHeader>
 
-              <CardContent className="space-y-3 overflow-x-auto">
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-
-                  <RenderFormElement
-                    inputType="select"
-                    value={selectedSaleType}
-                    onChange={handleClassificationChange}
-                    data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
-                    placeholder="Select Classification"
-                  />
-
-                  <EnhancedItemSearch
-                    onSelectItem={handleAddItemToDetails}
-                    placeholder="Search Items"
-                    fetchItemBatches={fetchItemBatches}
-                    fetchItemPrice={fetchItemPrice}
-                    getBatchQty={getBatchQty}
-                    onNoBatchesFound={handleNoBatchesFound}
-                    selectedWarehouse={selectedWarehouse}
-                    selectedCompany={selectedCompany}
-                    selectedCustomer={selectedCustomer}
-                    applyPricingRules={applyPricingRules}
-                    // showAlert={showAlert}
-                    selectedClassification={selectedSaleType}
-                    isGeneric={isGeneric}
-                    isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
-                    criticalCategoryDialog={criticalCategoryDialog}
-                    setCriticalCategoryDialog={setCriticalCategoryDialog}
-                    className="pt-2"// Pass getBatchQty as a prop
-                  />
-
-                  <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
-                    <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
-                    <Label htmlFor="terms">Generic</Label>
-                    <Button type="primary-button" size="button-medium" onClick={() => {
-                      console.log('Patient Requisition button clicked');
-                      setShowPatientRequisitionList(true)
-                      console.log('showPatientRequisitionList', showPatientRequisitionList);
-                    }
-                    }>
-                      Patient Requisition
-                    </Button>
-                    <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
-                      Prescription
-                    </Button>
-
-                    {/* --- START: Modified Upload Button --- */}
-                    <Button
-                      type={selectedDocument ? "secondary-button" : "primary-button"} // Changes style
-                      size="button-medium"
-                      onClick={() => setShowDocumentUpload(true)} // Still opens the modal
-                    >
-                      {selectedDocument ? (
-                        // --- Show file name if selected ---
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="truncate max-w-[150px]"
-                            title={selectedDocument.name}
-                          >
-                            {selectedDocument.name}
-                          </span>
-                          <X
-                            className="h-4 w-4 text-gray-600 cursor-pointer hover:text-red-500"
-                            onClick={handleClearFile} // Add clear handler
-                          />
-                        </div>
-                      ) : (
-                        // --- Default text ---
-                        'Upload'
-                      )}
-                    </Button>
-                    <Button type="button-primary" size="button-medium" onClick={handleCheckPreAuthStatus} className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:text-white">
-                      <UploadCloud className="h-4 w-4 text-white cursor-pointer cursor-pointer " /> Check Status
-                    </Button>
-                    {/* --- END: Modified Upload Button --- */}
-
-                    {/* --- START: Loaded Attachments Display --- */}
-                    {loadedAttachments.length > 0 && (
-                      <div className="mt-2 p-2 bg-gray-50 rounded border">
-                        <div className="text-sm font-medium text-gray-700 mb-1">Attached Files:</div>
-                        <div className="space-y-1">
-                          {loadedAttachments.map((attachment, index) => (
-                            <div key={index} className="flex items-center justify-between text-xs">
-                              <a
-                                href={getFullFileUrl(attachment.file_url)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 truncate max-w-[200px]"
-                                title={attachment.file_name}
-                                onMouseEnter={(e) => {
-                                  setHoveredAttachment(attachment.file_url);
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setPreviewPosition({
-                                    x: rect.right + 10,
-                                    y: rect.top
-                                  });
-                                }}
-                                onMouseLeave={() => setHoveredAttachment(null)}
-                              >
-                                {attachment.file_name}
-                              </a>
-                              <span className="text-gray-500">
-                                ({Math.round(attachment.file_size / 1024)}KB)
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* --- END: Loaded Attachments Display --- */}
-
-                    {/* --- START: Attachment Preview Popup --- */}
-                    {hoveredAttachment && (
-                      <div
-                        className="fixed z-50 bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4"
-                        style={{
-                          left: '50%',
-                          top: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '90vw',
-                          height: '90vh',
-                          maxWidth: '1200px',
-                          maxHeight: '800px'
-                        }}
-                        onMouseEnter={() => setHoveredAttachment(hoveredAttachment)}
-                        onMouseLeave={() => setHoveredAttachment(null)}
-                      >
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="text-sm font-medium text-gray-700">Preview</div>
-                          <button
-                            onClick={() => setHoveredAttachment(null)}
-                            className="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <div className="w-full h-full overflow-auto bg-gray-100 rounded">
-                          {hoveredAttachment.toLowerCase().endsWith('.pdf') ? (
-                            <div className="flex items-center justify-center w-full h-full text-gray-500">
-                              <div className="text-center">
-                                <div className="text-lg font-medium mb-2">PDF Document</div>
-                                <div className="text-sm mb-4">PDF files cannot be embedded due to security restrictions.</div>
-                                <div className="text-sm">
-                                  <a
-                                    href={getFullFileUrl(hoveredAttachment)}
-                                    target=""
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                  >
-                                    Click here to open PDF
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          ) : hoveredAttachment.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ? (
-                            <div className="flex items-center justify-center w-full h-full p-4">
-                              <img
-                                src={getFullFileUrl(hoveredAttachment)}
-                                alt="Preview"
-                                className="max-w-full max-h-full object-contain"
-                                onError={() => {
-                                  console.error("Failed to load image preview");
-                                }}
-                              />
-                            </div>
-                          ) : hoveredAttachment.toLowerCase().match(/\.(xlsx|xls|csv)$/i) ? (
-                            <div className="flex items-center justify-center w-full h-full text-gray-500">
-                              <div className="text-center">
-                                <div className="text-lg font-medium mb-2">
-                                  {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV File' : 'Excel Spreadsheet'}
-                                </div>
-                                <div className="text-sm mb-4">Spreadsheet files cannot be previewed in the browser.</div>
-                                <div className="text-sm">
-                                  <a
-                                    href={getFullFileUrl(hoveredAttachment)}
-                                    target=""
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                  >
-                                    Click here to download/open {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV file' : 'Excel file'}
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          ) : hoveredAttachment.toLowerCase().match(/\.(docx|doc)$/i) ? (
-                            <div className="flex items-center justify-center w-full h-full text-gray-500">
-                              <div className="text-center">
-                                <div className="text-lg font-medium mb-2">Word Document</div>
-                                <div className="text-sm mb-4">Word documents cannot be previewed in the browser.</div>
-                                <div className="text-sm">
-                                  <a
-                                    href={getFullFileUrl(hoveredAttachment)}
-                                    target=""
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                  >
-                                    Click here to download/open Word document
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          ) : hoveredAttachment.toLowerCase().match(/\.(txt|rtf)$/i) ? (
-                            <div className="flex items-center justify-center w-full h-full p-4">
-                              <iframe
-                                src={getFullFileUrl(hoveredAttachment)}
-                                className="w-full h-full border-0 bg-white"
-                                title="Text File Preview"
-                                onError={() => {
-                                  console.error("Failed to load text file preview");
-                                }}
-                              />
-                            </div>
-                          ) : hoveredAttachment.toLowerCase().match(/\.(zip|rar|7z|tar|gz)$/i) ? (
-                            <div className="flex items-center justify-center w-full h-full text-gray-500">
-                              <div className="text-center">
-                                <div className="text-lg font-medium mb-2">Archive File</div>
-                                <div className="text-sm mb-4">Compressed files cannot be previewed.</div>
-                                <div className="text-sm">
-                                  <a
-                                    href={getFullFileUrl(hoveredAttachment)}
-                                    target=""
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                  >
-                                    Click here to download archive file
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center w-full h-full text-gray-500">
-                              <div className="text-center">
-                                <div className="text-lg font-medium mb-2">File Preview</div>
-                                <div className="text-sm mb-2">Preview not available for this file type.</div>
-                                <div className="text-xs text-gray-400 mb-4">
-                                  Extension: {hoveredAttachment.split('.').pop()?.toUpperCase() || 'Unknown'}
-                                </div>
-                                <div className="text-sm">
-                                  <a
-                                    href={getFullFileUrl(hoveredAttachment)}
-                                    target=""
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                  >
-                                    Click here to download/open file
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {/* --- END: Attachment Preview Popup --- */}
-
-
-                    {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                    {/* <div className="w-full sm:w-auto flex-1 min-w-[150px]">
+              <CardContent className="space-y-2 overflow-x-auto p-3 pt-0">
+                <div className="flex flex-col gap-2 w-full">
+                  {/* First Row */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1.5fr_auto_1fr] gap-4 items-center">
                     <RenderFormElement
-                      inputType="input"
-                      InputValueType="text"
-                      value={toLocation}
-                      onChange={setToLocation}
-                      placeholder="Barcode"
+                      inputType="select"
+                      value={selectedSaleType}
+                      onChange={handleClassificationChange}
+                      data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
+                      placeholder="Select Classification"
                     />
-                  </div> */}
 
-
-                  </div>
-
-                  <RenderFormElement
-                    inputType="select"
-                    value={selectedKit}
-                    onChange={handleSelectKit}
-                    data={kitOptions}
-                    placeholder="Select Kit"
-                  />
-
-                  {/* Global Co-Pay % Input */}
-                  <div className="flex flex-row items-center gap-3">
-                    <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Co-Pay %:</Label>
-                    <Input
-                      type="number"
-                      value={globalCoPayPercent}
-                      onChange={(e) => setGlobalCoPayPercent(parseFloat(e.target.value) || 0)}
-                      placeholder="Enter co-pay %"
-                      className="w-32 text-sm"
-                      min="0"
-                      max="100"
-                      step="0.01"
+                    <EnhancedItemSearch
+                      onSelectItem={handleAddItemToDetails}
+                      placeholder="Search Items"
+                      fetchItemBatches={fetchItemBatches}
+                      fetchItemPrice={fetchItemPrice}
+                      getBatchQty={getBatchQty}
+                      onNoBatchesFound={handleNoBatchesFound}
+                      selectedWarehouse={selectedWarehouse}
+                      selectedCompany={selectedCompany}
+                      selectedCustomer={selectedCustomer}
+                      applyPricingRules={applyPricingRules}
+                      selectedClassification={selectedSaleType}
+                      isGeneric={isGeneric}
+                      isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
+                      criticalCategoryDialog={criticalCategoryDialog}
+                      setCriticalCategoryDialog={setCriticalCategoryDialog}
                     />
-                    <Button
-                      type="primary-button"
-                      size="button-small"
-                      onClick={() => {
-                        const updatedItems = items.map(item => ({
-                          ...item,
-                          coPayPercentage: globalCoPayPercent
-                        }));
-                        setItems(updatedItems);
-                        showAlert("success", "Success", `Co-Pay % applied to all items.`);
-                      }}
-                    >
-                      Apply Co-Pay
-                    </Button>
 
-                  </div>
-
-                  {/* Global Discount Input */}
-                  <div className="flex flex-row items-center gap-3">
-                    <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Discount %:</Label>
-                    <Input
-                      type="number"
-                      value={globalDiscountPercent}
-                      onChange={(e) => setGlobalDiscountPercent(parseFloat(e.target.value) || 0)}
-                      placeholder="Enter discount %"
-                      className="w-32 text-sm"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                    />
-                    <Button
-                      type="primary-button"
-                      size="button-small"
-                      onClick={handleApplyGlobalDiscount}
-                      className="whitespace-nowrap"
-                    >
-                      Apply Discount
-                    </Button>
-                  </div>
-
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                  {/* Transaction Type Toggle*/}
-                  <div className="flex items-center gap-2 ml-2">
-                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
-                    <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
-                      <button
-                        onClick={() => setTransactionType('cash')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
-                          ? 'bg-blue-500 text-white shadow-sm'
-                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        Cash
-                      </button>
-                      <button
-                        onClick={() => setTransactionType('credit')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
-                          ? 'bg-blue-500 text-white shadow-sm'
-                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        Credit
-                      </button>
+                    <div className="flex items-center gap-2 pl-2">
+                      <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
+                      <Label htmlFor="terms" className="text-sm font-medium text-gray-700">Generic</Label>
                     </div>
+
+                    <RenderFormElement
+                      inputType="select"
+                      value={selectedKit}
+                      onChange={handleSelectKit}
+                      data={kitOptions}
+                      placeholder="Select Kit"
+                    />
                   </div>
 
+                  {/* Second Row */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4 items-center mt-1">
+                    {/* Global Co-Pay % Input */}
+                    <div className="flex flex-row items-center gap-2">
+                      <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Co-Pay %:</Label>
+                      <Input
+                        type="number"
+                        value={globalCoPayPercent}
+                        onChange={(e) => setGlobalCoPayPercent(parseFloat(e.target.value) || 0)}
+                        placeholder="%"
+                        className="w-20 h-9 text-sm"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                      <Button
+                        type="primary-button"
+                        size="button-medium"
+                        onClick={() => {
+                          const updatedItems = items.map(item => {
+                            const updatedItem = {
+                              ...item,
+                              coPayPercentage: !item.covered ? 0 : globalCoPayPercent
+                            };
+                            return calculateItemTaxAndTotals(updatedItem, true);
+                          });
+                          setItems(updatedItems);
+                          showAlert("success", "Success", `Co-Pay % applied to all items.`);
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
 
-                  {/* OPD Effect Checkbox */}
-                  <div className="flex items-center gap-2 pl-2">
-                    <Checkbox
-                      id="opd-effect"
-                      checked={isIpdEffect}
-                      onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
-                    />
-                    <Label
-                      htmlFor="opd-effect"
-                      className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
+                    {/* Global Discount Input */}
+                    <div className="flex flex-row items-center gap-2">
+                      <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Discount %:</Label>
+                      <Input
+                        type="number"
+                        value={globalDiscountPercent}
+                        onChange={(e) => setGlobalDiscountPercent(parseFloat(e.target.value) || 0)}
+                        placeholder="%"
+                        className="w-20 h-9 text-sm"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                      <Button
+                        type="primary-button"
+                        size="button-medium"
+                        onClick={handleApplyGlobalDiscount}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+
+                    {/* Check Status */}
+                    <Button
+                      type="button-primary"
+                      size="button-medium"
+                      onClick={handleCheckPreAuthStatus}
+                      className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:text-white justify-self-start"
                     >
-                      OPD Effect
-                    </Label>
+                      <UploadCloud className="h-4 w-4 text-white cursor-pointer mr-2" /> Check Status
+                    </Button>
+                  </div>
+
+                  {/* Transaction Type and OPD Effect */}
+                  <div className="flex flex-row items-center gap-4 mt-1">
+                    {/* Transaction Type Toggle */}
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
+                      <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
+                        <button
+                          onClick={() => setTransactionType('cash')}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
+                            ? 'bg-blue-500 text-white shadow-sm'
+                            : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                          Cash
+                        </button>
+                        <button
+                          onClick={() => setTransactionType('credit')}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
+                            ? 'bg-blue-500 text-white shadow-sm'
+                            : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                          Credit
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* OPD Effect Checkbox */}
+                    <div className="flex items-center gap-2 pl-4 border-l border-gray-300">
+                      <Checkbox
+                        id="opd-effect"
+                        checked={isIpdEffect}
+                        onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
+                      />
+                      <Label
+                        htmlFor="opd-effect"
+                        className="text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap"
+                      >
+                        OPD Effect
+                      </Label>
+                    </div>
+
+                    {/* Barcode Input */}
+                    <div className="flex items-center gap-2 pl-4 border-l border-gray-300 flex-1 max-w-[200px]">
+                      <Input
+                        placeholder="Barcode"
+                        value={barcode || ""}
+                        onChange={(e) => setBarcode?.(e.target.value)}
+                        className="w-full h-9 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 

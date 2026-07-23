@@ -42,7 +42,7 @@ const saveToCache = (key: string, data: any[]): void => {
   }
 };
 
-const clearAllCache = (): void => {
+export const clearAllCache = (): void => {
   if (typeof window === "undefined") return;
   try {
     Object.values(CACHE_KEYS).forEach((key) => {

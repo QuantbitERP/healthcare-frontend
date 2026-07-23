@@ -100,6 +100,11 @@ export interface Item {
   custom_business_category?: string; // Add custom_business_category field for filtering by company
   max_discount?: number; // Add max_discount field for discount validation
   saleBillNo?: string; // Add saleBillNo field to track source invoice
+  covered?: boolean;
+  preAuthStatus?: string;
+  coPayPercentage?: number;
+  patientAmount?: number;
+  payerAmount?: number;
 }
 
 interface ItemSearchProps {
@@ -843,7 +848,7 @@ const truncateToTwoDecimals = (value: number): number => {
 
 const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = false): CalculatedItem => {
   const mrp = item.rate !== null ? item.rate : 0; // MRP (already includes GST)
-  const saleQty = item.saleQty || 0;
+  const saleQty = (item.returnQty && item.returnQty > 0) ? item.returnQty : (item.saleQty || 0);
   const discountPercent = item.discountPercent || 0;
   const cgstPercent = item.cgstPercent || 0;
   const sgstPercent = item.sgstPercent || 0;
@@ -930,8 +935,21 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     totalAmount
   });
 
+  // Calculate payer and patient amounts based on co-pay percentage and pre-auth status
+  const copayApplies = item.covered && item.preAuthStatus === 'Approved';
+  let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
+  if (!item.covered) {
+    coPayPercent = 0;
+  }
+  
+  const payerAmount = totalAmount * (coPayPercent / 100);
+  const patientAmount = totalAmount - payerAmount;
+
   return {
     ...item,
+    coPayPercentage: !item.covered ? 0 : item.coPayPercentage,
+    payerAmount: truncateToTwoDecimals(payerAmount),
+    patientAmount: truncateToTwoDecimals(patientAmount),
     itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
     discountAmt: truncateToTwoDecimals(discountAmount), // Discount amount calculated on MRP
     cgstAmt: truncateToTwoDecimals(cgstAmount),
@@ -950,9 +968,12 @@ export default function Return() {
   // --- START: Added state for file upload ---
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadedAttachments, setLoadedAttachments] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hoveredAttachment, setHoveredAttachment] = useState<string | null>(null);
-  const [_previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   // --- END: Added state for file upload ---
   const [initialLoading, setInitialLoading] = useState(true); // New state for splash screen
 
@@ -1946,6 +1967,7 @@ export default function Return() {
   };
 
   // --- START: Added function to clear file ---
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleClearFile = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the modal from opening
     setSelectedDocument(null);
@@ -4416,6 +4438,7 @@ export default function Return() {
   };
 
   // --- START: Function to get full file URL ---
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getFullFileUrl = (fileUrl: string) => {
     // If it's already a full URL, return as is
     if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
@@ -4892,13 +4915,11 @@ export default function Return() {
                   discount_amount: discountAmount * returnQty, // Total discount amount for return qty
                   rate: rateAfterDiscount, // Rate after discount (GST still included)
                   price_list_rate: ratePerUnit, // Original MRP before discount
-                  cgst_rate: item.cgstPercent || 0,
-                  sgst_rate: item.sgstPercent || 0,
-                  igst_rate: item.igstPercent || 0,
                   batch_no: item.batchNo || '',
                   custom_expiry_date: item.expiryDate || '',
                   warehouse: item.warehouse || selectedWarehouse,
-                  item_tax_template: item.taxTemplate || '',
+                  patient_amount: Number(item.patientAmount) || 0,
+                  payer_amount: Number(item.payerAmount) || 0,
                 };
               });
               const refundMode = 'Cash';
@@ -4925,7 +4946,6 @@ export default function Return() {
                 // IPD effect flags - use manual checkbox state for direct return
                 custom_ipd_effect: _isOpdEffect ? 1 : 0,
                 custom_is_ipd_invoice: _isOpdEffect ? 1 : 0,
-                taxes: []
               };
 
               console.log('Direct Return API Payload:', payload);
@@ -5026,13 +5046,11 @@ export default function Return() {
                 discount_amount: discountAmount * returnQty, // Total discount amount for return qty
                 rate: rateAfterDiscount, // Rate after discount (GST still included)
                 price_list_rate: ratePerUnit, // Original MRP before discount
-                cgst_rate: item.cgstPercent || 0,
-                sgst_rate: item.sgstPercent || 0,
-                igst_rate: item.igstPercent || 0,
                 batch_no: item.batchNo || '',
                 custom_expiry_date: item.expiryDate || '',
                 warehouse: item.warehouse || selectedWarehouse,
-                item_tax_template: item.taxTemplate || '',
+                patient_amount: Number(item.patientAmount) || 0,
+                payer_amount: Number(item.payerAmount) || 0,
               };
             });
             const refundMode = 'Cash';
@@ -5059,7 +5077,6 @@ export default function Return() {
               // IPD effect flags from selected invoices
               custom_ipd_effect: selectedInvoicesData.some(inv => inv.custom_ipd_effect === 1) ? 1 : 0,
               custom_is_ipd_invoice: selectedInvoicesData.some(inv => inv.custom_is_ipd_invoice === 1) ? 1 : 0,
-              taxes: []
             };
 
             console.log(`Return API Payload for ${originalInvoice}:`, payload);
@@ -5683,16 +5700,25 @@ export default function Return() {
           warehouse={selectedWarehouse || undefined}
           rightButtons={
             <div className="flex flex-row space-x-2">
-              <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
+              <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
+                Patient Requisition
+              </Button>
+              <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
+                Prescription
+              </Button>
+              <Button type="primary-button" size="button-small" onClick={() => setShowPatientReturnRequisitionList(true)}>
+                Return Requisition
+              </Button>
+              <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
                 View Sale Bills
               </Button>
-              <Button type="secondary-button" size="button-medium" onClick={() => setShowPosProfileSelector(true)}>
+              <Button type="secondary-button" size="button-small" onClick={() => setShowPosProfileSelector(true)}>
                 Change POS Profile
               </Button>
-              <Button type="secondary-button" size="button-medium" onClick={logout}>
+              <Button type="secondary-button" size="button-small" onClick={logout}>
                 Logout
               </Button>
-              <Button type="danger-button" size="button-medium" onClick={clearPatient}>
+              <Button type="danger-button" size="button-small" onClick={clearPatient}>
                 Clear Patient
               </Button>
             </div>
@@ -5791,362 +5817,137 @@ export default function Return() {
         </div>
 
         {/* Right Panel - Item Details */}
-        <div className="flex-1 min-w-0 space-y-6">
+        <div className="flex-1 min-w-0 space-y-2 text-sm">
           <Card>
-            <CardHeader>
+            <CardHeader className="py-2 px-3">
               <CardTitle>Item Details</CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-3 overflow-x-auto">
-              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <CardContent className="space-y-2 overflow-x-auto p-3 pt-0">
+                <div className="flex flex-col gap-2 w-full">
+                  {/* First Row */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1.5fr_auto_1fr] gap-4 items-center">
+                    <RenderFormElement
+                      inputType="select"
+                      value={selectedSaleType}
+                      onChange={handleClassificationChange}
+                      data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
+                      placeholder="Select Classification"
+                    />
 
-                <RenderFormElement
-                  inputType="select"
-                  value={selectedSaleType}
-                  onChange={handleClassificationChange}
-                  data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
-                  placeholder="Select Classification"
-                />
+                    <EnhancedItemSearch
+                      onSelectItem={handleAddItemToDetails}
+                      placeholder="Search Items"
+                      fetchItemBatches={fetchItemBatches}
+                      fetchItemPrice={fetchItemPrice}
+                      getBatchQty={getBatchQty}
+                      onNoBatchesFound={handleNoBatchesFound}
+                      selectedWarehouse={selectedWarehouse}
+                      selectedCompany={selectedCompany}
+                      selectedClassification={selectedSaleType}
+                      isGeneric={isGeneric}
+                      isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
+                    />
 
-                <EnhancedItemSearch
-                  onSelectItem={handleAddItemToDetails}
-                  placeholder="Search Items"
-                  fetchItemBatches={fetchItemBatches}
-                  fetchItemPrice={fetchItemPrice}
-                  getBatchQty={getBatchQty}
-                  onNoBatchesFound={handleNoBatchesFound}
-                  selectedWarehouse={selectedWarehouse}
-                  selectedCompany={selectedCompany}
-                  // showAlert={showAlert}
-                  selectedClassification={selectedSaleType}
-                  isGeneric={isGeneric}
-                  isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
-                  className="pt-2"// Pass getBatchQty as a prop
-                />
-
-                <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
-                  <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
-                  <Label htmlFor="terms">Generic</Label>
-                  {/* <Button type="primary-button" size="button-medium" onClick={() => {
-                    console.log('Patient Requisition button clicked');
-                    setShowPatientRequisitionList(true)
-                    console.log('showPatientRequisitionList', showPatientRequisitionList);
-                  }
-                  }>
-                    Patient Requisition
-                  </Button> */}
-                  <Button type="primary-button" size="button-medium" onClick={() => {
-                    console.log('Patient Return Requisition button clicked');
-                    setShowPatientReturnRequisitionList(true)
-                  }
-                  }>
-                    Patient Return Requisition
-                  </Button>
-                  {/* <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
-                    Prescription
-                  </Button> */}
-
-                  {/* --- START: Modified Upload Button --- */}
-                  <Button
-                    type={selectedDocument ? "secondary-button" : "primary-button"} // Changes style
-                    size="button-medium"
-                    onClick={() => setShowDocumentUpload(true)} // Still opens the modal
-                  >
-                    {selectedDocument ? (
-                      // --- Show file name if selected ---
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="truncate max-w-[150px]"
-                          title={selectedDocument.name}
-                        >
-                          {selectedDocument.name}
-                        </span>
-                        <X
-                          className="h-4 w-4 text-gray-600 cursor-pointer hover:text-red-500"
-                          onClick={handleClearFile} // Add clear handler
-                        />
-                      </div>
-                    ) : (
-                      // --- Default text ---
-                      'Upload'
-                    )}
-                  </Button>
-                  {/* --- END: Modified Upload Button --- */}
-
-                  {/* --- START: Loaded Attachments Display --- */}
-                  {loadedAttachments.length > 0 && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded border">
-                      <div className="text-sm font-medium text-gray-700 mb-1">Attached Files:</div>
-                      <div className="space-y-1">
-                        {loadedAttachments.map((attachment, index) => (
-                          <div key={index} className="flex items-center justify-between text-xs">
-                            <a
-                              href={getFullFileUrl(attachment.file_url)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 truncate max-w-[200px]"
-                              title={attachment.file_name}
-                              onMouseEnter={(e) => {
-                                setHoveredAttachment(attachment.file_url);
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setPreviewPosition({
-                                  x: rect.right + 10,
-                                  y: rect.top
-                                });
-                              }}
-                              onMouseLeave={() => setHoveredAttachment(null)}
-                            >
-                              {attachment.file_name}
-                            </a>
-                            <span className="text-gray-500">
-                              ({Math.round(attachment.file_size / 1024)}KB)
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-2 pl-2">
+                      <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
+                      <Label htmlFor="terms" className="text-sm font-medium text-gray-700">Generic</Label>
                     </div>
-                  )}
-                  {/* --- END: Loaded Attachments Display --- */}
 
-                  {/* --- START: Attachment Preview Popup --- */}
-                  {hoveredAttachment && (
-                    <div
-                      className="fixed z-50 bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4"
-                      style={{
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '90vw',
-                        height: '90vh',
-                        maxWidth: '1200px',
-                        maxHeight: '800px'
-                      }}
-                      onMouseEnter={() => setHoveredAttachment(hoveredAttachment)}
-                      onMouseLeave={() => setHoveredAttachment(null)}
-                    >
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="text-sm font-medium text-gray-700">Preview</div>
+                    <RenderFormElement
+                      inputType="select"
+                      value={selectedKit}
+                      onChange={handleSelectKit}
+                      data={kitOptions}
+                      placeholder="Select Kit"
+                    />
+                  </div>
+
+                  {/* Second Row */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center mt-1">
+                    {/* Global Discount Input */}
+                    <div className="flex flex-row items-center gap-2">
+                      <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Discount %:</Label>
+                      <Input
+                        type="number"
+                        value={globalDiscountPercent}
+                        onChange={(e) => setGlobalDiscountPercent(parseFloat(e.target.value) || 0)}
+                        placeholder="%"
+                        className="w-20 h-9 text-sm"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                      <Button
+                        type="primary-button"
+                        size="button-medium"
+                        onClick={handleApplyGlobalDiscount}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Transaction Type and IPD Effect */}
+                  <div className="flex flex-row items-center gap-4 mt-1">
+                    {/* Transaction Type Toggle */}
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
+                      <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
                         <button
-                          onClick={() => setHoveredAttachment(null)}
-                          className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                          onClick={() => setTransactionType('cash')}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
+                            ? 'bg-blue-500 text-white shadow-sm'
+                            : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                            }`}
                         >
-                          ✕
+                          Cash
+                        </button>
+                        <button
+                          onClick={() => setTransactionType('credit')}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
+                            ? 'bg-blue-500 text-white shadow-sm'
+                            : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                          Credit
                         </button>
                       </div>
-                      <div className="w-full h-full overflow-auto bg-gray-100 rounded">
-                        {hoveredAttachment.toLowerCase().endsWith('.pdf') ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">PDF Document</div>
-                              <div className="text-sm mb-4">PDF files cannot be embedded due to security restrictions.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to open PDF
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full p-4">
-                            <img
-                              src={getFullFileUrl(hoveredAttachment)}
-                              alt="Preview"
-                              className="max-w-full max-h-full object-contain"
-                              onError={() => {
-                                console.error("Failed to load image preview");
-                              }}
-                            />
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(xlsx|xls|csv)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">
-                                {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV File' : 'Excel Spreadsheet'}
-                              </div>
-                              <div className="text-sm mb-4">Spreadsheet files cannot be previewed in the browser.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download/open {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV file' : 'Excel file'}
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(docx|doc)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">Word Document</div>
-                              <div className="text-sm mb-4">Word documents cannot be previewed in the browser.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download/open Word document
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(txt|rtf)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full p-4">
-                            <iframe
-                              src={getFullFileUrl(hoveredAttachment)}
-                              className="w-full h-full border-0 bg-white"
-                              title="Text File Preview"
-                              onError={() => {
-                                console.error("Failed to load text file preview");
-                              }}
-                            />
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(zip|rar|7z|tar|gz)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">Archive File</div>
-                              <div className="text-sm mb-4">Compressed files cannot be previewed.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download archive file
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">File Preview</div>
-                              <div className="text-sm mb-2">Preview not available for this file type.</div>
-                              <div className="text-xs text-gray-400 mb-4">
-                                Extension: {hoveredAttachment.split('.').pop()?.toUpperCase() || 'Unknown'}
-                              </div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download/open file
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </div>
-                  )}
-                  {/* --- END: Attachment Preview Popup --- */}
 
-
-                  {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                  {/* <div className="w-full sm:w-auto flex-1 min-w-[150px]">
-                    <RenderFormElement
-                      inputType="input"
-                      InputValueType="text"
-                      value={toLocation}
-                      onChange={setToLocation}
-                      placeholder="Barcode"
-                    />
-                  </div> */}
-
-
-                </div>
-
-                <RenderFormElement
-                  inputType="select"
-                  value={selectedKit}
-                  onChange={handleSelectKit}
-                  data={kitOptions}
-                  placeholder="Select Kit"
-                />
-
-                {/* Global Discount Input */}
-                <div className="flex flex-row items-center gap-3">
-                  <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Discount %:</Label>
-                  <Input
-                    type="number"
-                    value={globalDiscountPercent}
-                    onChange={(e) => setGlobalDiscountPercent(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter discount %"
-                    className="w-32 text-sm"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                  />
-                  <Button
-                    type="primary-button"
-                    size="button-small"
-                    onClick={handleApplyGlobalDiscount}
-                    className="whitespace-nowrap"
-                  >
-                    Apply Discount
-                  </Button>
-
-
-                  {/* Transaction Type Toggle*/}
-                  <div className="flex items-center gap-2 ml-2">
-                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
-                    <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
-                      <button
-                        onClick={() => setTransactionType('cash')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
-                          ? 'bg-blue-500 text-white shadow-sm'
-                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                          }`}
+                    {/* IPD Effect Checkbox */}
+                    <div className="flex items-center gap-2 pl-4 border-l border-gray-300">
+                      <Checkbox
+                        id="Opd-effect"
+                        checked={_isOpdEffect}
+                        disabled={transactionType === 'cash'}
+                        onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
+                        className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
+                      />
+                      <Label
+                        htmlFor="Opd-effect"
+                        className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
                       >
-                        Cash
-                      </button>
-                      <button
-                        onClick={() => setTransactionType('credit')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
-                          ? 'bg-blue-500 text-white shadow-sm'
-                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        Credit
-                      </button>
+                        IPD Effect
+                      </Label>
+                    </div>
+
+                    {/* Barcode Input */}
+                    <div className="flex items-center gap-2 pl-4 border-l border-gray-300 flex-1 max-w-[200px]">
+                      <Input
+                        placeholder="Barcode"
+                        value={barcode || ""}
+                        onChange={(e) => setBarcode?.(e.target.value)}
+                        className="w-full h-9 text-sm"
+                      />
                     </div>
                   </div>
-
-
-                  {/* OPD Effect Checkbox */}
-                  <div className="flex items-center gap-2 pl-2">
-                    <Checkbox
-                      id="Opd-effect"
-                      checked={_isOpdEffect}
-                      disabled={transactionType === 'cash'}
-                      onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
-                      className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
-                    />
-                    <Label
-                      htmlFor="Opd-effect"
-                      className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
-                    >
-                      IPD Effect
-                    </Label>
-                  </div>
-
                 </div>
-
-              </div>
 
 
               <HorizontallyScrollableTable
+                hideTaxFields={true}
+                showInsuranceFields={true}
                 items={items}
                 setItems={setItems}
                 fetchItemBatches={fetchItemBatches}
@@ -6541,6 +6342,11 @@ export default function Return() {
                       includedInPrintRate: true,
                       mrp: item.custom_mrp || item.price_list_rate || 0,
                       saleBillNo: invoice.name, // Add the source invoice number
+                      coPayPercentage: item.co_pay || 0,
+                      patientAmount: item.patient_amount || 0,
+                      payerAmount: item.payer_amount || 0,
+                      covered: item.co_pay !== undefined && item.co_pay !== null ? true : false,
+                      preAuthStatus: 'Approved', // Default to approved for returns if copay exists
                     };
                   })
                 );

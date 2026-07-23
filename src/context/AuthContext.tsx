@@ -76,6 +76,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         if (sessionUser && sessionUser.user) {
           console.log("AuthContext: Active Frappe session found for user:", sessionUser.user);
 
+          // If the Frappe session user is DIFFERENT than the Next.js stored user -> SWITCH USER
+          if (storedUser && sessionUser.user !== storedUser) {
+            console.log(`User changed on mount from ${storedUser} to ${sessionUser.user}. Clearing old data...`);
+            const { clearAllCache } = await import("@/api/api");
+            clearAllCache();
+            setPosProfile(null);
+            localStorage.removeItem("posProfile");
+          }
+
           // If session is found, try to get API keys
           if (sessionUser.api_key && sessionUser.api_secret && !isMasked(sessionUser.api_secret)) {
             console.log("AuthContext: Session found with valid API keys!");
@@ -109,13 +118,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 setApiSecret(newKeys.api_secret);
                 localStorage.setItem("apiKey", newKeys.api_key);
                 localStorage.setItem("apiSecret", newKeys.api_secret);
-                setSessionAuthPreference(false);
+                localStorage.removeItem("useSessionAuth");
               } else {
-                console.warn("AuthContext: Failed to generate valid API keys, using session-based auth");
                 setSessionAuthPreference(true);
               }
             } catch (error) {
-              console.error("AuthContext: Error generating API keys:", error);
+              console.error("AuthContext: Failed to generate API keys", error);
               setSessionAuthPreference(true);
             }
 
@@ -128,9 +136,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           }
         } else {
-          console.log("AuthContext: No active Frappe session found, checking localStorage...");
+          console.log("AuthContext: No active Frappe session found.");
+          if (storedUser) {
+            console.log("Frappe is logged out. Next.js was logged in. Performing full logout...");
 
-          // If no session, fall back to localStorage
+            // Clear all storage as requested
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie.split(";").forEach((c) => {
+              document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+
+            window.location.href = "/login";
+            return;
+          }
+
+          // If no session, fall back to localStorage (only if not previously logged out)
           if (storedApiKey && storedApiSecret && !isMasked(storedApiSecret)) {
             console.log("AuthContext: Using stored API keys from localStorage");
             setApiKey(storedApiKey);
@@ -187,36 +208,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Add visibility change handler to re-check session when tab becomes visible
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && !isAuthenticatedRef.current) {
-        console.log("AuthContext: Tab became visible, re-checking session...");
-        const sessionUser = await checkFrappeSession();
-        if (sessionUser && sessionUser.user) {
-          setCurrentUser(sessionUser.user);
-          setIsAuthenticated(true);
-          localStorage.setItem("currentUser", sessionUser.user);
+      if (document.visibilityState === 'visible') {
+        console.log("AuthContext: Tab became visible, verifying active session...");
 
-          // Try to get API keys
-          const { getApiKeys } = await import("@/utils/sessionAuth");
-          const newKeys = await getApiKeys(sessionUser.user);
-          const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
+        try {
+          const { checkFrappeSession } = await import("@/utils/sessionAuth");
+          const sessionUser = await checkFrappeSession();
 
-          if (newKeys && newKeys.api_key && newKeys.api_secret && !isMasked(newKeys.api_secret)) {
-            setApiKey(newKeys.api_key);
-            setApiSecret(newKeys.api_secret);
-            localStorage.setItem("apiKey", newKeys.api_key);
-            localStorage.setItem("apiSecret", newKeys.api_secret);
-            localStorage.removeItem("useSessionAuth");
-          } else {
-            setSessionAuthPreference(true);
+          const currentStoredUser = localStorage.getItem("currentUser");
+
+          // If the Frappe session is dead, but we were logged in -> FULL LOGOUT
+          if (!sessionUser || !sessionUser.user) {
+            if (isAuthenticatedRef.current) {
+              console.log("Session died in background. Performing full logout...");
+              localStorage.clear();
+              sessionStorage.clear();
+              document.cookie.split(";").forEach((c) => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+              });
+              window.location.href = "/login";
+            }
+            return;
           }
 
-          // Refresh CSRF token
-          const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
-          const token = await getFrappeCSRFToken();
-          if (token) {
-            setCsrfToken(token);
-            localStorage.setItem('csrfToken', token);
+          // If the Frappe session user is DIFFERENT than the Next.js user -> SWITCH USER
+          if (sessionUser.user && sessionUser.user !== currentStoredUser) {
+            console.log(`User changed from ${currentStoredUser} to ${sessionUser.user}. Re-authenticating...`);
+
+            // First, clear the old user's cache so the new user doesn't see it!
+            const { clearAllCache } = await import("@/api/api");
+            clearAllCache();
+
+            // Wipe old POS profile so new user has to select their own
+            setPosProfile(null);
+            localStorage.removeItem("posProfile");
+
+            setCurrentUser(sessionUser.user);
+            setIsAuthenticated(true);
+            localStorage.setItem("currentUser", sessionUser.user);
+
+            // Grab new API keys for the new user
+            const { getApiKeys } = await import("@/utils/sessionAuth");
+            const newKeys = await getApiKeys(sessionUser.user);
+            const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
+
+            if (newKeys && newKeys.api_key && newKeys.api_secret && !isMasked(newKeys.api_secret)) {
+              setApiKey(newKeys.api_key);
+              setApiSecret(newKeys.api_secret);
+              localStorage.setItem("apiKey", newKeys.api_key);
+              localStorage.setItem("apiSecret", newKeys.api_secret);
+              localStorage.removeItem("useSessionAuth");
+            } else {
+              setSessionAuthPreference(true);
+            }
+
+            // Refresh CSRF token
+            const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
+            const token = await getFrappeCSRFToken();
+            if (token) {
+              setCsrfToken(token);
+              localStorage.setItem('csrfToken', token);
+            }
           }
+        } catch (e) {
+          console.error("Visibility check failed", e);
         }
       }
     };

@@ -6342,7 +6342,7 @@ export default function NewBill() {
                     />
                     <Button
                       type="primary-button"
-                      size="button-small"
+                      size="button-medium"
                       onClick={handleApplyGlobalDiscount}
                       className="whitespace-nowrap"
                     >

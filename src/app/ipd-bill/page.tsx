@@ -5938,13 +5938,13 @@ export default function IPDBill() {
             warehouse={selectedWarehouse || undefined}
             rightButtons={
               <div className="flex flex-row space-x-2">
-                <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
+                <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
                   View Sale Bills
                 </Button>
-                <Button type="secondary-button" size="button-medium" onClick={() => { window.location.href = "https://gmcerp.quantcloud.in/app/home"; }}>
+                <Button type="secondary-button" size="button-small" onClick={() => { window.location.href = "https://gmcerp.quantcloud.in/app/home"; }}>
                   Home
                 </Button>
-                <Button type="secondary-button" size="button-medium" onClick={handleChangePOSProfile}>
+                <Button type="secondary-button" size="button-small" onClick={handleChangePOSProfile}>
                   Change POS Profile
                 </Button>
                 {/* <Button type="secondary-button" size="button-medium" onClick={logout}>
@@ -6345,7 +6345,7 @@ export default function IPDBill() {
                     />
                     <Button
                       type="primary-button"
-                      size="button-small"
+                      size="button-medium"
                       onClick={handleApplyGlobalDiscount}
                       className="whitespace-nowrap"
                     >

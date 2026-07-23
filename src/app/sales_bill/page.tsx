@@ -6195,7 +6195,7 @@ export default function SalesBill() {
                   />
                   <Button
                     type="primary-button"
-                    size="button-small"
+                    size="button-medium"
                     onClick={handleApplyGlobalDiscount}
                     className="whitespace-nowrap"
                   >

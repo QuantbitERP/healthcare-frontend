@@ -63,6 +63,8 @@ type SelectedPatient = {
     company?: string;
     visitID?: string;
     visitNo?: string;
+    bedName?: string;
+    wardName?: string;
     payerType?: string;
     payerName?: string;
     network?: string;
@@ -97,8 +99,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     setSelectedWarehouse,
     selectedCustomer = '',
     setSelectedCustomer,
-    selectedCompany = '',
-    setSelectedCompany,
+    selectedCompany: _selectedCompany = '',
+    setSelectedCompany: _setSelectedCompany,
     selectedBranch = '',
     setSelectedBranch,
     selectedDepartment = '',
@@ -109,7 +111,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     onReturnStatusChange,
 }, ref) => {
     const [open, setOpen] = useState<boolean>(false);
-    const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors } = useFrappeApi();
+    const { fetchWarehouses, fetchBranch, customers, companies: _companies, departments, fetchDoctors } = useFrappeApi();
     const { apiKey, apiSecret, isInitialized } = useAuth();
     // fetchWarehouseForSubdepartment
     const { showAlert } = useAlert();
@@ -133,6 +135,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         dept: patientData?.dept,
         visitID: patientData?.visitID ?? '',
         visitNo: patientData?.visitNo ?? '',
+        bedName: patientData?.bedName ?? '',
+        wardName: patientData?.wardName ?? '',
         payerType: patientData?.payerType ?? '',
         payerName: patientData?.payerName ?? '',
         network: patientData?.network ?? '',
@@ -199,6 +203,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                 dept: patientData.dept,
                 visitID: patientData.visitID,
                 visitNo: patientData.visitNo,
+                bedName: patientData.bedName ?? '',
+                wardName: patientData.wardName ?? '',
                 payerType: patientData.payerType ?? '',
                 payerName: patientData.payerName ?? '',
                 network: patientData.network ?? '',
@@ -214,7 +220,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             setEditedPatient({
                 name: '', age: '', sex: '', phone: '', ABHAID: '',
                 category: '', doctor: '', company: '', visitType: '',
-                visitID: '', visitNo: '',
+                visitID: '', visitNo: '', bedName: '', wardName: '',
                 payerType: '',
                 payerName: '',
                 network: '',
@@ -411,7 +417,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             dept: patient.departmentName || "N/A",
             visitType: patient.patientVisitType || "N/A",
             company: patient.patientCompany || "N/A",
-            Bed: patient.bedName || "N/A",
+            bedName: patient.bedName || "N/A",
+            wardName: patient.wardName || "N/A",
             visitID: patient.visitID || "N/A",
             visitNo: patient.visitNo || patient.visitNumber || patient.patientVisitNo || patient.visitID || "N/A",
             // Payer details from search response
@@ -581,18 +588,18 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         [setSelectedWarehouse]
     );
 
-    const handleCustomerChange = useCallback(
+    const _handleCustomerChange = useCallback(
         (value: string) => {
             setSelectedCustomer?.(value);
         },
         [setSelectedCustomer]
     );
 
-    const handleCompanyChange = useCallback(
+    const _handleCompanyChange = useCallback(
         (value: string) => {
-            setSelectedCompany?.(value);
+            _setSelectedCompany?.(value);
         },
-        [setSelectedCompany]
+        [_setSelectedCompany]
     );
 
     const handleBranchChange = useCallback(
@@ -812,13 +819,13 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         onChange={(value) => handleFieldChange('age', value)}
                         disabled={true}
                     />
-                    <InfoRow
+                    {/* <InfoRow
                         icon="assets/icons/Phone.svg"
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
                         disabled={true}
-                    />
+                    /> */}
                     <InfoRow
                         icon="assets/icons/Id.svg"
                         label="Visit No"
@@ -831,7 +838,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         value={editedPatient.ABHAID}
                         onChange={(value) => handleFieldChange('ABHAID', value)}
                     /> */}
-                    <div className="flex flex-col gap-2 w-full">
+                    {/* <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
                                 <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
@@ -850,8 +857,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                 />
                             </div>
                         </div>
-                    </div>
-                    <div className="flex flex-col gap-2 w-full">
+                    </div> */}
+                    {/* <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
                                 <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
@@ -870,7 +877,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                 />
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
@@ -924,13 +931,13 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         </div>
                     </div>
 
-                    <InfoRow
+                    {/* <InfoRow
                         icon="assets/icons/Building.svg"
                         label="Customer Name"
                         value={editedPatient.name || ''}
                         onChange={(value) => handleFieldChange('name', value)}
                         disabled={true}
-                    />
+                    /> */}
                     <InfoRow
                         icon="assets/icons/DoorEnter.svg"
                         label="Visit Type"
@@ -945,6 +952,18 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                         selectOptions={localDoctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
                         selectValue={editedPatient.doctor}
                         onSelectChange={(value) => handleFieldChange('doctor', value)}
+                        disabled={true}
+                    />
+                    <InfoRow
+                        icon="assets/icons/Id.svg"
+                        label="Bed Name"
+                        value={editedPatient.bedName || ''}
+                        disabled={true}
+                    />
+                    <InfoRow
+                        icon="assets/icons/Id.svg"
+                        label="Ward Name"
+                        value={editedPatient.wardName || ''}
                         disabled={true}
                     />
                     <DialogTrigger asChild>
@@ -973,7 +992,9 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                     phone={editedPatient.phone}
                     ABHAID={editedPatient.ABHAID}
                     category={editedPatient.category}
-                    company={editedPatient.company}
+                    company={_companies?.find((c: any) => c.value === _selectedCompany)?.label || _selectedCompany || editedPatient.company}
+                    customer={customers?.find((c: any) => c.value === selectedCustomer)?.label || selectedCustomer}
+                    customerName={editedPatient.name}
                     doctor={editedPatient.doctor}
                     onClose={() => setOpen(false)}
                     isReturn={isReturn}
