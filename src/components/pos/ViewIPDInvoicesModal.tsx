@@ -5,6 +5,7 @@ import { X, Search } from "lucide-react";
 import Button from "@/components/buttons/Button";
 import { useAuth } from '@/context/AuthContext';
 import { getAuthHeaders } from '@/utils/sessionAuth';
+import { securePrintPdf } from '@/utils/printHelper';
 import DataTableComponent, { TableCellComponents } from '../DataTable';
 
 interface AlertState {
@@ -150,7 +151,7 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
       'letterhead=' + encodeURIComponent(company) + '&' +
       'settings=' + encodeURIComponent('{}') + '&' +
       '_lang=en';
-    window.open(url, '_blank');
+    securePrintPdf(url, getAuthHeaders, showAlert);
   };
 
   const handleSubmitInvoice = async (invoice: Invoice) => {

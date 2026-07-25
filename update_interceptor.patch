@@ -1,0 +1,61 @@
+--- src/utils/fetchInterceptor.ts
++++ src/utils/fetchInterceptor.ts
+@@ -1,5 +1,6 @@
+ import { FRAPPE_CONFIG } from '@/config/frappe';
++import axios from 'axios';
+ 
+ /**
+  * Sets up a global fetch interceptor to automatically add Frappe authentication headers
+  * and ensure session cookies are sent for all requests to the Frappe backend.ries.
+@@ -62,11 +63,40 @@
+             }
+ 
+             newInit.headers = headers;
+-            return originalFetch(input, newInit);
++            
++            try {
++                const response = await originalFetch(input, newInit);
++                
++                // Handle 401/403 Unauthorized directly
++                if (response.status === 401 || response.status === 403) {
++                    if (window.location.pathname !== '/login') {
++                        console.log("[FetchInterceptor] Unauthorized response, logging out...");
++                        localStorage.clear();
++                        sessionStorage.clear();
++                        document.cookie.split(";").forEach((c) => {
++                            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
++                        });
++                        window.location.href = '/login';
++                    }
++                }
++                
++                return response;
++            } catch (error) {
++                throw error;
++            }
+         }
+ 
+         return originalFetch(input, init);
+     };
++
++    // Add Axios interceptor as well
++    axios.interceptors.response.use(
++        (response) => response,
++        (error) => {
++            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
++                if (window.location.pathname !== '/login') {
++                    console.log("[AxiosInterceptor] Unauthorized response, logging out...");
++                    localStorage.clear();
++                    sessionStorage.clear();
++                    document.cookie.split(";").forEach((c) => {
++                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
++                    });
++                    window.location.href = '/login';
++                }
++            }
++            return Promise.reject(error);
++        }
++    );
+ 
+     console.log("[FetchInterceptor] Frappe Fetch Interceptor initialized");
+ };

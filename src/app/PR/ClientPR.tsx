@@ -30,6 +30,7 @@ import PatientRequisitionCard from "@/components/patientRequisitionCard/PatientR
 import { useFrappeApi } from "@/api/api";
 import { useAuth } from "@/context/AuthContext";
 import { getAuthHeaders } from "@/utils/sessionAuth";
+import { securePrintPdf } from '@/utils/printHelper';
 import { Search, X, Plus } from 'lucide-react';
 import { DataTable as EditableDataTable } from "@/components/EditableCellsTable/TableTry";
 import { ColumnDef, getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
@@ -1359,6 +1360,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         aadhar_no: patientData.aadhaarNo || "",
         registration_date: patientData.registrationDate,
         remark: trimmedRemark,
+        update_flag: requisitionNo ? 1 : 0,
+        delete_flag: 0,
         patient_requisition_item_details: items.map(item => ({
           item_code: item.itemCode,
           item_name: item.itemName,
@@ -2222,7 +2225,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         'settings=%7B%7D&' +
         '_lang=en';
 
-      window.open(printUrl, '_blank');
+      securePrintPdf(printUrl, getAuthHeaders, showAlert);
     } catch (error) {
       console.error("Error printing requisition:", error);
       showAlert("danger", "Error", "Failed to print requisition. Please try again.");

@@ -45,6 +45,8 @@ import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import CreateReturnEntryModal from '@/components/return/CreateReturnEntryModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
+import { securePrintPdf } from "@/utils/printHelper";
+import { getAuthHeaders } from "@/utils/sessionAuth";
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -4123,13 +4125,13 @@ export default function NewBill() {
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
             const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-            window.open(printUrl, '_blank');
+            securePrintPdf(printUrl, getAuthHeaders, showAlert);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
           const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-          window.open(printUrl, '_blank');
+          securePrintPdf(printUrl, getAuthHeaders, showAlert);
         }
 
       } catch (error) {
@@ -4491,13 +4493,13 @@ export default function NewBill() {
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
             const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(invoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-            window.open(printUrl, '_blank');
+            securePrintPdf(printUrl, getAuthHeaders, showAlert);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
           const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(invoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-          window.open(printUrl, '_blank');
+          securePrintPdf(printUrl, getAuthHeaders, showAlert);
         }
 
       } catch (error) {
@@ -4933,12 +4935,12 @@ export default function NewBill() {
                       console.error("Network printing failed:", error);
                       showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                       // Fallback to browser print
-                      window.open(`https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                      securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
                     }
                   } else {
                     // Fallback to browser print if network printer not available
                     console.warn('Network printer not available, using browser print');
-                    window.open(`https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                    securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${encodeURIComponent(loadedInvoiceName)}&format=IPD%20BIll%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
                   }
                 }}
               >
@@ -5063,7 +5065,7 @@ export default function NewBill() {
                 const returnInvoiceName = result.message?.return_invoice || result.data?.return_invoice;
                 if (returnInvoiceName) {
                   const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=IPD%20BIll&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
-                  window.open(printUrl, '_blank');
+                  securePrintPdf(printUrl, getAuthHeaders, showAlert);
                 }
               } else {
                 throw new Error(result.message || 'Failed to create return invoice');

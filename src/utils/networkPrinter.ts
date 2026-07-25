@@ -133,23 +133,8 @@ export class NetworkPrinter {
       console.log(`Document ${documentName} sent to network printer successfully`);
     } catch (error) {
       console.error('Network printing failed:', error);
-      // Fallback to browser print if network printing fails
-      this.fallbackToBrowserPrint(documentName, doctype, format);
       throw error; // Re-throw to let caller handle the fallback
     }
-  }
-
-  private fallbackToBrowserPrint(documentName: string, doctype: string, format: string): void {
-    console.log('Falling back to browser print');
-    const printUrl = `https://gmcerp.quantcloud.in/printview?` +
-      `doctype=${encodeURIComponent(doctype)}&` +
-      `name=${encodeURIComponent(documentName)}&` +
-      `format=${encodeURIComponent(format)}&` +
-      `trigger_print=1&` +
-      `no_letterhead=0&` +
-      `_lang=en`;
-
-    window.open(printUrl, '_blank');
   }
 
   isPrinterAvailable(): boolean {

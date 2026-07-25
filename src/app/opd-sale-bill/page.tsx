@@ -30,6 +30,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import Image from "next/image";
 import BillBreakdown from "@/components/billbreakdown/billbreakdown";
 import { networkPrinter } from "@/utils/networkPrinter";
+import { securePrintPdf } from "@/utils/printHelper";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
 import { Search, X, Plus, UploadCloud } from 'lucide-react';
 import OpdCard, { OpdCardRef } from "@/components/OpdInfo/Opdinfo";
@@ -3919,6 +3920,7 @@ export default function IPDBill() {
 
     const payload = {
       doctype: "Sale Bill",
+      transaction_type: transactionType,
       currency: "QAR",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
@@ -6011,13 +6013,13 @@ export default function IPDBill() {
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
             const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-            window.open(printUrl, '_blank');
+            securePrintPdf(printUrl, getAuthHeaders, showAlert);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
           const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-          window.open(printUrl, '_blank');
+          securePrintPdf(printUrl, getAuthHeaders, showAlert);
         }
 
       } catch (error) {
@@ -6121,7 +6123,7 @@ export default function IPDBill() {
             // Print the return invoice
             if (returnInvoiceName) {
               const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
-              window.open(printUrl, '_blank');
+              securePrintPdf(printUrl, getAuthHeaders, showAlert);
             }
 
             // Reset form
@@ -6205,6 +6207,7 @@ export default function IPDBill() {
 
       const payload = {
         doctype: "Sale Bill",
+        transaction_type: transactionType,
         currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
@@ -6636,13 +6639,13 @@ export default function IPDBill() {
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
             const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-            window.open(printUrl, '_blank');
+            securePrintPdf(printUrl, getAuthHeaders, showAlert);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
           const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-          window.open(printUrl, '_blank');
+          securePrintPdf(printUrl, getAuthHeaders, showAlert);
         }
 
       } catch (error) {
@@ -7238,12 +7241,14 @@ export default function IPDBill() {
                         console.error("Network printing failed:", error);
                         showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                         // Fallback to browser print
-                        window.open(`https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                        const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+                        securePrintPdf(printUrl, getAuthHeaders, showAlert);
                       }
                     } else {
                       // Fallback to browser print if network printer not available
                       console.warn('Network printer not available, using browser print');
-                      window.open(`https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+                      const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+                      securePrintPdf(printUrl, getAuthHeaders, showAlert);
                     }
                   }}
                 >

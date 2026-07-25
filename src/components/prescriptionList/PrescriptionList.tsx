@@ -265,7 +265,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
 
 
 
-  
+
   // Debounced search implementation
   const debouncedFetch = useCallback((search: string, dateRange?: DateRange) => {
     if (timeoutRef.current) {
@@ -358,10 +358,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       accessorKey: "mobile_number",
       header: "Mobile Number",
     },
-    {
-      accessorKey: "aadhar_no",
-      header: "Aadhar No",
-    },
+    // {
+    //   accessorKey: "aadhar_no",
+    //   header: "Aadhar No",
+    // },
     {
       accessorKey: "doctor_id",
       header: "Doctor Name",
@@ -377,8 +377,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         return (
           <div className="flex items-center gap-2">
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status === "Completed"
-                ? "bg-green-100 text-green-800"
-                : "bg-yellow-100 text-yellow-800"
+              ? "bg-green-100 text-green-800"
+              : "bg-yellow-100 text-yellow-800"
               }`}>
               {status || "Pending"}
             </span>

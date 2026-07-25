@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 setApiSecret(newKeys.api_secret);
                 localStorage.setItem("apiKey", newKeys.api_key);
                 localStorage.setItem("apiSecret", newKeys.api_secret);
-                localStorage.removeItem("useSessionAuth");
+                setSessionAuthPreference(true);
               } else {
                 setSessionAuthPreference(true);
               }
@@ -257,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               setApiSecret(newKeys.api_secret);
               localStorage.setItem("apiKey", newKeys.api_key);
               localStorage.setItem("apiSecret", newKeys.api_secret);
-              localStorage.removeItem("useSessionAuth");
+              setSessionAuthPreference(true);
             } else {
               setSessionAuthPreference(true);
             }
@@ -325,7 +325,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setApiSecret(apiSecret);
       localStorage.setItem("apiKey", apiKey);
       localStorage.setItem("apiSecret", apiSecret);
-      localStorage.removeItem("useSessionAuth"); // Clear session auth flag when using API keys
+      setSessionAuthPreference(true);
     } else {
       // If no API keys provided, we'll rely on session-based authentication
       console.log("Session-based authentication for user:", user);
