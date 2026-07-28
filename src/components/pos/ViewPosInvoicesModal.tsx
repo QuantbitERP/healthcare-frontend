@@ -42,6 +42,7 @@ interface Invoice {
   outstanding_amount: number;
   company: string;
   custom_ipd_effect?: number; // Add IPD effect field
+  custom_opd_effect?: number; // Add OPD effect field
 }
 
 const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
@@ -119,7 +120,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       const filterStr = JSON.stringify(filters);
-      const url = `${API_BASE_URL}/Sale%20Bill?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return","custom_ipd_effect"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
+      const url = `${API_BASE_URL}/Sale%20Bill?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return","custom_ipd_effect","custom_opd_effect"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -327,7 +328,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
         <DataTableComponent
           columns={[
-            { accessorKey: 'idx', header: 'IDX', cell: ({ row }) => row.index + 1 },
+            { accessorKey: 'idx', header: 'IDX', cell: ({ row }: any) => row.index + 1 },
             { accessorKey: 'name', header: 'Invoice No' },
             { accessorKey: 'customer', header: 'Customer' },
             {
@@ -335,48 +336,48 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 <TableCellComponents type="user" value={getValue()} />
               ),
             },
-            { accessorKey: 'posting_date', header: 'Date', cell: ({ row }) => new Date(row.original.posting_date).toLocaleDateString() },
-            { id: 'posting_time', header: 'Time', cell: ({ row }) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
-            { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }) => `₹${row.original.rounded_total.toFixed(2)}` },
-            { accessorKey: 'status', header: 'Status', cell: ({ row }) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
+            { accessorKey: 'posting_date', header: 'Date', cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString() },
+            { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
+            { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${row.original.rounded_total.toFixed(2)}` },
+            { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
             {
-  id: 'ipd_effect',
-  header: 'IPD Effect',
-  cell: ({ row }) => {
-    const hasIPDEffect = row.original.custom_ipd_effect === 1;
+              id: isIPDPage ? 'ipd_effect' : 'opd_effect',
+              header: isIPDPage ? 'IPD Effect' : 'OPD Effect',
+              cell: ({ row }: any) => {
+                const hasEffect = isIPDPage
+                  ? row.original.custom_ipd_effect === 1
+                  : row.original.custom_opd_effect === 1;
 
-    return (
-      <div className="flex items-center justify-center">
-        {hasIPDEffect ? (
-          // ✔ Green filled circle with check icon
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              viewBox="0 0 24 24"
-            >
-              <path d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        ) : (
-          // — Gray empty circle
-          <div className="">
-            <span className="text-gray-400 text-xs"></span>
-          </div>
-        )}
-      </div>
-    );
-  }
-},
-            { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }) => new Date(row.original.modified).toLocaleDateString() },
+                return (
+                  <div className="flex items-center justify-center">
+                    {hasEffect ? (
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                        <svg
+                          className="w-4 h-4 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="">
+                        <span className="text-gray-400 text-xs"></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            },
+            { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }: any) => new Date(row.original.modified).toLocaleDateString() },
             {
               accessorKey: 'modified_by', header: 'Modified By', cell: ({ getValue }: any) => (
                 <TableCellComponents type="user" value={getValue()} />
               ),
             },
-            { id: 'action', header: 'Actions', cell: ({ row }) => <Button type="secondary-button" size="button-small" onClick={() => handleViewDetails(row.original)}>View</Button> },
+            { id: 'action', header: 'Actions', cell: ({ row }: any) => <Button type="secondary-button" size="button-small" onClick={() => handleViewDetails(row.original)}>View</Button> },
           ]}
           data={invoices}
           loading={loading}
@@ -389,7 +390,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             posting_time: 'Time',
             rounded_total: 'Amount',
             status: 'Status',
-            ipd_effect: 'IPD Effect',
+            ...(isIPDPage ? { ipd_effect: 'IPD Effect' } : { opd_effect: 'OPD Effect' }),
             modified: 'Modified Date',
             modified_by: 'Modified By',
             action: 'Actions',

@@ -1082,6 +1082,8 @@ export default function IPDBill() {
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
   const ITEM_DETAILS_API_URL = 'https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
+  const isCreatingClosingEntryRef = useRef(false);
+
   // Function to fetch pricing rules for a specific customer
   const fetchPricingRules = async (customer: string): Promise<any[]> => {
     try {
@@ -6664,37 +6666,46 @@ export default function IPDBill() {
       return;
     }
 
-    try {
-      // Use the same authentication logic as other functions
-      const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ?
-        JSON.parse(authHeaders) :
-        Array.isArray(authHeaders) ?
-          Object.fromEntries(authHeaders) :
-          authHeaders;
+    if (isCreatingClosingEntryRef.current) {
+      console.log("Closing entry creation already in progress, ignoring duplicate call");
+      return;
+    }
+    isCreatingClosingEntryRef.current = true;
 
-      const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ opening_entry_name: openingEntryName }),
-      });
+    try {
+      const authHeaders = getAuthHeaders();
+      const headers = typeof authHeaders === 'string'
+        ? JSON.parse(authHeaders)
+        : Array.isArray(authHeaders)
+          ? Object.fromEntries(authHeaders)
+          : authHeaders;
+
+      const response = await fetch(
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`,
+        {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ opening_entry_name: openingEntryName }),
+        }
+      );
 
       const result = await response.json();
       console.log("Closing entry response:", result);
 
-      if (response.ok && result.success) {
-        showAlert("success", "Success", `POS Closing Entry ${result.closing_entry} created and submitted successfully!`);
+      if (response.ok && result.message?.success) {
+        showAlert("success", "Success", `POS Closing Entry ${result.message.closing_entry} created and submitted successfully!`);
         setShowClosingEntryModal(false);
-        // Optionally, refresh data or navigate
       } else {
-        console.error("Failed to create POS Closing Entry:", result.error);
-        showAlert("danger", "Error", `Failed to create POS Closing Entry: ${result.error || 'Unknown error'}`);
+        const errMsg = result.message?.error || result._server_messages || 'Unknown error';
+        console.error("Failed to create POS Closing Entry:", errMsg);
+        showAlert("danger", "Error", `Failed to create POS Closing Entry: ${errMsg}`);
       }
     } catch (error) {
       console.error("Error creating POS Closing Entry:", error);
       showAlert("danger", "Error", "Error creating POS Closing Entry. Please try again.");
+    } finally {
+      isCreatingClosingEntryRef.current = false;
     }
   };
 
@@ -7327,7 +7338,7 @@ export default function IPDBill() {
             posProfile={posProfile}
             showAlert={showAlert}
             onLoadInvoice={handleLoadInvoice}
-            isIPDPage={true}
+            excludeIPDInvoices={true}
           />
         )}
 
@@ -7351,7 +7362,7 @@ export default function IPDBill() {
           <SelectInvoiceModal
             isOpen={showSelectInvoiceModal}
             onClose={() => setShowSelectInvoiceModal(false)}
-            isIPDPage={true}
+            isIPDPage={false}
             onSelect={async (invoices: any[]) => {  // Handle array of invoices
               try {
                 // Take the first invoice for return processing
