@@ -3315,7 +3315,7 @@ export default function IPDBill() {
 
   // useEffect to populate payer fields when patient data changes (from visit details)
   useEffect(() => {
-    if (patientData && patientData.visitID) {
+    if (patientData && patientData.visitID && patientData.visitID !== "N/A" && patientData.visitID !== "undefined") {
       console.log('Visit details useEffect triggered with visitID:', patientData.visitID);
       console.log('payerDetailsFromSearch flag:', payerDetailsFromSearch);
       console.log('Current payer state in visit useEffect:', {
@@ -3329,9 +3329,9 @@ export default function IPDBill() {
         expiryValidityTo
       });
 
-      // Skip fetching visit details for payer fields if they came from patient search
-      if (payerDetailsFromSearch) {
-        console.log('Skipping visit details fetch for payer fields - they came from patient search');
+      // Skip fetching visit details if payer fields are already populated (from patient search or loaded invoice)
+      if (payerDetailsFromSearch || (payerCategory && payerName)) {
+        console.log('Skipping visit details fetch for payer fields - they are already populated');
         return;
       }
 
@@ -5645,32 +5645,72 @@ export default function IPDBill() {
       // Load attachments for this invoice
       await loadInvoiceAttachments(fullInvoice.name);
 
-      try {
-        const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
-        const fetchHeaders: any = { 'Content-Type': 'application/json' };
-        if (apiKey && apiSecret) {
-          fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
-        }
+      let patientSelected = false;
+      const invoicePatient = {
+        patientFullName: fullInvoice.custom_patient_name || fullInvoice.patient_name || "",
+        mrn: fullInvoice.custom_uhid || fullInvoice.custom_mrn || fullInvoice.custom_patient_id || "",
+        ageDisplay: fullInvoice.custom_age || "",
+        genderValue: fullInvoice.custom_gender || fullInvoice.sex || "",
+        mobileNo: fullInvoice.custom_phone || fullInvoice.contact_mobile || "",
+        aadharCardNo: fullInvoice.custom_aadhar || "",
+        patientCategory: fullInvoice.custom_patient_category || "",
+        consultingDoctor: fullInvoice.custom_doctor_name || fullInvoice.custom_doctor || "",
+        departmentName: fullInvoice.custom_department || "",
+        patientVisitType: fullInvoice.custom_visit_type || "",
+        patientCompany: fullInvoice.custom_patient_company || "",
+        bedName: fullInvoice.custom_bed_no || "",
+        wardName: fullInvoice.custom_ward || "",
+        visitID: fullInvoice.custom_visit_code || "",
+        visitNo: fullInvoice.custom_visit_code || "",
+        payerType: fullInvoice.custom_payer_category || "",
+        payerName: fullInvoice.custom_payer_name || "",
+        network: fullInvoice.custom_network || "",
+        insurnaceNo: fullInvoice.custom_insurance_no || "",
+        subInsurance: fullInvoice.custom_sub_insurance || "",
+        otherNo: fullInvoice.custom_other_no || "",
+        validateFrom: fullInvoice.custom_validity_from || "",
+        expiryDate: fullInvoice.custom_validity_to || "",
+        hospitalId: fullInvoice.custom_hospital || "",
+        co_Pay: fullInvoice.co_pay || 0,
+      };
 
-        console.log("Patient Search API request for invoice patient_id:", fullInvoice.custom_uhid);
-        const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullInvoice.custom_uhid}&PageIndex=1&PageSize=10&IsExpired=false`, {
-          method: 'GET',
-          headers: fetchHeaders,
-          credentials: 'include',
-        });
+      const searchUHID = fullInvoice.custom_uhid || fullInvoice.custom_mrn || fullInvoice.custom_patient_id;
 
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
-          const patients = searchData.message || [];
-          if (patients.length > 0) {
-            const fetchedPatient = patients[0];
-            if (opdCardRef.current) {
-              opdCardRef.current.handleSelectPatient(fetchedPatient);
+      if (searchUHID) {
+        try {
+          const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+          const fetchHeaders: any = { 'Content-Type': 'application/json' };
+          if (apiKey && apiSecret) {
+            fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
+          }
+
+          console.log("Patient Search API request for invoice patient_id:", searchUHID);
+          const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${searchUHID}&PageIndex=1&PageSize=10&IsExpired=false`, {
+            method: 'GET',
+            headers: fetchHeaders,
+            credentials: 'include',
+          });
+
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            const patients = searchData.message || [];
+            if (patients.length > 0) {
+              const fetchedPatient = patients[0];
+              if (opdCardRef.current) {
+                opdCardRef.current.handleSelectPatient(fetchedPatient);
+                patientSelected = true;
+              }
             }
           }
+        } catch (e) {
+          console.error("Failed to fetch patient details via API, using invoice patient data:", e);
         }
-      } catch (e) {
-        console.error("Failed to fetch patient details:", e);
+      }
+
+      // Fallback: Populate patient details directly from invoice document if search API didn't select patient
+      if (!patientSelected && opdCardRef.current) {
+        console.log("Populating patient card directly from invoice fields:", invoicePatient);
+        opdCardRef.current.handleSelectPatient(invoicePatient);
       }
 
       // Set other form fields
