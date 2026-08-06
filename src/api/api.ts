@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext"; // Adjust the import path as needed
 
 import { FRAPPE_CONFIG } from "@/config/frappe";
@@ -146,6 +146,8 @@ export const useFrappeApi = () => {
   const [localBranches, setLocalBranches] = useState<any[]>([]);
   const [subDepartments, setSubDepartments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
+  const hasInitialized = useRef(false);
+
 
   // Fetch warehouses
   const fetchWarehouses = useCallback(async () => {
@@ -715,19 +717,37 @@ export const useFrappeApi = () => {
   }, [isAuthenticated, apiKey, apiSecret]);
 
   // Automatically fetch data on mount if authenticated
+  // useEffect(() => {
+  //   if (isAuthenticated) {
+  //     fetchWarehouses();
+  //     fetchBranches();
+  //     fetchKits();
+  //     fetchClassifications();
+  //     fetchCustomer();
+  //     fetchBranch();
+  //     fetchCompany();
+  //     fetchDepartment();
+  //     fetchSubDepatment();
+  //   }
+  // }, [isAuthenticated, fetchWarehouses, fetchBranches, fetchKits, fetchClassifications, fetchCustomer, fetchCompany, fetchBranch, fetchDepartment, fetchSubDepatment]);
+
+
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchWarehouses();
-      fetchBranches();
-      fetchKits();
-      fetchClassifications();
-      fetchCustomer();
-      fetchBranch();
-      fetchCompany();
-      fetchDepartment();
-      fetchSubDepatment();
-    }
-  }, [isAuthenticated, fetchWarehouses, fetchBranches, fetchKits, fetchClassifications, fetchCustomer, fetchCompany, fetchBranch, fetchDepartment, fetchSubDepatment]);
+    if (!isAuthenticated) return;
+    if (hasInitialized.current) return;
+
+    hasInitialized.current = true;
+
+    fetchWarehouses();
+    fetchBranches();
+    fetchKits();
+    fetchClassifications();
+    fetchCustomer();
+    fetchBranch();
+    fetchCompany();
+    fetchDepartment();
+    fetchSubDepatment();
+  }, [isAuthenticated]);
 
   return {
     fetchWarehouses,

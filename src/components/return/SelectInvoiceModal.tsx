@@ -71,6 +71,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     posting_date: 'Date',
     posting_time: 'Time',
     grand_total: 'Amount',
+    visit_type: 'Visit Type',
     ipd_effect_checkmark: 'IPD Effect',
     ipd_bill_type: 'Bill Type',
     status: 'Status',
@@ -166,6 +167,11 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     {
       accessorKey: 'grand_total',
       header: 'Amount',
+    },
+    {
+      accessorKey: 'visit_type',
+      header: 'Visit Type',
+      cell: ({ row }: any) => row.original.visit_type || '-',
     },
     {
       id: 'ipd_effect_checkmark',
@@ -430,7 +436,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       }
 
       const queryParams = new URLSearchParams({
-        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice']),
+        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice', 'visit_type']),
         filters: JSON.stringify(apiFilters),
         order_by: 'posting_date desc, posting_time desc',
         limit_page_length: '100'

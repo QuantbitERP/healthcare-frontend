@@ -7,7 +7,7 @@ import axios from 'axios';
  * This is a systemic fix for 401 Unauthorized issues in legacy code.RIES.
  */
 // Utility function to show the auth error popup and redirect
-const showAuthErrorPopupAndRedirect = () => {
+const showAuthErrorPopupAndRedirect = (isAnotherDevice: boolean = false) => {
     if (typeof document === 'undefined') return;
     if (document.getElementById('auth-error-popup')) return;
 
@@ -47,7 +47,9 @@ const showAuthErrorPopupAndRedirect = () => {
     title.style.fontWeight = 'bold';
     
     const message = document.createElement('p');
-    message.innerText = 'Your account has been used by another device. You are being redirected to the login page...';
+    message.innerText = isAnotherDevice 
+        ? 'Your account has been used by another device. You are being redirected to the login page...'
+        : 'Your session has expired. You are being redirected to the login page...';
     message.style.color = '#4b5563';
     message.style.fontSize = '16px';
     message.style.lineHeight = '1.6';
@@ -151,7 +153,8 @@ export const setupFetchInterceptor = () => {
                 if (response.status === 401) {
                     if (window.location.pathname !== '/login') {
                         console.log("[FetchInterceptor] Unauthorized response, showing popup and logging out...");
-                        showAuthErrorPopupAndRedirect();
+                        const hasToken = headers.has('Authorization');
+                        showAuthErrorPopupAndRedirect(hasToken);
                         // Return a never-resolving promise to prevent components from catching the error
                         // and showing their own red box alerts while the popup counts down.
                         return new Promise(() => {}) as unknown as Promise<Response>;
@@ -176,7 +179,9 @@ export const setupFetchInterceptor = () => {
                     if (error.response && error.response.status === 401) {
                         if (window.location.pathname !== '/login') {
                             console.log("[AxiosInterceptor] Unauthorized response, showing popup and logging out...");
-                            showAuthErrorPopupAndRedirect();
+                            const configHeaders = error.config?.headers;
+                            const hasToken = !!(configHeaders && (configHeaders['Authorization'] || configHeaders['authorization'] || (typeof configHeaders.get === 'function' && configHeaders.get('Authorization'))));
+                            showAuthErrorPopupAndRedirect(hasToken);
                             // Return a never-resolving promise to block the component from showing an alert
                             return new Promise(() => {});
                         }

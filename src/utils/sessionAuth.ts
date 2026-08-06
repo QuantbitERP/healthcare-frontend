@@ -112,7 +112,20 @@ export async function checkFrappeSession(): Promise<SessionUser | null> {
  */
 export async function getApiKeys(user: string): Promise<{ api_key: string; api_secret: string } | null> {
     try {
-        console.log("Attempting to fetch API keys for user:", user);
+        // Check if we already have valid, unmasked API keys in localStorage for this user
+        if (typeof window !== "undefined") {
+            const storedUser = window.localStorage.getItem("currentUser");
+            const storedKey = window.localStorage.getItem("apiKey");
+            const storedSecret = window.localStorage.getItem("apiSecret");
+            const isMasked = (secret: string | null) => secret && secret.includes('***');
+            
+            if (storedUser === user && storedKey && storedSecret && !isMasked(storedSecret)) {
+                console.log("Using valid API keys already stored in localStorage");
+                return { api_key: storedKey, api_secret: storedSecret };
+            }
+        }
+
+        console.log("Attempting to fetch API keys for user from server:", user);
 
         // Try to fetch existing API keys
         const response = await fetch(

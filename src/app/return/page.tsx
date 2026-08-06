@@ -102,7 +102,10 @@ export interface Item {
   max_discount?: number; // Add max_discount field for discount validation
   saleBillNo?: string; // Add saleBillNo field to track source invoice
   covered?: boolean;
+  preAuthRequired?: boolean;
   preAuthStatus?: string;
+  preAuthNo?: string;
+  preAuthDateTime?: string;
   coPayPercentage?: number;
   patientAmount?: number;
   payerAmount?: number;
@@ -940,11 +943,11 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   const copayApplies = item.covered && item.preAuthStatus === 'Approved';
   let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
   if (!item.covered) {
-    coPayPercent = 0;
+    coPayPercent = 100;
   }
   
-  const payerAmount = totalAmount * (coPayPercent / 100);
-  const patientAmount = totalAmount - payerAmount;
+  const patientAmount = totalAmount * (coPayPercent / 100);
+  const payerAmount = totalAmount - patientAmount;
 
   return {
     ...item,
@@ -1528,6 +1531,20 @@ export default function Return() {
   const [totalCgstAmount, setTotalCgstAmount] = useState<number>(0);
   const [totalSgstAmount, setTotalSgstAmount] = useState<number>(0);
   const [totalIgstAmount, setTotalIgstAmount] = useState<number>(0);
+  const [totalPayerAmount, setTotalPayerAmount] = useState<number>(0);
+  const [totalPatientAmount, setTotalPatientAmount] = useState<number>(0);
+
+  // Insurance & Payer state variables
+  const [payerCategory, setPayerCategory] = useState<string>('');
+  const [payerName, setPayerName] = useState<string>('');
+  const [subInsurance, setSubInsurance] = useState<string>('');
+  const [network, setNetwork] = useState<string>('');
+  const [insuranceNo, setInsuranceNo] = useState<string>('');
+  const [otherNo, setOtherNo] = useState<string>('');
+  const [validityFrom, setValidityFrom] = useState<string>('');
+  const [validityTo, setValidityTo] = useState<string>('');
+  const [globalCoPayPercent, setGlobalCoPayPercent] = useState<number>(0);
+
   const [showClosingEntryModal, setShowClosingEntryModal] = useState(false); // New state
   const [CompanyAddress, setCompanyAddress] = useState<string | null>(null);
   const [isReturn, setIsReturn] = useState(true);
@@ -2189,6 +2206,18 @@ export default function Return() {
       setTotalCgstAmount(newTotalCgstAmount);
       setTotalSgstAmount(newTotalSgstAmount);
       setTotalIgstAmount(newTotalIgstAmount);
+      const newTotalPayerAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + ((item.payerAmount || 0) * returnQty / saleQty);
+      }, 0);
+      const newTotalPatientAmount = calculatedItems.reduce((sum, item) => {
+        const returnQty = item.returnQty || 0;
+        const saleQty = item.saleQty || 1;
+        return sum + ((item.patientAmount || 0) * returnQty / saleQty);
+      }, 0);
+      setTotalPayerAmount(newTotalPayerAmount);
+      setTotalPatientAmount(newTotalPatientAmount);
     } else {
       // Normal mode calculations
       const newTotalBillAmount = calculatedItems.reduce((sum, item) => sum + item.totalAmt, 0);
@@ -2202,6 +2231,10 @@ export default function Return() {
       setTotalCgstAmount(newTotalCgstAmount);
       setTotalSgstAmount(newTotalSgstAmount);
       setTotalIgstAmount(newTotalIgstAmount);
+      const newTotalPayerAmount = calculatedItems.reduce((sum, item) => sum + (item.payerAmount || 0), 0);
+      const newTotalPatientAmount = calculatedItems.reduce((sum, item) => sum + (item.patientAmount || 0), 0);
+      setTotalPayerAmount(newTotalPayerAmount);
+      setTotalPatientAmount(newTotalPatientAmount);
     }
   };
 
@@ -4562,7 +4595,7 @@ export default function Return() {
         mrn: fullInvoice.custom_uhid || "N/A",
         displayNo: fullInvoice.custom_uhid || "N/A",
         dept: fullInvoice.custom_department || "N/A",
-        visitType: fullInvoice.custom_visit_type || "N/A",
+        visitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || "N/A",
         company: fullInvoice.company || "N/A",
         visitID: fullInvoice.custom_visit_code || "N/A",
         bed: fullInvoice.custom_bed_no || "N/A",
@@ -4919,8 +4952,14 @@ export default function Return() {
                   batch_no: item.batchNo || '',
                   custom_expiry_date: item.expiryDate || '',
                   warehouse: item.warehouse || selectedWarehouse,
-                  patient_amount: Number(item.patientAmount) || 0,
-                  payer_amount: Number(item.payerAmount) || 0,
+                  patient_amount: Number(item.patientAmount) || 0.0,
+                  payer_amount: Number(item.payerAmount) || 0.0,
+                  patientAmount: Number(item.patientAmount) || 0.0,
+                  companyAmount: Number(item.payerAmount) || 0.0,
+                  co_pay: Number(item.coPayPercentage) || 0,
+                  covered: item.covered ? 1 : 0,
+                  pre_auth_req: item.preAuthRequired ? "Yes" : "No",
+                  pre_auth_status: item.preAuthStatus || "",
                 };
               });
               const refundMode = 'Cash';
@@ -4934,6 +4973,16 @@ export default function Return() {
                 customer: selectedCustomer || '',
                 company: selectedCompany || '',
                 pos_profile: posProfile || '',
+                payer_amount: totalPayerAmount,
+                patient_amount: totalPatientAmount,
+                custom_payer_category: payerCategory || '',
+                custom_payer_name: payerName || '',
+                custom_sub_insurance: subInsurance || '',
+                custom_network: network || '',
+                custom_insurance_no: insuranceNo || '',
+                custom_other_no: otherNo || '',
+                custom_validity_from: validityFrom || '',
+                custom_validity_to: validityTo || '',
                 // Custom fields
                 custom_patient_name: patientData?.name || '',
                 custom_uhid: patientData?.ABHAID || '',
@@ -5050,8 +5099,14 @@ export default function Return() {
                 batch_no: item.batchNo || '',
                 custom_expiry_date: item.expiryDate || '',
                 warehouse: item.warehouse || selectedWarehouse,
-                patient_amount: Number(item.patientAmount) || 0,
-                payer_amount: Number(item.payerAmount) || 0,
+                patient_amount: Number(item.patientAmount) || 0.0,
+                payer_amount: Number(item.payerAmount) || 0.0,
+                patientAmount: Number(item.patientAmount) || 0.0,
+                companyAmount: Number(item.payerAmount) || 0.0,
+                co_pay: Number(item.coPayPercentage) || 0,
+                covered: item.covered ? 1 : 0,
+                pre_auth_req: item.preAuthRequired ? "Yes" : "No",
+                pre_auth_status: item.preAuthStatus || "",
               };
             });
             const refundMode = 'Cash';
@@ -5065,6 +5120,16 @@ export default function Return() {
               customer: selectedCustomer || '',
               company: selectedCompany || '',
               pos_profile: posProfile || '',
+              payer_amount: totalPayerAmount,
+              patient_amount: totalPatientAmount,
+              custom_payer_category: payerCategory || '',
+              custom_payer_name: payerName || '',
+              custom_sub_insurance: subInsurance || '',
+              custom_network: network || '',
+              custom_insurance_no: insuranceNo || '',
+              custom_other_no: otherNo || '',
+              custom_validity_from: validityFrom || '',
+              custom_validity_to: validityTo || '',
               // Custom fields
               custom_patient_name: patientData?.name || '',
               custom_uhid: patientData?.ABHAID || '',
@@ -5811,6 +5876,9 @@ export default function Return() {
             totalCgstAmount={totalCgstAmount}
             totalSgstAmount={totalSgstAmount}
             totalIgstAmount={totalIgstAmount}
+            totalPayerAmount={totalPayerAmount}
+            totalPatientAmount={totalPatientAmount}
+            showPayerPatientAmounts={true}
             posProfile={posProfile || undefined}
             onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
           // onRecordPayments prop is removed
@@ -6041,7 +6109,10 @@ export default function Return() {
               >
                 Return Bill
               </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving || !!loadedInvoiceName} onClick={handleFinalizeAndPrint}>
+              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
+                Closing Entry
+              </Button>
+              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
                 Submit Return
               </Button>
             </>
@@ -6224,7 +6295,7 @@ export default function Return() {
                   mrn: firstInvoice.custom_mrn || '',
                   displayNo: firstInvoice.custom_display_no || '',
                   dept: firstInvoice.custom_department || '',
-                  visitType: firstInvoice.custom_visit_type || '',
+                  visitType: firstInvoice.visit_type || firstInvoice.custom_visit_type || '',
                   company: firstInvoice.custom_company || '',
                   visitID: firstInvoice.custom_visit_code || '',
                   bed: firstInvoice.custom_bed || '',

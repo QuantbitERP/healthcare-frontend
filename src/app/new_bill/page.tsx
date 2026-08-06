@@ -234,7 +234,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        console.log("generic item data", data);
+
         let fetchedItems: Item[] = data.data.map((item: any) => ({
           id: item.name || '', // Use item.name (which is itemCode) as the initial ID
           itemCode: item.name || '',
@@ -294,12 +294,6 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
         // Filter items by business category if company is selected
         if (selectedCompany) {
-          console.log("Filtering items for company:", selectedCompany);
-          console.log("Items before filtering:", fetchedItems.map(item => ({
-            name: item.itemName,
-            business_category: item.custom_business_category
-          })));
-
           // Check if any items have matching business categories
           const itemsWithMatchingCategories = fetchedItems.filter(item => {
             if (!item.custom_business_category) return false;
@@ -308,14 +302,8 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           });
 
           // If no items match exactly, show all items (fallback behavior)
-          if (itemsWithMatchingCategories.length === 0) {
-            console.log("No items match the selected company exactly. Showing all items.");
-            console.log("Items after filtering:", fetchedItems.length);
-            // Return all items without filtering
-          } else {
-            // Filter to show only matching items
+          if (itemsWithMatchingCategories.length != 0) {
             fetchedItems = itemsWithMatchingCategories;
-            console.log("Items after filtering:", fetchedItems.length);
           }
         }
 
@@ -530,7 +518,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       use_serial_batch_fields: 1,
       custom_classification: item.custom_classification, // Explicitly preserve custom_classification for high-alert check
     };
-    console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
+
     onSelectItem(itemWithBatchAndRate);
     // setSearchTerm(''); // Don't clear search term immediately, allow further selections
     // setSuggestions([]);
@@ -617,12 +605,6 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
           remainingQty -= qtyToTake;
         }
-      }
-
-      // Show detailed allocation message
-      if (allocationDetails.length > 0) {
-        const allocationText = allocationDetails.join(' + ');
-        console.log(`FEFO Allocation: ${totalRequestedQty} units = ${allocationText}`);
       }
     }
 
@@ -971,26 +953,6 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
   }
 
-  console.log('calculateItemTaxAndTotals (MRP Inclusive GST):', {
-    itemCode: item.itemCode,
-    mrp,
-    saleQty,
-    discountPercent,
-    cgstPercent,
-    sgstPercent,
-    igstPercent,
-    includedInPrintRate,
-    basePricePerUnit: includedInPrintRate && (cgstPercent + sgstPercent + igstPercent) > 0
-      ? mrp / (1 + (cgstPercent + sgstPercent + igstPercent) / 100)
-      : mrp,
-    discountAmount,
-    priceAfterDiscountBase: taxableAmount,
-    cgstAmount,
-    sgstAmount,
-    igstAmount,
-    totalAmount
-  });
-
   return {
     ...item,
     itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
@@ -1049,7 +1011,6 @@ export default function NewBill() {
   const fetchPricingRules = async (customer: string): Promise<any[]> => {
     try {
       if (!customer) {
-        console.log('Missing customer for pricing rules:', { customer });
         return [];
       }
       const authHeaders = getAuthHeaders();
@@ -1064,7 +1025,6 @@ export default function NewBill() {
 
       // Get visit type from patient data, default to "OPD" for OPD billing
       const visitType = patientData?.visitType || "OPD";
-      console.log('Fetching pricing rules for visit type:', visitType, 'customer:', customer, 'transaction type:', transactionType);
 
       // Fetch pricing rules for the customer with visit type and transaction type filters
       const encodedCustomer = encodeURIComponent(customer);
@@ -1074,14 +1034,13 @@ export default function NewBill() {
         `["custom_visit_type","=","${visitType}"]`,
         `["disable","=",0]`
       ];
-      console.log('Base filters:', baseFilters);
 
       let allPricingRules: any[] = [];
 
       if (transactionType === 'cash') {
         // Fetch cash-specific rules
         const cashFilters = [...baseFilters, '["custom_cash","=",1]'];
-        console.log('Cash filters:', cashFilters);
+
         const cashResponse = await fetch(`${API_BASE_URL}/Pricing%20Rule?filters=[${cashFilters.join(',')}]&fields=["name","title","discount_percentage","rate_or_discount","apply_on","for_price_list","valid_from","valid_upto","items","custom_is_landing_cost_applicable","margin_rate_or_amount"]&order_by=modified desc`,
           {
             method: 'GET',
@@ -1092,12 +1051,10 @@ export default function NewBill() {
 
         if (cashResponse.ok) {
           const cashData = await cashResponse.json();
-          console.log('Cash pricing rules response:', cashData);
+
           if (cashData.data && Array.isArray(cashData.data)) {
             allPricingRules = allPricingRules.concat(cashData.data);
           }
-        } else {
-          console.log('Cash pricing rules request failed:', cashResponse.status, cashResponse.statusText);
         }
 
         // Fetch rules that apply to all transaction types
@@ -1157,8 +1114,6 @@ export default function NewBill() {
         index === self.findIndex((r) => r.name === rule.name)
       );
 
-      console.log('Fetched pricing rules:', uniqueRules.length, 'rules for transaction type:', transactionType);
-
       if (uniqueRules && Array.isArray(uniqueRules)) {
         // Fetch complete pricing rule documents with their items
         const pricingRulesWithItems = await Promise.all(
@@ -1175,13 +1130,10 @@ export default function NewBill() {
                 const ruleData = await ruleResponse.json();
                 const fullRule = ruleData.data;
                 rule.items = fullRule.items || [];
-                console.log(`Fetched ${rule.items.length} items for pricing rule ${rule.name}:`, rule.items);
               } else {
-                console.log(`Failed to fetch complete pricing rule ${rule.name}`);
                 rule.items = [];
               }
             } catch (error) {
-              console.error(`Error fetching pricing rule ${rule.name}:`, error);
               rule.items = [];
             }
             return rule;
@@ -1198,10 +1150,6 @@ export default function NewBill() {
 
             const isValidDate = (!validFrom || currentDate >= validFrom) &&
               (!validTo || currentDate <= validTo);
-
-            if (isValidDate) {
-              console.log('Valid pricing rule found:', rule.name, 'Discount:', rule.discount_percentage + '%');
-            }
 
             return isValidDate;
           }
@@ -1226,11 +1174,8 @@ export default function NewBill() {
       const pricingRules = await fetchPricingRules(customer);
 
       if (!pricingRules.length) {
-        console.log('No pricing rules found for customer:', customer);
         return items;
       }
-
-      console.log('Applying pricing rules to', items.length, 'items');
 
       return await Promise.all(items.map(async (item) => {
         const updatedItem = { ...item };
@@ -1238,7 +1183,6 @@ export default function NewBill() {
         for (const rule of pricingRules) {
           // Skip disabled pricing rules
           if (rule.disable) {
-            console.log(`Skipping disabled pricing rule ${rule.name}`);
             continue;
           }
 
@@ -1249,11 +1193,7 @@ export default function NewBill() {
             // Check if item is in the rule's items list
             if (rule.items && rule.items.length > 0) {
               ruleApplies = rule.items.some((ruleItem: any) => ruleItem.item_code === item.itemCode);
-              if (ruleApplies) {
-                console.log(`Pricing rule ${rule.name} applies to item ${item.itemCode} (found in items list)`);
-              }
             } else {
-              console.log(`Pricing rule ${rule.name} has no items defined, skipping`);
               ruleApplies = false;
             }
           } else if (rule.apply_on === 'Item Group' && rule.item_groups && rule.item_groups.length > 0) {
@@ -1272,8 +1212,6 @@ export default function NewBill() {
             if (rule.custom_is_landing_cost_applicable) {
               // For landing cost rules, we need margin_rate_or_amount
               if (rule.margin_rate_or_amount && rule.margin_rate_or_amount > 0) {
-                console.log(`Pricing rule ${rule.name} has landing cost applicable with margin ${rule.margin_rate_or_amount}%, fetching landing cost...`);
-
                 // Fetch landing cost from Item Price
                 const landingCost = await fetchLandingCost(item.itemCode, item.batchNo, 'Standard Selling');
 
@@ -1282,34 +1220,11 @@ export default function NewBill() {
                   const marginAmount = (landingCost * rule.margin_rate_or_amount) / 100;
                   updatedItem.rate = landingCost + marginAmount;
                   updatedItem.appliedPricingRule = rule.name;
-
-                  console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with landing cost + margin:`);
-                  console.log(`  Original Rate: ₹${originalRate}`);
-                  console.log(`  Landing Cost: ₹${landingCost}`);
-                  console.log(`  Margin: ${rule.margin_rate_or_amount}%`);
-                  console.log(`  Margin Amount: ₹${marginAmount}`);
-                  console.log(`  New Rate: ₹${updatedItem.rate}`);
-
-                  // Only apply the first matching rule (highest priority)
                   break;
                 } else {
-                  console.log(`No valid landing cost found for ${item.itemCode}, applying margin to original rate instead`);
-                  // Apply margin to original rate if no landing cost found
-                  // const marginAmount = (originalRate * rule.margin_rate_or_amount) / 100;
-                  // updatedItem.rate = originalRate + marginAmount;
                   updatedItem.appliedPricingRule = rule.name;
-
-                  // console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with original rate + margin:`);
-                  // console.log(`  Original Rate: ₹${originalRate}`);
-                  // console.log(`  Margin: ${rule.margin_rate_or_amount}%`);
-                  // console.log(`  Margin Amount: ₹${marginAmount}`);
-                  // console.log(`  New Rate: ₹${updatedItem.rate}`);
-
-                  // Only apply the first matching rule (highest priority)
                   break;
                 }
-              } else {
-                console.log(`Pricing rule ${rule.name} has landing cost applicable but no margin rate (margin_rate_or_amount: ${rule.margin_rate_or_amount}), skipping`);
               }
             } else if (rule.discount_percentage && rule.discount_percentage > 0) {
               // Standard pricing rule logic (discount based)
@@ -1317,12 +1232,6 @@ export default function NewBill() {
               updatedItem.rate = originalRate - discountAmount;
               updatedItem.appliedPricingRule = rule.name;
 
-              console.log(`Applied pricing rule ${rule.name} to ${item.itemCode}:`);
-              console.log(`  Original Rate: ₹${originalRate}`);
-              console.log(`  Discount: ${rule.discount_percentage}%`);
-              console.log(`  New Rate: ₹${updatedItem.rate}`);
-
-              // Only apply the first matching rule (highest priority)
               break;
             }
           }
@@ -1374,13 +1283,8 @@ export default function NewBill() {
           (!validUpto || currentDate <= validUpto);
 
         if (isValidPrice && itemPrice.custom_landing_cost) {
-          console.log(`Found landing cost ${itemPrice.custom_landing_cost} for item ${itemCode}, batch ${batchNo}`);
           return itemPrice.custom_landing_cost;
-        } else {
-          console.log(`Landing cost found but not valid for current date for item ${itemCode}, batch ${batchNo}`);
         }
-      } else {
-        console.log(`No landing cost found for item ${itemCode}, batch ${batchNo} in price list ${priceList}`);
       }
     } catch (error) {
       console.error('Error fetching landing cost from Item Price:', error);
@@ -1424,11 +1328,6 @@ export default function NewBill() {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for item batch data');
-        } else {
-          console.error('Failed to fetch batches:', response.status, response.statusText);
-        }
         return [];
       }
 
@@ -1478,21 +1377,15 @@ export default function NewBill() {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for item batch data');
-        } else {
-          console.error('Failed to fetch batches:', response.status, response.statusText);
-        }
         return [];
       }
 
       const data = await response.json();
-      console.log('fetchItemBatchesWithParams response for', itemCode, ':', data);
+
       if (data.message) {
-        console.log('Returning batches:', data.message, 'Type:', typeof data.message, 'Is Array:', Array.isArray(data.message));
         return data.message;
       }
-      console.log('No message in response, returning empty array');
+
       return [];
     } catch (error: any) {
       console.error('Error fetching batches:', error);
@@ -1568,13 +1461,8 @@ export default function NewBill() {
 
         if (isValidPrice && itemPrice.price_list_rate) {
           rate = itemPrice.price_list_rate;
-          console.log(`Set price ${rate} from Price List for item ${itemCode}, batch ${batchNo}`);
           return rate;
-        } else {
-          console.log(`Price found in Price List but not valid for current date for item ${itemCode}, batch ${batchNo}`);
         }
-      } else {
-        console.log(`No price found in Price List for item ${itemCode}, batch ${batchNo} in price list ${priceList}`);
       }
     } catch (error) {
       console.error('Error fetching item price from Price List:', error);
@@ -1599,9 +1487,6 @@ export default function NewBill() {
         const data = await response.json();
         if (data.data && data.data.length > 0 && data.data[0].custom_mrp) {
           rate = data.data[0].custom_mrp;
-          console.log(`Set price ${rate} from Batch custom_mrp for item ${itemCode}, batch ${batchNo}`);
-        } else {
-          console.log(`No custom_mrp found for item ${itemCode}, batch ${batchNo}`);
         }
       } catch (error) {
         console.error('Error fetching custom_mrp from Batch:', error);
@@ -1622,8 +1507,6 @@ export default function NewBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      console.log(`[BinLocation] Fetching item: ${itemCode}`);
-
       // Fetch the entire Item document
       const response = await fetch(`${API_BASE_URL}/Item/${itemCode}`, {
         method: 'GET',
@@ -1632,28 +1515,19 @@ export default function NewBill() {
       });
 
       if (!response.ok) {
-        console.log(`[BinLocation] Failed to fetch item ${itemCode}, status: ${response.status}`);
         return "";
       }
 
       const data = await response.json();
-      console.log(`[BinLocation] Item data received:`, data.data);
-
-      // Log all keys in the data object
-      if (data.data) {
-        console.log(`[BinLocation] Available fields:`, Object.keys(data.data));
-      }
 
       // Try different possible field names for the child table
       const childTableNames = ['custom_item_consumption_details', 'item_consumption_details', 'consumption_details'];
 
       for (const fieldName of childTableNames) {
-        console.log(`[BinLocation] Checking field: ${fieldName}`);
         if (data.data?.[fieldName]) {
-          console.log(`[BinLocation] Found field ${fieldName}:`, data.data[fieldName]);
           if (Array.isArray(data.data[fieldName]) && data.data[fieldName].length > 0) {
             const binLocation = data.data[fieldName][0].bin_location;
-            console.log(`[BinLocation] Found bin_location from ${fieldName}:`, binLocation);
+
             if (binLocation) {
               return binLocation;
             }
@@ -1663,11 +1537,9 @@ export default function NewBill() {
 
       // If no child table found, try direct bin_location field
       if (data.data?.bin_location) {
-        console.log('[BinLocation] Found direct bin_location field:', data.data.bin_location);
         return data.data.bin_location;
       }
 
-      console.log(`[BinLocation] No bin_location found for item ${itemCode}`);
       return "";
     } catch (error) {
       console.error('[BinLocation] Error fetching bin location:', error);
@@ -1691,8 +1563,6 @@ export default function NewBill() {
   // Handle barcode scanning
   const handleBarcodeScan = async (scannedBarcode: string) => {
     try {
-      console.log('Scanning barcode:', scannedBarcode);
-      console.log('Selected warehouse:', selectedWarehouse);
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
@@ -1722,8 +1592,6 @@ export default function NewBill() {
         return;
       }
 
-      console.log('Batch data:', batch);
-
       // Check if batch has stock in selected warehouse
       let stockQty = 0;
       if (selectedWarehouse) {
@@ -1740,21 +1608,14 @@ export default function NewBill() {
 
           if (batchQtyResponse.ok) {
             const stockData = await batchQtyResponse.json();
-            console.log('Stock balance response:', stockData);
-            // The response structure is {message: number} not {message: [{actual_qty: number}]}
             stockQty = stockData.message || 0;
-          } else {
-            console.log('Stock balance API failed:', batchQtyResponse.status);
           }
         } catch (error) {
           console.error('Error checking stock balance:', error);
         }
       } else {
-        console.log('No warehouse selected, using batch quantity as fallback');
         stockQty = batch.batch_qty || 0;
       }
-
-      console.log('Final stock quantity:', stockQty);
 
       // Only show stock warning if we have a warehouse selected and stock is 0
       if (selectedWarehouse && stockQty <= 0) {
@@ -1775,8 +1636,6 @@ export default function NewBill() {
 
       const itemData = await itemResponse.json();
       const item = itemData.data;
-
-      console.log('Item data:', item);
 
       // Check if item already exists in the table with the same batch
       const existingItemIndex = items.findIndex(
@@ -1831,8 +1690,6 @@ export default function NewBill() {
           mrp: batch.custom_mrp, // Store MRP from batch
           hasStock: stockQty > 0,
         };
-
-        console.log('New item created:', newItem);
 
         // Calculate tax and totals for the new item
         const calculatedItem = calculateItemTaxAndTotals(newItem, item.included_in_print_rate || false);
@@ -1960,7 +1817,6 @@ export default function NewBill() {
       try {
         const hasPermission = await checkUserRole("Allow Sale Rate Change");
         setCanChangeRate(hasPermission);
-        console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
       } catch (error) {
         console.error("Error checking user role:", error);
         setCanChangeRate(false);
@@ -1974,19 +1830,10 @@ export default function NewBill() {
 
   // Handle direct return checkbox changes
   useEffect(() => {
-    console.log('Direct return useEffect triggered:', { isReturn, isReturnInvoice, isDirectReturn, itemsLength: items.length });
-
     if (isReturn && !isReturnInvoice) {
-      // Direct return mode enabled (checkbox checked without loading invoice)
-      console.log('Setting direct return mode - Sale Qty column will be hidden');
-      // Set isReturnInvoice to true and isDirectReturn to true
       setIsReturnInvoice(true);
       setIsDirectReturn(true);
-
-      // No need to set saleQty to 0 since the column will be hidden
     } else if (!isReturn && isReturnInvoice) {
-      // Return mode disabled, reset all return states
-      console.log('Disabling return mode');
       setIsReturnInvoice(false);
       setIsDirectReturn(false);
     }
@@ -1995,7 +1842,6 @@ export default function NewBill() {
   // Reapply pricing rules when transaction type changes
   useEffect(() => {
     if (items.length > 0 && selectedCustomer) {
-      console.log('Transaction type changed, reapplying pricing rules...');
       applyPricingRulesToExistingItems();
     }
   }, [transactionType]);
@@ -2003,7 +1849,6 @@ export default function NewBill() {
   // Reapply pricing rules when customer changes
   useEffect(() => {
     if (items.length > 0) {
-      console.log('Customer changed, reapplying pricing rules...');
       applyPricingRulesToExistingItems();
     }
   }, [selectedCustomer]);
@@ -2011,7 +1856,6 @@ export default function NewBill() {
   // Reapply pricing rules when visit type changes (from patient data)
   useEffect(() => {
     if (items.length > 0 && selectedCustomer && patientData?.visitType) {
-      console.log('Visit type changed, reapplying pricing rules...');
       applyPricingRulesToExistingItems();
     }
   }, [patientData?.visitType]);
@@ -2027,9 +1871,6 @@ export default function NewBill() {
 
       if (updatedItems && updatedItems.length > 0) {
         setItems(updatedItems);
-        console.log('Pricing rules reapplied successfully:', updatedItems.length, 'items updated');
-      } else {
-        console.log('No pricing rules applied, keeping original items');
       }
     } catch (error) {
       console.error('Error reapplying pricing rules:', error);
@@ -2094,18 +1935,12 @@ export default function NewBill() {
 
       const reqData = await reqResponse.json();
       const requisitionItems = reqData.data?.patient_requisition_item_details || [];
-      console.log("Requisition items for", reqNo, ":", requisitionItems);
 
       // Try different field names for quantity
       const totalQty = requisitionItems.reduce((sum: number, item: any) => {
-        // Debug: Show all available fields
-        console.log("Item fields:", Object.keys(item), "Item data:", item);
         const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
-        console.log("Using quantity field:", qty, "from item:", item);
         return sum + qty;
       }, 0);
-
-      console.log("Total quantity calculated:", totalQty);
 
       // Get invoiced quantity from Sale Bills
       const invoiceResponse = await fetch(
@@ -2124,13 +1959,11 @@ export default function NewBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log("Invoices for requisition", reqNo, ":", invoices);
+
       let invoicedQty = 0;
 
       // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
-        console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
-
         try {
           const fullInvoiceResponse = await fetch(
             `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
@@ -2146,10 +1979,8 @@ export default function NewBill() {
             const fullInvoice = fullInvoiceData.data;
 
             if (fullInvoice?.items) {
-              console.log("Invoice items:", fullInvoice.items);
               const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
               invoicedQty += invoiceQty;
-              console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
             }
           }
         } catch (error) {
@@ -2157,7 +1988,6 @@ export default function NewBill() {
         }
       }
 
-      console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
       return { total_qty: totalQty, invoiced_qty: invoicedQty };
     } catch (error) {
       console.error("Error getting requisition quantities:", error);
@@ -2176,9 +2006,6 @@ export default function NewBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-
-      console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
-
       // Get all invoices for this requisition
       const invoiceResponse = await fetch(
         `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
@@ -2196,7 +2023,6 @@ export default function NewBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
 
       let totalInvoicedQty = 0;
 
@@ -2216,17 +2042,12 @@ export default function NewBill() {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
 
-            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
-
             if (fullInvoice?.items) {
-              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
-
               // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
                 .filter((item: any) => item.item_code === itemCode)
                 .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
 
-              console.log(`Item ${itemCode} quantity in invoice ${invoice.name}: ${itemInvoiceQty}`);
               totalInvoicedQty += itemInvoiceQty;
             }
           } else {
@@ -2237,7 +2058,6 @@ export default function NewBill() {
         }
       }
 
-      console.log(`Item ${itemCode} in requisition ${reqNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting item invoiced quantity:", error);
@@ -2304,7 +2124,6 @@ export default function NewBill() {
         }
       }
 
-      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting prescription item invoiced quantity:", error);
@@ -2333,22 +2152,16 @@ export default function NewBill() {
 
       if (forceComplete) {
         status = "Completed";
-        console.log("Force completing requisition:", reqNo);
       } else {
         // Check current status based on quantities
         const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
-        console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
 
         if (total_qty > 0 && invoiced_qty >= total_qty) {
           status = "Completed";
-          console.log("Requisition marked as Completed");
         } else {
           status = "Pending";
-          console.log("Requisition marked as Pending");
         }
       }
-
-      console.log("Updating requisition", reqNo, "status to:", status);
 
       // Update the requisition status
       const response = await fetch(
@@ -2368,7 +2181,6 @@ export default function NewBill() {
         console.error("Failed to update requisition status:", errorData);
       } else {
         const result = await response.json();
-        console.log(`Requisition ${reqNo} status updated to: ${status}`, result);
 
         // Verify the update by fetching the requisition again
         try {
@@ -2381,10 +2193,6 @@ export default function NewBill() {
             }
           );
 
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            console.log("Verification - Current status in database:", verifyData.data?.custom_requisition_status);
-          }
         } catch (verifyError) {
           console.error("Failed to verify status update:", verifyError);
         }
@@ -2394,22 +2202,18 @@ export default function NewBill() {
     }
   };
 
-  // --- START: Added function to clear file ---
   const handleClearFile = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevents the modal from opening
+    e.stopPropagation();
     setSelectedDocument(null);
   };
-  // --- END: Added function to clear file ---
 
-  // --- START: File upload function ---
   const uploadFile = async (file: File, invoiceName?: string): Promise<string | null> => {
     try {
-      // First upload the file
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('is_private', '0'); // Make file public
+      formData.append('is_private', '0');
+
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
@@ -2434,7 +2238,6 @@ export default function NewBill() {
       }
 
       const result = await response.json();
-      console.log("File upload result:", result);
 
       if (result.message && result.message.file_url) {
         const fileUrl = result.message.file_url;
@@ -2464,13 +2267,6 @@ export default function NewBill() {
                 folder: 'Home/Attachments'
               }),
             });
-
-            if (fileDocResponse.ok) {
-              console.log("File document created and linked to invoice:", invoiceName);
-            } else {
-              console.error("Failed to create File document:", await fileDocResponse.json());
-              // Still return the URL even if linking failed
-            }
           } catch (error) {
             console.error("Error creating File document:", error);
             // Still return the URL even if linking failed
@@ -2688,7 +2484,6 @@ export default function NewBill() {
         const defaultCompany = await fetchUserDefaultCompany();
         if (defaultCompany) {
           setSelectedCompany(defaultCompany);
-          console.log("Default company set:", defaultCompany);
         }
       }
     };
@@ -2741,14 +2536,11 @@ export default function NewBill() {
 
         if (taxAccountsResponse.ok) {
           const taxAccountsData = await taxAccountsResponse.json();
-          console.log('Tax accounts response:', taxAccountsData);
+
           if (taxAccountsData.message) {
             setCgstAccounts(taxAccountsData.message.cgst_accounts || []);
             setSgstAccounts(taxAccountsData.message.sgst_accounts || []);
             setIgstAccounts(taxAccountsData.message.igst_accounts || []);
-            console.log('CGST Accounts:', taxAccountsData.message.cgst_accounts);
-            console.log('SGST Accounts:', taxAccountsData.message.sgst_accounts);
-            console.log('IGST Accounts:', taxAccountsData.message.igst_accounts);
           }
         } else {
           console.error('Failed to fetch tax accounts:', taxAccountsResponse.status, taxAccountsResponse.statusText);
@@ -2783,16 +2575,12 @@ export default function NewBill() {
           credentials: 'include',
           body: JSON.stringify({ company: selectedCustomer }),
         });
-        console.log("Fetching GST Category for company:", selectedCompany);
 
         if (response.ok) {
           const data = await response.json();
           if (data.gst_category) {
             setGstCategory(data.gst_category);
-            console.log("Fetched GST Category:", data.gst_category);
           }
-        } else {
-          console.error('Failed to fetch GST category:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error fetching GST category:', error);
@@ -2806,7 +2594,6 @@ export default function NewBill() {
   useEffect(() => {
     const fetchCompanyAddress = async () => {
       if (!selectedCustomer) {
-        console.log('Missing required parameters:', { selectedCustomer });
         setCompanyAddress(null);
         return;
       }
@@ -2831,18 +2618,12 @@ export default function NewBill() {
           }
         );
 
-        console.log('Fetching Company Billing Address for company:', selectedCustomer);
-        console.log('Response:', response);
-
         const data = await response.json();
-        console.log('Response JSON for Company Address:', data);
 
         if (response.ok && data.message) {
           if (data.message.company_address) {
             setCompanyAddress(data.message.company_address);
-            console.log('Fetched Company Address:', data.message.company_address);
           } else {
-            console.log('No company address found for:', selectedCustomer);
             setCompanyAddress(null);
           }
         } else {
@@ -2981,12 +2762,7 @@ export default function NewBill() {
     const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
     const classification = item.custom_classification || "";
     const isHighAlert = highAlertClassifications.includes(classification);
-    console.log('Checking high-alert classification:', {
-      itemCode: item.itemCode,
-      itemName: item.itemName,
-      classification,
-      isHighAlert
-    });
+    
     return isHighAlert;
   };
 
@@ -3019,32 +2795,16 @@ export default function NewBill() {
 
     const isCritical = activeCategories.length > 0;
 
-    console.log('Checking critical categories:', {
-      itemCode: item.itemCode,
-      itemName: item.itemName,
-      isCritical,
-      categories: activeCategories
-    });
-
     return { isCritical, categories: activeCategories };
   };
 
   const handleAddItemToDetails = async (item: Item) => {
-    console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
-      // Check for duplicate item with same batch
-      console.log("Checking for duplicate:", {
-        newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
-        existingItems: items.map(i => ({ itemCode: i.itemCode, batchNo: i.batchNo, itemName: i.itemName, id: i.id }))
-      });
-
       const existingItemIndex = items.findIndex(existingItem =>
         existingItem.itemCode === item.itemCode &&
         existingItem.batchNo === item.batchNo &&
         existingItem.batchNo !== '' // Only check if batchNo is not empty
       );
-
-      console.log("Duplicate check result:", { existingItemIndex, itemCode: item.itemCode, batchNo: item.batchNo });
 
       if (existingItemIndex !== -1) {
         const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
@@ -3076,30 +2836,19 @@ export default function NewBill() {
         const itemsWithPricingRule = await applyPricingRules([{ ...item, rate: finalRate }], selectedCustomer);
         if (itemsWithPricingRule.length > 0 && itemsWithPricingRule[0].rate !== finalRate && itemsWithPricingRule[0].rate !== null) {
           finalRate = itemsWithPricingRule[0].rate;
-          console.log(`Applied pricing rule in handleAddItemToDetails. New rate: ${finalRate}`);
         }
       }
 
       // Fetch bin_location from Item doctype
-      console.log(`[BinLocation] Fetching bin_location for item: ${item.itemCode}`);
       const binLocation = await fetchBinLocationFromItem(item.itemCode);
-      console.log(`[BinLocation] Fetched bin_location: ${binLocation}`);
 
-      // Batch expiry warning check
-      console.log("Batch Expiry Warning Check - finalExpiryDate:", finalExpiryDate);
-      console.log("Batch Expiry Warning Check - Date.now():", Date.now());
       const daysUntilExpiry = Math.round((new Date(finalExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
-      console.log("Batch Expiry Warning Check - daysUntilExpiry:", daysUntilExpiry);
       const customAllowSaleDays = item.custom_allow_sale_days || 0; // Default to 0 if undefined
-      console.log("Batch Expiry Warning Check - customAllowSaleDays:", customAllowSaleDays);
+
       if (customAllowSaleDays > 0) {
         if (daysUntilExpiry > 0 && daysUntilExpiry <= customAllowSaleDays) {
-          console.log(`Batch ${finalBatchNo} of item ${item.itemName} expires in ${daysUntilExpiry} days. Please verify before proceeding.`);
-          console.log("Showing batch expiry warning alert...");
           showAlert("warning", "Batch Expiry Warning", `Batch ${finalBatchNo} of ${item.itemName} will expire in ${daysUntilExpiry} days (Expiry Date: ${finalExpiryDate}). This is within the allowed sale period of ${customAllowSaleDays} days.`);
         } else if (daysUntilExpiry <= 0) {
-          console.log(`Batch ${finalBatchNo} of item ${item.itemName} has already expired. Please verify before proceeding.`);
-          console.log("Showing batch expiry error alert...");
           showAlert("danger", "Batch Expired", `Batch ${finalBatchNo} of ${item.itemName} has already expired (Expiry Date: ${finalExpiryDate}). Cannot add to bill.`);
           return; // Don't add expired batch
         }
@@ -3123,7 +2872,7 @@ export default function NewBill() {
           alternateBatches: item.substituteItem ? "1" : "",
           includedInPrintRate: true, // Always consider included_in_print_rate as true
         });
-        console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
+
         if (newItemWithCalculations) {
           const updatedItems = [...prevItems, newItemWithCalculations];
           // Recalculate totals for all items
@@ -3178,12 +2927,6 @@ export default function NewBill() {
   // Save as Draft functionality
   // Inside NewBill component
   const handleSaveAsDraft = async (skipHighAlertCheck: boolean = false) => {
-    // Prevent multiple submissions
-    if (isSaving) {
-      console.log('Save operation already in progress');
-      return;
-    }
-
     if (!patientData) {
       showAlert("danger", "Error", "Please select a patient before saving.");
       setIsSaving(false);
@@ -3209,11 +2952,9 @@ export default function NewBill() {
 
     // Check for high-alert items and show confirmation if any exist (unless skipped)
     if (!skipHighAlertCheck) {
-      console.log("Checking for high-alert items in save draft, items count:", items.length);
       const highAlertItems = items.filter(item => checkHighAlertClassification(item));
-      console.log("High-alert items found:", highAlertItems.length);
+
       if (highAlertItems.length > 0) {
-        console.log("Showing high-alert save dialog");
         // const highAlertItemNames = highAlertItems.map(item => `${item.itemName} (${item.custom_classification})`).join(', ');
         setHighAlertItems(highAlertItems);
         setPendingSaveAction('draft');
@@ -3242,9 +2983,7 @@ export default function NewBill() {
 
     // Check if requisition is fully completed
     if (sourceDocumentName && sourceDocumentType === 'requisition') {
-      console.log("Checking requisition completion for:", sourceDocumentName);
       const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
-      console.log("Is requisition fully completed?", isFullyCompleted);
 
       if (isFullyCompleted) {
         showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
@@ -3269,17 +3008,6 @@ export default function NewBill() {
     // Calculate total discount amount for invoice level
     const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
     // const hasAnyDiscount = items.some(item => (Number(item.discountPercent) || 0) > 0);
-
-    // console.log('Save Draft - Discount calculation debug:', {
-    //   items: items.map(item => ({
-    //     itemCode: item.itemCode,
-    //     discountPercent: item.discountPercent,
-    //     discountAmt: item.discountAmt,
-    //     rate: item.rate
-    //   })),
-    //   totalDiscountAmount,
-    //   hasAnyDiscount
-    // });
 
     const payload = {
       doctype: "Sale Bill",
@@ -3340,22 +3068,6 @@ export default function NewBill() {
         const totalIgstAmount = igstAmountPerUnit * saleQty;
         const totalAmount = finalAmountPerUnit * saleQty;
         const netAmount = taxableAmountPerUnit * saleQty;
-
-        console.log('Saving item with MRP Inclusive GST (Frappe format):', {
-          itemCode: calculatedItem.itemCode,
-          mrp,
-          saleQty,
-          discountPercent,
-          discountAmountOnMrp,
-          rateAfterDiscount,
-          taxableAmountPerUnit,
-          cgstAmountPerUnit,
-          sgstAmountPerUnit,
-          igstAmountPerUnit,
-          finalAmountPerUnit,
-          totalAmount,
-          netAmount
-        });
 
         return {
           item_code: calculatedItem.itemCode,
@@ -3439,6 +3151,10 @@ export default function NewBill() {
       custom_bed_no: patientData?.bed || "",
       custom_department: selectedDepartment || patientData?.dept || "",
       custom_hospital: selectedHospital || "",
+      visit_type: "OPD",
+      visit_no: patientData?.visitID || "",
+      is_cash_bill: transactionType === 'cash' ? 1 : 0,
+      is_credit_bill: transactionType === 'credit' ? 1 : 0,
     };
 
     // Construct the taxes array dynamically
@@ -3528,12 +3244,10 @@ export default function NewBill() {
     let attachmentUrl: string | null = null;
     let selectedFile: File | null = null;
     if (selectedDocument) {
-      console.log("Preparing to upload document:", selectedDocument.name);
       selectedFile = selectedDocument;
       // Upload the file first to get the URL
       attachmentUrl = await uploadFile(selectedFile);
       if (attachmentUrl) {
-        console.log("Document uploaded successfully:", attachmentUrl);
       } else {
         console.warn("File upload failed, saving invoice without attachment");
         showAlert("warning", "Upload Warning", "File upload failed. Invoice saved without attachment.");
@@ -3543,19 +3257,10 @@ export default function NewBill() {
     // --- END: Handle file upload ---
 
     try {
-      console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-      console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
-      console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-
       // Check if a draft invoice is already loaded
       if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
-        // Update existing draft invoice using PUT request
-        console.log("Updating existing draft invoice:", loadedInvoiceName);
-        // Add docstatus: 0 to ensure Frappe recalculates totals
-
-        // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
+
         const headers = typeof authHeaders === 'string' ?
           JSON.parse(authHeaders) :
           Array.isArray(authHeaders) ?
@@ -3570,20 +3275,15 @@ export default function NewBill() {
         });
 
         if (response.ok) {
-          const result = await response.json();
           showAlert("success", "Success", `Sale Bill ${loadedInvoiceName} updated successfully!`);
-          console.log("Draft updated:", result);
-          // Keep the invoice loaded but don't reset
         } else {
           const errorData = await response.json().catch(() => ({}));
           console.error("Failed to update draft:", response.status, errorData);
           showAlert("danger", "Error", `Failed to update draft: ${errorData.message || 'Unknown error occurred.'}`);
         }
       } else {
-        // Create new draft invoice using POST request
-        // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
+
         const headers = typeof authHeaders === 'string' ?
           JSON.parse(authHeaders) :
           Array.isArray(authHeaders) ?
@@ -3596,7 +3296,6 @@ export default function NewBill() {
           credentials: 'include',
           body: JSON.stringify(finalPayload),
         });
-        console.log(response);
 
         if (response.ok) {
           const result = await response.json();
@@ -3609,12 +3308,10 @@ export default function NewBill() {
           else if (result.message?.status === "success") {
             // When draft saved successfully
             showAlert("success", "Success", result.message?.message || "Sale Bill saved as draft successfully!");
-            console.log("Draft saved:", result);
 
             // --- START: Link file to invoice if file was uploaded ---
             if (selectedFile && attachmentUrl && result.message?.data?.name) {
               const invoiceName = result.message.data.name;
-              console.log("Linking file to invoice:", invoiceName);
 
               try {
                 const authHeaders = getAuthHeaders();
@@ -3640,7 +3337,6 @@ export default function NewBill() {
                 });
 
                 if (fileDocResponse.ok) {
-                  console.log("File document created and linked to invoice:", invoiceName);
                   showAlert("success", "File Attached", "Document successfully attached to the invoice.");
                 } else {
                   console.error("Failed to create File document:", await fileDocResponse.json());
@@ -3730,19 +3426,12 @@ export default function NewBill() {
           // Set warehouse from POS Profile if available
           if (posProfileData.warehouse) {
             setSelectedWarehouse(posProfileData.warehouse);
-            console.log('Warehouse set automatically from POS Profile:', posProfileData.warehouse);
           }
-        } else if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for POS Profile data');
         } else {
           console.error('Failed to fetch POS Profile:', response.status, response.statusText);
         }
       } catch (error: any) {
-        if (error.response?.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for POS Profile data');
-        } else {
-          console.error('Error fetching POS Profile warehouse:', error);
-        }
+        console.error('Error fetching POS Profile warehouse:', error);
       }
     };
 
@@ -3755,8 +3444,6 @@ export default function NewBill() {
     }
 
     try {
-      console.log("Checking for opening entries for POS profile:", posProfile, "and user:", currentUser);
-
       // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
@@ -3779,7 +3466,6 @@ export default function NewBill() {
       );
 
       const result = await response.json();
-      console.log("Opening entries check result:", result);
 
       if (response.ok && result.message) {
         const conflictData = result.message;
@@ -3830,7 +3516,6 @@ export default function NewBill() {
 
   // Debug: Log patientData and selectedValue changes
   useEffect(() => {
-    console.log("patientData updated:", patientData);
   }, [patientData]);
 
   useEffect(() => {
@@ -3842,8 +3527,6 @@ export default function NewBill() {
   }, [transactionType]);
 
   const handleSelectRequisition = async (requisition: any) => {
-    console.log("Selected requisition:", requisition);
-    // Set source document information
     setSourceDocumentName(requisition.name);
     setSourceDocumentType('requisition');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
@@ -3874,7 +3557,6 @@ export default function NewBill() {
         const data = await response.json();
         fullRequisitionData = data.data;
       } else if (response.status === 403) {
-        console.log('Access forbidden (403) - User lacks permission for Patient Requisition details');
         showAlert("warning", "Access Restricted", "You don't have permission to view requisition details. The basic information will be used.");
         // Continue with the basic requisition data we already have
       } else {
@@ -3885,7 +3567,6 @@ export default function NewBill() {
       }
     } catch (error: any) {
       if (error.response?.status === 403) {
-        console.log('Access forbidden (403) - User lacks permission for Patient Requisition details');
         showAlert("warning", "Access Restricted", "You don't have permission to view requisition details. The basic information will be used.");
         // Continue with the basic requisition data we already have
       } else {
@@ -3914,42 +3595,27 @@ export default function NewBill() {
     };
     setPatientData(newPatientData);
 
-    // Auto-set customer based on requisition's patient company or default to self-paid
-    console.log('Customer population - requisition data:', fullRequisitionData);
-    console.log('Customer population - patient_company:', fullRequisitionData.patient_company);
-    console.log('Customer population - available customers:', customers);
-
     if (customers && customers.length > 0) {
       // If requisition has a patient company, try to find matching customer
       if (fullRequisitionData.patient_company) {
-        console.log('Looking for customer matching:', fullRequisitionData.patient_company);
         const matchingCustomer = customers.find((customer: any) =>
           customer.label === fullRequisitionData.patient_company || customer.value === fullRequisitionData.patient_company
         );
-        console.log('Found matching customer:', matchingCustomer);
+
         if (matchingCustomer) {
           setSelectedCustomer(matchingCustomer.value);
-          console.log('Set customer to requisition patient company:', matchingCustomer.value);
         } else {
-          // If no matching customer found, default to self-paid
-          console.log('No matching customer found, looking for self-paid customer');
           const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
           if (defaultSelfPaidCustomer) {
             setSelectedCustomer(defaultSelfPaidCustomer.value);
-            console.log('No matching customer found for requisition, defaulted to self-paid:', defaultSelfPaidCustomer.value);
           }
         }
       } else {
-        // If requisition has no patient company, default to self-paid
-        console.log('Requisition has no patient company, looking for self-paid customer');
         const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
         if (defaultSelfPaidCustomer) {
           setSelectedCustomer(defaultSelfPaidCustomer.value);
-          console.log('Requisition has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
         }
       }
-    } else {
-      console.log('No customers available for population');
     }
 
     // Set requisition details
@@ -3993,24 +3659,18 @@ export default function NewBill() {
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
 
-      console.log(`Processing requisition item: ${itemCode}, requestedQty: ${requestedQty}`);
-
       try {
         // Get the invoiced quantity for this specific item
         const invoicedQty = await getItemInvoicedQuantity(requisition.name, itemCode);
         let remainingQtyToAllocate = requestedQty - invoicedQty;
 
-        console.log(`Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
-
         // Skip items that are already fully invoiced
         if (remainingQtyToAllocate <= 0) {
-          console.log(`Skipping item ${itemCode} - already fully invoiced`);
           continue;
         }
 
         // Skip items with zero remaining quantity
         if (remainingQtyToAllocate === 0) {
-          console.log(`Skipping item ${itemCode} - no remaining quantity to allocate`);
           continue;
         }
 
@@ -4065,7 +3725,6 @@ export default function NewBill() {
           const qtyToTake = Math.min(remainingQtyToAllocate, batchAvailableQty);
 
           if (qtyToTake > 0) {
-            console.log(`Adding item: ${itemCode}, batch: ${batch.name}, qty: ${qtyToTake}`);
             const itemRate = await fetchItemPrice(itemCode, batch.name, 'Standard Selling');
             const batchStockQty = await getBatchQty(itemCode, batch.name, warehouse);
 
@@ -4153,11 +3812,9 @@ export default function NewBill() {
   };
 
   const handleSelectPrescription = async (prescription: any) => {
-    console.log("Selected prescription:", prescription);
-    // Set source document information
     setSourceDocumentName(prescription.prescription_number);
     setSourceDocumentType('prescription');
-    setIsItemsLoadedFromRequisitionOrPrescription(true);
+    // setIsItemsLoadedFromRequisitionOrPrescription(true);
 
     // Set Req ID field with prescription number and make it readonly
     setReqId(prescription.prescription_number);
@@ -4222,13 +3879,11 @@ export default function NewBill() {
         );
         if (matchingCustomer) {
           setSelectedCustomer(matchingCustomer.value);
-          console.log('Set customer to prescription patient company:', matchingCustomer.value);
         } else {
           // If no matching customer found, default to self-paid
           const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
           if (defaultSelfPaidCustomer) {
             setSelectedCustomer(defaultSelfPaidCustomer.value);
-            console.log('No matching customer found for prescription, defaulted to self-paid:', defaultSelfPaidCustomer.value);
           }
         }
       } else {
@@ -4236,7 +3891,6 @@ export default function NewBill() {
         const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
         if (defaultSelfPaidCustomer) {
           setSelectedCustomer(defaultSelfPaidCustomer.value);
-          console.log('Prescription has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
         }
       }
     }
@@ -4279,28 +3933,21 @@ export default function NewBill() {
     }
 
     for (const reqItem of fullPrescriptionData.patient_requisition_item_details) {
-      console.log('Prescription item details:', reqItem);
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
-      console.log('Processing item - itemCode:', itemCode, 'requestedQty:', requestedQty);
 
       try {
         // Get the invoiced quantity for this specific item from prescription
         const invoicedQty = await getItemInvoicedQuantityFromPrescription(prescription.prescription_number, itemCode);
         let remainingQtyToAllocate = requestedQty - invoicedQty;
 
-        console.log(`Prescription Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
-
         // Skip items that are already fully invoiced
         if (remainingQtyToAllocate <= 0) {
-          console.log(`Skipping prescription item ${itemCode} - already fully invoiced`);
           continue;
         }
 
         const batches = await fetchItemBatchesWithParams(itemCode, warehouse, company);
-        console.log('handleSelectPrescription - fetched batches for', itemCode, ':', batches, 'Type:', typeof batches, 'Is Array:', Array.isArray(batches));
         const sortedBatches = [...batches].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
-        console.log('handleSelectPrescription - sortedBatches for', itemCode, ':', sortedBatches, 'Length:', sortedBatches.length);
 
         if (sortedBatches.length === 0) {
           // Add item without stock to grid with red color indicator
@@ -4663,12 +4310,10 @@ export default function NewBill() {
   const [pendingSaveAction, setPendingSaveAction] = useState<'draft' | 'finalize' | null>(null);
 
   useEffect(() => {
-    console.log('Alert state changed:', alert);
   }, [alert]);
 
   // Show alert function
   const showAlert = (variant: AlertState['variant'], heading: string, content: string) => {
-    console.log('Setting alert state:', variant, heading, content);
     setAlert({
       show: true,
       variant,
@@ -4684,17 +4329,11 @@ export default function NewBill() {
   // High-alert dialog handlers
   const handleHighAlertConfirm = async () => {
     if (pendingItem) {
-      console.log("User confirmed high-alert item, proceeding with normal addition process:", pendingItem);
-
-      // Create a modified item that bypasses the high-alert check
-      // We'll add a flag to skip the high-alert check in the normal flow
       const itemForNormalAddition = {
         ...pendingItem,
         _skipHighAlertCheck: true, // Add flag to bypass high-alert check
       };
 
-      // Call the normal handleAddItemToDetails function
-      // This will ensure all calculations work exactly like normal item addition
       await handleAddItemToDetails(itemForNormalAddition);
     }
 
@@ -4706,7 +4345,6 @@ export default function NewBill() {
   };
 
   const handleHighAlertCancel = () => {
-    console.log("User cancelled adding high-alert item");
     setShowHighAlertDialog(false);
     setHighAlertItem(null);
     setPendingItem(null);
@@ -4715,8 +4353,6 @@ export default function NewBill() {
 
   // High-alert save dialog handlers
   const handleHighAlertSaveConfirm = async () => {
-    console.log("User confirmed high-alert items, proceeding with save/finalize");
-
     // Reset dialog state first
     setShowHighAlertSaveDialog(false);
     const actionToExecute = pendingSaveAction;
@@ -4725,18 +4361,13 @@ export default function NewBill() {
 
     // Execute the pending action - skip high-alert check this time
     if (actionToExecute === 'draft') {
-      // Call the actual save draft function with flag to skip high-alert check
-      console.log("Calling handleSaveAsDraft after high-alert confirmation");
-      await handleSaveAsDraft(true); // Pass true to skip high-alert check
+      await handleSaveAsDraft(true);
     } else if (actionToExecute === 'finalize') {
-      // Call the actual finalize function with flag to skip high-alert check
-      console.log("Calling handleFinalizeAndPrint after high-alert confirmation");
-      await handleFinalizeAndPrint(true); // Pass true to skip high-alert check
+      await handleFinalizeAndPrint(true);
     }
   };
 
   const handleHighAlertSaveCancel = () => {
-    console.log("User cancelled save/finalize due to high-alert items");
     setShowHighAlertSaveDialog(false);
     setHighAlertItems([]);
     setPendingSaveAction(null);
@@ -4745,13 +4376,11 @@ export default function NewBill() {
   // Apply global discount to all items
   const handleApplyGlobalDiscount = () => {
     if (items.length === 0) {
-      console.log('Setting alert state:', "warning", "Warning", "No items in the table to apply discount.");
       showAlert("warning", "Warning", "No items in the table to apply discount.");
       return;
     }
 
     if (globalDiscountPercent < 0 || globalDiscountPercent > 100) {
-      console.log('Setting alert state:', "danger", "Error", "Discount percentage must be between 0 and 100.");
       showAlert("danger", "Error", "Discount percentage must be between 0 and 100.");
       return;
     }
@@ -4775,13 +4404,6 @@ export default function NewBill() {
         ...item,
         discountPercent: globalDiscountPercent,
       }, true);
-
-      console.log('Applied global discount to item:', {
-        itemCode: item.itemCode,
-        discountPercent: globalDiscountPercent,
-        newDiscountAmount: calculated.discountAmt,
-        newTotalAmount: calculated.totalAmt
-      });
 
       return calculated;
     });
@@ -4822,7 +4444,6 @@ export default function NewBill() {
       const matchingItem = requisitionItems.find((item: any) => item.item_code === itemCode);
       if (matchingItem) {
         const reqQty = matchingItem.req_qty || matchingItem.quantity || matchingItem.qty || 0;
-        console.log(`Found req_qty for item ${itemCode}: ${reqQty}`);
         return reqQty;
       }
 
@@ -4874,21 +4495,11 @@ export default function NewBill() {
       if (response.ok) {
         const result = await response.json();
         if (result.message && result.message.length > 0) {
-          console.log("Found attachments for invoice:", invoiceName, result.message);
-
           // Store attachments in state
           setLoadedAttachments(result.message);
 
-          // Log the attachments
-          result.message.forEach((attachment: any) => {
-            console.log(`- ${attachment.file_name} (${attachment.file_url})`);
-          });
-
-          // Show alert about attachments
           showAlert("primary", "Attachments Found", `Found ${result.message.length} attachment(s) for this invoice.`);
         } else {
-          console.log("No attachments found for invoice:", invoiceName);
-          // Clear loaded attachments
           setLoadedAttachments([]);
         }
       } else {
@@ -4931,7 +4542,6 @@ export default function NewBill() {
 
       const data = await response.json();
       const fullInvoice = data.data;
-      console.log(fullInvoice)
 
       // Store loaded invoice details
       setLoadedInvoiceName(fullInvoice.name);
@@ -4952,7 +4562,7 @@ export default function NewBill() {
         mrn: fullInvoice.custom_uhid || "N/A",
         displayNo: fullInvoice.custom_uhid || "N/A",
         dept: fullInvoice.custom_department || "N/A",
-        visitType: fullInvoice.custom_visit_type || "N/A",
+        visitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || "N/A",
         company: fullInvoice.company || "N/A",
         visitID: fullInvoice.custom_visit_code || "N/A",
         bed: fullInvoice.custom_bed_no || "N/A",
@@ -5055,29 +4665,15 @@ export default function NewBill() {
 
           // Fetch current stock quantity for the batch in the warehouse
           let currentStockQty = 0;
-          console.log('Loading item:', {
-            item_code: invItem.item_code,
-            batch_no: invItem.batch_no,
-            warehouse: fullInvoice.warehouse,
-            set_warehouse: fullInvoice.set_warehouse
-          });
 
           if (invItem.batch_no && invItem.item_code && (fullInvoice.warehouse || fullInvoice.set_warehouse)) {
             const warehouse = fullInvoice.warehouse || fullInvoice.set_warehouse;
             try {
-              console.log(`Fetching stock for ${invItem.item_code}, batch ${invItem.batch_no}, warehouse ${warehouse}`);
               currentStockQty = await getBatchQty(invItem.item_code, invItem.batch_no, warehouse);
-              console.log(`Stock qty fetched: ${currentStockQty}`);
             } catch (error) {
               console.error(`Error fetching stock qty for ${invItem.item_code} batch ${invItem.batch_no}:`, error);
               currentStockQty = 0;
             }
-          } else {
-            console.log('Missing required data for stock fetch:', {
-              hasBatchNo: !!invItem.batch_no,
-              hasItemCode: !!invItem.item_code,
-              hasWarehouse: !!(fullInvoice.warehouse || fullInvoice.set_warehouse)
-            });
           }
 
           // Fetch req_qty from requisition/prescription if invoice has custom_req_no or custom_prescription_no
@@ -5177,12 +4773,7 @@ export default function NewBill() {
 
         setRecordedPayments(loadedPayments);
 
-        // Log total paid amount for debugging
-        const totalPaidAmount = loadedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
-        console.log('Payments loaded successfully. Total paid amount:', totalPaidAmount);
-        console.log('Individual payment amounts:', loadedPayments.map(p => ({ mode: p.paymentMode, amount: p.paidAmount })));
       } else {
-        // No payments found, set empty payment record
         setRecordedPayments([{
           id: 1,
           name: '',
@@ -5197,7 +4788,6 @@ export default function NewBill() {
           custom_branch_name: '',
           custom_transaction_no: ''
         }]);
-        console.log('No payments found in loaded invoice, set to 0');
       }
 
       // Reset flag after all data is loaded
@@ -5214,7 +4804,6 @@ export default function NewBill() {
   const handleFinalizeAndPrint = async (skipHighAlertCheck: boolean = false) => {
     // Prevent multiple submissions
     if (isSaving) {
-      console.log('Submit operation already in progress');
       return;
     }
 
@@ -5312,6 +4901,11 @@ export default function NewBill() {
           custom_phone: patientData?.phone || '',
           custom_doctor_name: patientData?.doctor || '',
           custom_age: patientData?.age || '',
+          visit_type: "OPD",
+          visit_no: patientData?.visitID || '',
+          transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
+          is_cash_bill: transactionType === 'cash' ? 1 : 0,
+          is_credit_bill: transactionType === 'credit' ? 1 : 0,
           return_items: itemsToReturn.map(item => {
             const returnQty = item.returnQty || 0;
             // const saleQty = item.saleQty || 1;
@@ -5418,11 +5012,8 @@ export default function NewBill() {
 
       // Check for high-alert items and show confirmation if any exist (unless skipped)
       if (!skipHighAlertCheck) {
-        console.log("Checking for high-alert items in finalize, items count:", items.length);
         const highAlertItems = items.filter(item => checkHighAlertClassification(item));
-        console.log("High-alert items found:", highAlertItems.length);
         if (highAlertItems.length > 0) {
-          console.log("Showing high-alert save dialog for finalize");
           // const highAlertItemNames = highAlertItems.map(item => `${item.itemName} (${item.custom_classification})`).join(', ');
           setHighAlertItems(highAlertItems);
           setPendingSaveAction('finalize');
@@ -5451,9 +5042,7 @@ export default function NewBill() {
 
       // Check if requisition is fully completed
       if (sourceDocumentName && sourceDocumentType === 'requisition') {
-        console.log("Checking requisition completion for:", sourceDocumentName);
         const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
-        console.log("Is requisition fully completed?", isFullyCompleted);
 
         if (isFullyCompleted) {
           showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
@@ -5524,22 +5113,6 @@ export default function NewBill() {
           const totalIgstAmount = igstAmountPerUnit * saleQty;
           const totalAmount = finalAmountPerUnit * saleQty;
           const netAmount = taxableAmountPerUnit * saleQty;
-
-          console.log('Finalize item with MRP Inclusive GST (Frappe format):', {
-            itemCode: calculatedItem.itemCode,
-            mrp,
-            saleQty,
-            discountPercent,
-            discountAmountOnMrp,
-            rateAfterDiscount,
-            taxableAmountPerUnit,
-            cgstAmountPerUnit,
-            sgstAmountPerUnit,
-            igstAmountPerUnit,
-            finalAmountPerUnit,
-            totalAmount,
-            netAmount
-          });
 
           return {
             item_code: item.itemCode,
@@ -5621,6 +5194,11 @@ export default function NewBill() {
         custom_bed_no: patientData?.bed || "",
         custom_department: selectedDepartment || patientData?.dept || "",
         custom_hospital: selectedHospital || "",
+        visit_type: "OPD",
+        visit_no: patientData?.visitID || "",
+        transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
+        is_cash_bill: transactionType === 'cash' ? 1 : 0,
+        is_credit_bill: transactionType === 'credit' ? 1 : 0,
       };
 
       // Construct the taxes array dynamically
@@ -5710,13 +5288,10 @@ export default function NewBill() {
       let attachmentUrl: string | null = null;
       let selectedFile: File | null = null;
       if (selectedDocument) {
-        console.log("Preparing to upload document for finalize:", selectedDocument.name);
         selectedFile = selectedDocument;
         // Upload the file first to get the URL
         attachmentUrl = await uploadFile(selectedFile);
-        if (attachmentUrl) {
-          console.log("Document uploaded successfully:", attachmentUrl);
-        } else {
+        if (!attachmentUrl) {
           console.warn("File upload failed, saving invoice without attachment");
           showAlert("warning", "Upload Warning", "File upload failed. Invoice saved without attachment.");
           selectedFile = null; // Clear the file if upload failed
@@ -5725,11 +5300,6 @@ export default function NewBill() {
       // --- END: Handle file upload ---
 
       try {
-        console.log("Final payload for creating submitted invoice:", finalPayload);
-        console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
-        console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-
-        // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
         const headers = typeof authHeaders === 'string' ?
@@ -5777,12 +5347,9 @@ export default function NewBill() {
         }
 
         showAlert("success", "Success", `Invoice ${invoiceName} created and submitted successfully!`);
-        console.log("Invoice created and submitted:", result);
 
         // --- START: Link file to invoice if file was uploaded ---
         if (selectedFile && attachmentUrl && invoiceName) {
-          console.log("Linking file to finalized invoice:", invoiceName);
-
           try {
             // Use the same authentication logic as other functions
             const authHeaders = getAuthHeaders();
@@ -5809,7 +5376,6 @@ export default function NewBill() {
             });
 
             if (fileDocResponse.ok) {
-              console.log("File document created and linked to invoice:", invoiceName);
               showAlert("success", "File Attached", "Document successfully attached to the invoice.");
             } else {
               console.error("Failed to create File document:", await fileDocResponse.json());
@@ -5884,7 +5450,6 @@ export default function NewBill() {
       });
 
       const result = await response.json();
-      console.log("Closing entry response:", result);
 
       if (response.ok && result.message.success) {
         showAlert("success", "Success", `POS Closing Entry ${result.closing_entry} created and submitted successfully!`);
@@ -6089,9 +5654,7 @@ export default function NewBill() {
                     <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
                     <Label htmlFor="terms">Generic</Label>
                     <Button type="primary-button" size="button-medium" onClick={() => {
-                      console.log('Patient Requisition button clicked');
                       setShowPatientRequisitionList(true)
-                      console.log('showPatientRequisitionList', showPatientRequisitionList);
                     }
                     }>
                       Patient Requisition
@@ -6551,7 +6114,6 @@ export default function NewBill() {
           <PatientRequisitionList
             isOpen={showPatientRequisitionList}
             onClose={() => {
-              console.log('Closing PatientRequisitionList');
               setShowPatientRequisitionList(false)
             }}
             onSelectRequisition={handleSelectRequisition}
@@ -6639,7 +6201,7 @@ export default function NewBill() {
                     mrn: invoice.custom_mrn || '',
                     displayNo: invoice.custom_display_no || '',
                     dept: invoice.custom_department || '',
-                    visitType: invoice.custom_visit_type || '',
+                    visitType: invoice.visit_type || invoice.custom_visit_type || '',
                     company: invoice.custom_company || '',
                     visitID: invoice.custom_visit_code || '',
                     bed: invoice.custom_bed || '',

@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 setApiSecret(newKeys.api_secret);
                 localStorage.setItem("apiKey", newKeys.api_key);
                 localStorage.setItem("apiSecret", newKeys.api_secret);
-                setSessionAuthPreference(true);
+                setSessionAuthPreference(false);
               } else {
                 setSessionAuthPreference(true);
               }
@@ -211,63 +211,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (document.visibilityState === 'visible') {
         console.log("AuthContext: Tab became visible, verifying active session...");
 
+        const currentStoredUser = localStorage.getItem("currentUser");
+        const currentStoredApiKey = localStorage.getItem("apiKey");
+        const currentStoredApiSecret = localStorage.getItem("apiSecret");
+        const useSessionAuth = localStorage.getItem("useSessionAuth") === "true";
+        const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
+
         try {
-          const { checkFrappeSession } = await import("@/utils/sessionAuth");
-          const sessionUser = await checkFrappeSession();
-
-          const currentStoredUser = localStorage.getItem("currentUser");
-
-          // If the Frappe session is dead, but we were logged in -> FULL LOGOUT
-          if (!sessionUser || !sessionUser.user) {
-            if (isAuthenticatedRef.current) {
-              console.log("Session died in background. Performing full logout...");
-              localStorage.clear();
-              sessionStorage.clear();
-              document.cookie.split(";").forEach((c) => {
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-              });
-              window.location.href = "/login";
-            }
-            return;
-          }
-
-          // If the Frappe session user is DIFFERENT than the Next.js user -> SWITCH USER
-          if (sessionUser.user && sessionUser.user !== currentStoredUser) {
-            console.log(`User changed from ${currentStoredUser} to ${sessionUser.user}. Re-authenticating...`);
-
-            // First, clear the old user's cache so the new user doesn't see it!
-            const { clearAllCache } = await import("@/api/api");
-            clearAllCache();
-
-            // Wipe old POS profile so new user has to select their own
-            setPosProfile(null);
-            localStorage.removeItem("posProfile");
-
-            setCurrentUser(sessionUser.user);
-            setIsAuthenticated(true);
-            localStorage.setItem("currentUser", sessionUser.user);
-
-            // Grab new API keys for the new user
-            const { getApiKeys } = await import("@/utils/sessionAuth");
-            const newKeys = await getApiKeys(sessionUser.user);
-            const isMasked = (secret: string | null | undefined) => secret ? secret.includes('***') : false;
-
-            if (newKeys && newKeys.api_key && newKeys.api_secret && !isMasked(newKeys.api_secret)) {
-              setApiKey(newKeys.api_key);
-              setApiSecret(newKeys.api_secret);
-              localStorage.setItem("apiKey", newKeys.api_key);
-              localStorage.setItem("apiSecret", newKeys.api_secret);
-              setSessionAuthPreference(true);
-            } else {
-              setSessionAuthPreference(true);
+          if (!useSessionAuth && currentStoredApiKey && currentStoredApiSecret && !isMasked(currentStoredApiSecret)) {
+            // Using API keys. Check if keys are still valid on the server.
+            console.log("AuthContext: Verifying stored API keys...");
+            const apiUser = await getCurrentUser(currentStoredApiKey, currentStoredApiSecret);
+            if (!apiUser) {
+              if (isAuthenticatedRef.current) {
+                console.log("API keys became invalid in background. Performing full logout...");
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie.split(";").forEach((c) => {
+                  document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+                window.location.href = "/login";
+              }
+              return;
             }
 
-            // Refresh CSRF token
-            const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
-            const token = await getFrappeCSRFToken();
-            if (token) {
-              setCsrfToken(token);
-              localStorage.setItem('csrfToken', token);
+            // If the user on the server is different from the stored user -> SWITCH USER
+            if (apiUser !== currentStoredUser) {
+              console.log(`User changed from ${currentStoredUser} to ${apiUser}. Re-authenticating...`);
+              const { clearAllCache } = await import("@/api/api");
+              clearAllCache();
+              setPosProfile(null);
+              localStorage.removeItem("posProfile");
+
+              setCurrentUser(apiUser);
+              setIsAuthenticated(true);
+              localStorage.setItem("currentUser", apiUser);
+
+              // Update the current state/storage with the new API keys (they should already match the ones we verified)
+              setApiKey(currentStoredApiKey);
+              setApiSecret(currentStoredApiSecret);
+              setSessionAuthPreference(false);
+            }
+          } else {
+            // Using Session cookies
+            console.log("AuthContext: Verifying cookie session...");
+            const { checkFrappeSession } = await import("@/utils/sessionAuth");
+            const sessionUser = await checkFrappeSession();
+
+            // If the Frappe session is dead, but we were logged in -> FULL LOGOUT
+            if (!sessionUser || !sessionUser.user) {
+              if (isAuthenticatedRef.current) {
+                console.log("Session died in background. Performing full logout...");
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie.split(";").forEach((c) => {
+                  document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+                window.location.href = "/login";
+              }
+              return;
+            }
+
+            // If the Frappe session user is DIFFERENT than the Next.js user -> SWITCH USER
+            if (sessionUser.user && sessionUser.user !== currentStoredUser) {
+              console.log(`User changed from ${currentStoredUser} to ${sessionUser.user}. Re-authenticating...`);
+
+              // First, clear the old user's cache so the new user doesn't see it!
+              const { clearAllCache } = await import("@/api/api");
+              clearAllCache();
+
+              // Wipe old POS profile so new user has to select their own
+              setPosProfile(null);
+              localStorage.removeItem("posProfile");
+
+              setCurrentUser(sessionUser.user);
+              setIsAuthenticated(true);
+              localStorage.setItem("currentUser", sessionUser.user);
+
+              // Grab new API keys for the new user
+              const { getApiKeys } = await import("@/utils/sessionAuth");
+              const newKeys = await getApiKeys(sessionUser.user);
+
+              if (newKeys && newKeys.api_key && newKeys.api_secret && !isMasked(newKeys.api_secret)) {
+                setApiKey(newKeys.api_key);
+                setApiSecret(newKeys.api_secret);
+                localStorage.setItem("apiKey", newKeys.api_key);
+                localStorage.setItem("apiSecret", newKeys.api_secret);
+                setSessionAuthPreference(false);
+              } else {
+                setSessionAuthPreference(true);
+              }
+
+              // Refresh CSRF token
+              const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
+              const token = await getFrappeCSRFToken();
+              if (token) {
+                setCsrfToken(token);
+                localStorage.setItem('csrfToken', token);
+              }
             }
           }
         } catch (e) {
@@ -387,14 +428,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      // Use the same authentication logic as other functions
-      const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ?
-        JSON.parse(authHeaders) :
-        Array.isArray(authHeaders) ?
-          Object.fromEntries(authHeaders) :
-          authHeaders;
+      // Construct headers using the auth keys directly
+      const headers: Record<string, string> = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      };
+      if (authKey && authSecret) {
+        headers["Authorization"] = `token ${authKey}:${authSecret}`;
+      }
 
       const response = await fetch(
         "https://gmcerp.quantcloud.in/api/method/frappe.auth.get_logged_user",

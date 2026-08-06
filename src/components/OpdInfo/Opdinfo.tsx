@@ -44,6 +44,7 @@ interface PatientCardProps {
     setSelectedSubDepartment?: (value: string) => void;
     isReturn: boolean;
     onReturnStatusChange: (status: boolean) => void;
+    isIPDPage?: boolean;
 }
 
 type SelectOption = { label: string; value: string };
@@ -109,6 +110,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     // setSelectedSubDepartment,
     isReturn,
     onReturnStatusChange,
+    isIPDPage = false,
 }, ref) => {
     const [open, setOpen] = useState<boolean>(false);
     const { fetchWarehouses, fetchBranch, customers, companies: _companies, departments, fetchDoctors } = useFrappeApi();
@@ -188,33 +190,46 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     // Update internal state when patientData prop changes
     useEffect(() => {
         if (patientData) {
+            let parsedSex = patientData.sex || "";
+            if (!parsedSex || parsedSex === "N/A") {
+                if (patientData.age && typeof patientData.age === "string") {
+                    const upperAge = patientData.age.toUpperCase();
+                    if (upperAge.includes("/M")) parsedSex = "Male";
+                    else if (upperAge.includes("/F")) parsedSex = "Female";
+                }
+            }
+            if (parsedSex && parsedSex.toUpperCase() === "M") parsedSex = "Male";
+            if (parsedSex && parsedSex.toUpperCase() === "F") parsedSex = "Female";
+
             setEditedPatient({
-                name: patientData.name ?? name,
-                age: patientData.age ?? age,
-                sex: patientData.sex ?? sex,
-                phone: patientData.phone ?? phone,
-                ABHAID: patientData.ABHAID ?? ABHAID,
-                category: patientData.category ?? category,
-                company: patientData.company ?? company,
-                visitType: patientData.visitType ?? visitType,
-                doctor: patientData.doctor ?? doctor,
-                mrn: patientData.mrn,
-                displayNo: patientData.displayNo,
-                dept: patientData.dept,
-                visitID: patientData.visitID,
-                visitNo: patientData.visitNo,
-                bedName: patientData.bedName ?? '',
-                wardName: patientData.wardName ?? '',
-                payerType: patientData.payerType ?? '',
-                payerName: patientData.payerName ?? '',
-                network: patientData.network ?? '',
-                insuranceNo: patientData.insuranceNo ?? '',
-                subInsurance: patientData.subInsurance ?? '',
-                otherNo: patientData.otherNo ?? '',
-                validityFrom: patientData.validityFrom ?? '',
-                expiryValidityTo: patientData.expiryValidityTo ?? '',
+                name: patientData.name || "N/A",
+                age: patientData.age || "N/A",
+                sex: parsedSex || "N/A",
+                phone: patientData.phone || "N/A",
+                ABHAID: patientData.ABHAID || "N/A",
+                category: patientData.category || "N/A",
+                company: patientData.company || "N/A",
+                visitType: (patientData.visitType && patientData.visitType !== "N/A") ? patientData.visitType : (isIPDPage ? "IP" : "OP"),
+                doctor: patientData.doctor || "N/A",
+                mrn: patientData.mrn || "N/A",
+                displayNo: patientData.displayNo || patientData.mrn || "N/A",
+                dept: patientData.dept || "N/A",
+                visitID: patientData.visitID || "N/A",
+                visitNo: patientData.visitNo || patientData.visitID || "N/A",
+                bedName: patientData.bedName || "N/A",
+                wardName: patientData.wardName || "N/A",
+                payerType: patientData.payerType || '',
+                payerName: patientData.payerName || '',
+                network: patientData.network || '',
+                insuranceNo: patientData.insuranceNo || '',
+                subInsurance: patientData.subInsurance || '',
+                otherNo: patientData.otherNo || '',
+                validityFrom: patientData.validityFrom || '',
+                expiryValidityTo: patientData.expiryValidityTo || '',
             });
-            setSearchValue(`${patientData.name} (${patientData.mrn})`);
+            const displayName = patientData.name && patientData.name !== "N/A" ? patientData.name : "";
+            const displayMRN = patientData.mrn && patientData.mrn !== "N/A" ? patientData.mrn : "";
+            setSearchValue(displayName ? `${displayName}${displayMRN ? ` (${displayMRN})` : ''}` : '');
         } else {
             // Clear patient data when patientData is null
             setEditedPatient({
@@ -404,10 +419,22 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             expiryDate: patient.expiryDate
         });
 
+        const rawAge = patient.ageDisplay || patient.custom_age || patient.age || "N/A";
+        let rawSex = patient.genderValue || patient.custom_gender || patient.sex || "";
+        if (!rawSex || rawSex === "N/A") {
+            if (rawAge && typeof rawAge === "string") {
+                const upperAge = rawAge.toUpperCase();
+                if (upperAge.includes("/M")) rawSex = "Male";
+                else if (upperAge.includes("/F")) rawSex = "Female";
+            }
+        }
+        if (rawSex && rawSex.toUpperCase() === "M") rawSex = "Male";
+        if (rawSex && rawSex.toUpperCase() === "F") rawSex = "Female";
+
         const newPatientData = {
             name: patient.patientFullName || patient.custom_patient_name || patient.patient_name || patient.name || "N/A",
-            age: patient.ageDisplay || patient.custom_age || patient.age || "N/A",
-            sex: patient.genderValue || patient.custom_gender || patient.sex || "N/A",
+            age: rawAge,
+            sex: rawSex || "N/A",
             phone: patient.mobileNo || patient.phoneNo || patient.custom_phone || patient.contact_mobile || patient.phone || "N/A",
             ABHAID: patient.aadharCardNo || patient.custom_aadhar || patient.ABHAID || "N/A",
             category: patient.patientCategory || patient.custom_patient_category || patient.category || "N/A",
@@ -417,8 +444,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             dept: patient.departmentName || patient.custom_department || patient.dept || "N/A",
             visitType: patient.patientVisitType || patient.custom_visit_type || patient.visitType || "N/A",
             company: patient.patientCompany || patient.custom_patient_company || patient.company || "N/A",
-            bedName: patient.bedName || patient.custom_bed_no || "N/A",
-            wardName: patient.wardName || patient.custom_ward || "N/A",
+            bedName: patient.bedName || patient.custom_bed_no || patient.custom_bed || patient.bed_no || patient.bed_name || patient.bed || "N/A",
+            wardName: patient.wardName || patient.custom_ward || patient.custom_ward_no || patient.custom_ward_name || patient.ward || "N/A",
             visitID: patient.visitID || patient.custom_visit_code || "N/A",
             visitNo: patient.visitNo || patient.visitNumber || patient.patientVisitNo || patient.custom_visit_code || patient.visitID || "N/A",
             // Payer details from search response
@@ -516,7 +543,9 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             });
         }
 
-        setSearchValue(`${patient.patientFullName} (${patient.mrn})`);
+        const displayName = newPatientData.name !== "N/A" ? newPatientData.name : patient.patientFullName || patient.name || "";
+        const displayMRN = newPatientData.mrn !== "N/A" ? newPatientData.mrn : patient.mrn || "";
+        setSearchValue(displayName ? `${displayName}${displayMRN ? ` (${displayMRN})` : ''}` : '');
         setShowDropdown(false);
         setHighlightedIndex(-1);
         console.log("Selected patient data:", newPatientData);
@@ -804,7 +833,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                     <InfoRow
                         icon="assets/icons/Cake.svg"
                         label="Gender"
-                        value={editedPatient.age}
+                        value={editedPatient.sex}
                         selectValue={editedPatient.sex}
                         // onChange={(value) => handleFieldChange('age', value)}
                         onSelectChange={(value) => handleFieldChange('sex', value)}

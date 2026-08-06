@@ -294,11 +294,11 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
         // Filter items by business category if company is selected
         if (selectedCompany) {
-          console.log("Filtering items for company:", selectedCompany);
-          console.log("Items before filtering:", fetchedItems.map(item => ({
-            name: item.itemName,
-            business_category: item.custom_business_category
-          })));
+          // console.log("Filtering items for company:", selectedCompany);
+          // console.log("Items before filtering:", fetchedItems.map(item => ({
+          //   name: item.itemName,
+          //   business_category: item.custom_business_category
+          // })));
 
           // Check if any items have matching business categories
           const itemsWithMatchingCategories = fetchedItems.filter(item => {
@@ -309,13 +309,13 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
           // If no items match exactly, show all items (fallback behavior)
           if (itemsWithMatchingCategories.length === 0) {
-            console.log("No items match the selected company exactly. Showing all items.");
-            console.log("Items after filtering:", fetchedItems.length);
+            // console.log("No items match the selected company exactly. Showing all items.");
+            // console.log("Items after filtering:", fetchedItems.length);
             // Return all items without filtering
           } else {
             // Filter to show only matching items
             fetchedItems = itemsWithMatchingCategories;
-            console.log("Items after filtering:", fetchedItems.length);
+            // console.log("Items after filtering:", fetchedItems.length);
           }
         }
 
@@ -530,7 +530,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       use_serial_batch_fields: 1,
       custom_classification: item.custom_classification, // Explicitly preserve custom_classification for high-alert check
     };
-    console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
+    // console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
     onSelectItem(itemWithBatchAndRate);
     // setSearchTerm(''); // Don't clear search term immediately, allow further selections
     // setSuggestions([]);
@@ -1957,7 +1957,7 @@ export default function IPDBill() {
       try {
         const hasPermission = await checkUserRole("Allow Sale Rate Change");
         setCanChangeRate(hasPermission);
-        console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
+        // console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
       } catch (error) {
         console.error("Error checking user role:", error);
         setCanChangeRate(false);
@@ -2091,18 +2091,18 @@ export default function IPDBill() {
 
       const reqData = await reqResponse.json();
       const requisitionItems = reqData.data?.patient_requisition_item_details || [];
-      console.log("Requisition items for", reqNo, ":", requisitionItems);
+      // console.log("Requisition items for", reqNo, ":", requisitionItems);
 
       // Try different field names for quantity
       const totalQty = requisitionItems.reduce((sum: number, item: any) => {
         // Debug: Show all available fields
-        console.log("Item fields:", Object.keys(item), "Item data:", item);
+        // console.log("Item fields:", Object.keys(item), "Item data:", item);
         const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
-        console.log("Using quantity field:", qty, "from item:", item);
+        // console.log("Using quantity field:", qty, "from item:", item);
         return sum + qty;
       }, 0);
 
-      console.log("Total quantity calculated:", totalQty);
+      // console.log("Total quantity calculated:", totalQty);
 
       // Get invoiced quantity from Sale bills
       const invoiceResponse = await fetch(
@@ -2121,12 +2121,12 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log("Invoices for requisition", reqNo, ":", invoices);
+      // console.log("Invoices for requisition", reqNo, ":", invoices);
       let invoicedQty = 0;
 
       // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
-        console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
+        // console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
 
         try {
           const fullInvoiceResponse = await fetch(
@@ -2143,10 +2143,10 @@ export default function IPDBill() {
             const fullInvoice = fullInvoiceData.data;
 
             if (fullInvoice?.items) {
-              console.log("Invoice items:", fullInvoice.items);
+              // console.log("Invoice items:", fullInvoice.items);
               const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
               invoicedQty += invoiceQty;
-              console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
+              // console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
             }
           }
         } catch (error) {
@@ -2154,10 +2154,10 @@ export default function IPDBill() {
         }
       }
 
-      console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
+      // console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
       return { total_qty: totalQty, invoiced_qty: invoicedQty };
     } catch (error) {
-      console.error("Error getting requisition quantities:", error);
+      // console.error("Error getting requisition quantities:", error);
       return { total_qty: 0, invoiced_qty: 0 };
     }
   };
@@ -2193,7 +2193,7 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
+      // console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
 
       let totalInvoicedQty = 0;
 
@@ -2213,10 +2213,10 @@ export default function IPDBill() {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
 
-            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
+            // console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
 
             if (fullInvoice?.items) {
-              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
+              // console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
 
               // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
@@ -2301,7 +2301,7 @@ export default function IPDBill() {
         }
       }
 
-      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
+      // console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting prescription item invoiced quantity:", error);
@@ -2330,22 +2330,22 @@ export default function IPDBill() {
 
       if (forceComplete) {
         status = "Completed";
-        console.log("Force completing requisition:", reqNo);
+        // console.log("Force completing requisition:", reqNo);
       } else {
         // Check current status based on quantities
         const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
-        console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
+        // console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
 
         if (total_qty > 0 && invoiced_qty >= total_qty) {
           status = "Completed";
-          console.log("Requisition marked as Completed");
+          // console.log("Requisition marked as Completed");
         } else {
           status = "Pending";
-          console.log("Requisition marked as Pending");
+          // console.log("Requisition marked as Pending");
         }
       }
 
-      console.log("Updating requisition", reqNo, "status to:", status);
+      // console.log("Updating requisition", reqNo, "status to:", status);
 
       // Update the requisition status
       const response = await fetch(

@@ -1919,7 +1919,7 @@ const EditableTable = ({
   };
 
   return (
-    <div className="p-2 max-w-7xl mx-auto">
+    <div className="w-full py-2">
 
 
 

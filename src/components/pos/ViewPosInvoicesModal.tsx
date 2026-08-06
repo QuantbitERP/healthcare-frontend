@@ -30,6 +30,29 @@ interface Invoice {
   name: string;
   customer: string;
   custom_patient_name: string;
+  custom_uhid?: string;
+  custom_mrn?: string;
+  custom_doctor_name?: string;
+  custom_age?: string;
+  custom_gender?: string;
+  custom_phone?: string;
+  custom_visit_code?: string;
+  custom_bed_no?: string;
+  custom_ward?: string;
+  custom_patient_category?: string;
+  custom_patient_company?: string;
+  custom_department?: string;
+  custom_payer_category?: string;
+  custom_payer_name?: string;
+  custom_sub_insurance?: string;
+  custom_network?: string;
+  custom_insurance_no?: string;
+  custom_other_no?: string;
+  custom_validity_from?: string;
+  custom_validity_to?: string;
+  co_pay?: number;
+  payer_amount?: number;
+  patient_amount?: number;
   posting_date: string;
   posting_time: string;
   rounded_total: number;
@@ -43,6 +66,7 @@ interface Invoice {
   company: string;
   custom_ipd_effect?: number; // Add IPD effect field
   custom_opd_effect?: number; // Add OPD effect field
+  visit_type?: string;
 }
 
 const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
@@ -98,16 +122,10 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         filters.push(['custom_patient_name', 'like', `%${patientName}%`]);
       }
       if (dates.from) {
-        // Add one day to the 'to' date to include the full end date
-        const fromDate = new Date(dates.from);
-        fromDate.setHours(0, 0, 0, 0);
-        filters.push(['posting_date', '>=', fromDate.toISOString().split('T')[0]]);
+        filters.push(['posting_date', '>=', dates.from.toISOString().split('T')[0]]);
       }
       if (dates.to) {
-        // Set time to end of day to include the full end date
-        const toDate = new Date(dates.to);
-        toDate.setHours(23, 59, 59, 999);
-        filters.push(['posting_date', '<=', toDate.toISOString().split('T')[0]]);
+        filters.push(['posting_date', '<=', dates.to.toISOString().split('T')[0]]);
       }
 
       // Use the same authentication logic as other functions
@@ -120,7 +138,19 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       const filterStr = JSON.stringify(filters);
-      const url = `${API_BASE_URL}/Sale%20Bill?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return","custom_ipd_effect","custom_opd_effect"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
+      const requestedFields = JSON.stringify([
+        "name", "customer", "custom_patient_name", "custom_uhid",
+        "custom_doctor_name", "custom_age", "custom_phone",
+        "custom_visit_code", "custom_bed_no", "custom_req_no",
+        "custom_department", "custom_hospital", "custom_payer_category",
+        "custom_payer_name", "custom_sub_insurance", "custom_network",
+        "custom_insurance_no", "custom_other_no", "custom_validity_from",
+        "custom_validity_to", "co_pay", "payer_amount", "patient_amount",
+        "posting_date", "posting_time", "rounded_total", "status", "pos_profile",
+        "modified", "modified_by", "paid_amount", "outstanding_amount", "company",
+        "is_return", "custom_ipd_effect", "custom_opd_effect", "visit_type"
+      ]);
+      const url = `${API_BASE_URL}/Sale%20Bill?fields=${encodeURIComponent(requestedFields)}&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -340,6 +370,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
             { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${row.original.rounded_total.toFixed(2)}` },
             { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
+            { accessorKey: 'visit_type', header: 'Visit Type', cell: ({ row }: any) => row.original.visit_type || '-' },
             {
               id: isIPDPage ? 'ipd_effect' : 'opd_effect',
               header: isIPDPage ? 'IPD Effect' : 'OPD Effect',
@@ -390,6 +421,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             posting_time: 'Time',
             rounded_total: 'Amount',
             status: 'Status',
+            visit_type: 'Visit Type',
             ...(isIPDPage ? { ipd_effect: 'IPD Effect' } : { opd_effect: 'OPD Effect' }),
             modified: 'Modified Date',
             modified_by: 'Modified By',
@@ -431,6 +463,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
               <p><strong>Paid Amount:</strong> ₹{selectedInvoice.paid_amount ? selectedInvoice.paid_amount.toFixed(2) : '0.00'}</p>
               <p><strong>Outstanding Amount:</strong> ₹{selectedInvoice.outstanding_amount ? selectedInvoice.outstanding_amount.toFixed(2) : '0.00'}</p>
               <p><strong>Status:</strong> <span className={`status-badge ${selectedInvoice.status?.toLowerCase()}`}>{selectedInvoice.status}</span></p>
+              <p><strong>Visit Type:</strong> {selectedInvoice.visit_type || 'N/A'}</p>
               <p><strong>Modified:</strong> {new Date(selectedInvoice.modified).toLocaleString()}</p>
               <p><strong>Modified By:</strong> {selectedInvoice.modified_by}</p>
 

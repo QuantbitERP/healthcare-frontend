@@ -3920,11 +3920,16 @@ export default function IPDBill() {
       custom_uhid: patientData?.mrn || "",
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
+      custom_gender: patientData?.sex || "",
+      custom_visit_type: patientData?.visitType || "",
+      custom_ward: patientData?.wardName || "",
+      custom_patient_category: patientData?.category || "",
+      custom_patient_company: patientData?.company || "",
       custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
-      custom_bed_no: patientData?.bed || "",
+      custom_bed_no: patientData?.bedName || patientData?.bed || "",
       custom_department: selectedDepartment || patientData?.dept || "",
       custom_hospital: selectedHospital || "",
       // Payer details
@@ -5439,10 +5444,10 @@ export default function IPDBill() {
         patientCategory: fullInvoice.custom_patient_category || "",
         consultingDoctor: fullInvoice.custom_doctor_name || fullInvoice.custom_doctor || "",
         departmentName: fullInvoice.custom_department || "",
-        patientVisitType: fullInvoice.custom_visit_type || "",
+        patientVisitType: fullInvoice.custom_visit_type || (fullInvoice.custom_is_ipd_invoice === 1 || fullInvoice.custom_ipd_effect === 1 ? "IP" : "OP"),
         patientCompany: fullInvoice.custom_patient_company || "",
-        bedName: fullInvoice.custom_bed_no || "",
-        wardName: fullInvoice.custom_ward || "",
+        bedName: fullInvoice.custom_bed_no || fullInvoice.custom_bed || fullInvoice.bed_no || fullInvoice.bed_name || "",
+        wardName: fullInvoice.custom_ward || fullInvoice.custom_ward_no || fullInvoice.custom_ward_name || fullInvoice.ward || "",
         visitID: fullInvoice.custom_visit_code || "",
         visitNo: fullInvoice.custom_visit_code || "",
         payerType: fullInvoice.custom_payer_category || "",
@@ -5457,9 +5462,9 @@ export default function IPDBill() {
         co_Pay: fullInvoice.co_pay || 0,
       };
 
-      const searchUHID = fullInvoice.custom_uhid || fullInvoice.custom_mrn || fullInvoice.custom_patient_id;
+      const searchUHID = (fullInvoice.custom_uhid || fullInvoice.custom_mrn || fullInvoice.custom_patient_id || "").trim();
 
-      if (searchUHID) {
+      if (searchUHID && searchUHID !== "N/A" && searchUHID !== "undefined") {
         try {
           const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
           const fetchHeaders: any = { 'Content-Type': 'application/json' };
@@ -5498,6 +5503,12 @@ export default function IPDBill() {
       // Set other form fields
       setSelectedCustomer(fullInvoice.customer || '');
       setSelectedCompany(fullInvoice.company || '');
+      if (fullInvoice.custom_hospital) {
+        setSelectedBranch(fullInvoice.custom_hospital);
+      }
+      if (fullInvoice.custom_department) {
+        setSelectedDepartment(fullInvoice.custom_department);
+      }
       setRequisitionNo(fullInvoice.custom_req_no || '');
       setReqId(fullInvoice.custom_req_no || '');
       setIsReqIdReadonly(!!fullInvoice.custom_req_no);

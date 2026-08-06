@@ -256,7 +256,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        console.log("generic item data", data);
+
         let fetchedItems: Item[] = data.data.map((item: any) => ({
           id: item.name || '', // Use item.name (which is itemCode) as the initial ID
           itemCode: item.name || '',
@@ -309,35 +309,19 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           custom_is_prescribed: item.custom_is_prescribed || 0,
         }));
 
-        // Apply pricing rules if customer is selected
         if (selectedCustomer && applyPricingRulesFn) {
           fetchedItems = await applyPricingRulesFn(fetchedItems, selectedCustomer);
         }
 
-        // Filter items by business category if company is selected
         if (selectedCompany) {
-          console.log("Filtering items for company:", selectedCompany);
-          console.log("Items before filtering:", fetchedItems.map(item => ({
-            name: item.itemName,
-            business_category: item.custom_business_category
-          })));
-
-          // Check if any items have matching business categories
           const itemsWithMatchingCategories = fetchedItems.filter(item => {
             if (!item.custom_business_category) return false;
             const categories = item.custom_business_category.split(',').map(cat => cat.trim());
             return categories.includes(selectedCompany);
           });
 
-          // If no items match exactly, show all items (fallback behavior)
-          if (itemsWithMatchingCategories.length === 0) {
-            console.log("No items match the selected company exactly. Showing all items.");
-            console.log("Items after filtering:", fetchedItems.length);
-            // Return all items without filtering
-          } else {
-            // Filter to show only matching items
+          if (itemsWithMatchingCategories.length > 0) {
             fetchedItems = itemsWithMatchingCategories;
-            console.log("Items after filtering:", fetchedItems.length);
           }
         }
 
@@ -540,19 +524,19 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
     const itemWithBatchAndRate: Item = {
       ...item,
-      id: `${item.itemCode}-${batchNo}-${Date.now()}`, // Generate unique ID for each batch item
-      batchNo: batchNo, // Use the provided batchNo
-      expiryDate: expiryDate, // Use the provided expiryDate
-      batchStockQty: batchStockQty, // Set batchStockQty from fetched quantity
-      stockQty: batchStockQty, // Ensure stockQty also reflects the batch-specific quantity
+      id: `${item.itemCode}-${batchNo}-${Date.now()}`,
+      batchNo: batchNo,
+      expiryDate: expiryDate,
+      batchStockQty: batchStockQty,
+      stockQty: batchStockQty,
       rate: itemRate,
-      mrp: batchMRP, // Set MRP from fetched batch MRP
-      orderedQty: item.orderedQty, // Preserve the original ordered quantity from the item
-      saleQty: qtyToTake, // Set saleQty to the quantity taken from this batch
+      mrp: batchMRP,
+      orderedQty: item.orderedQty,
+      saleQty: qtyToTake,
       use_serial_batch_fields: 1,
-      custom_classification: item.custom_classification, // Explicitly preserve custom_classification for high-alert check
+      custom_classification: item.custom_classification,
     };
-    console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
+
     onSelectItem(itemWithBatchAndRate);
     // setSearchTerm(''); // Don't clear search term immediately, allow further selections
     // setSuggestions([]);
@@ -639,12 +623,6 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           await handleConfirmedSelectItem(item, batch.name, batch.expiry_date, qtyToTake, batch.batch_qty);
           remainingQty -= qtyToTake;
         }
-      }
-
-      // Show detailed allocation message
-      if (allocationDetails.length > 0) {
-        const allocationText = allocationDetails.join(' + ');
-        console.log(`FEFO Allocation: ${totalRequestedQty} units = ${allocationText}`);
       }
     }
 
@@ -995,26 +973,6 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     totalAmount = itemAmountAfterDiscount + cgstAmount + sgstAmount + igstAmount;
   }
 
-  console.log('calculateItemTaxAndTotals (MRP Inclusive GST):', {
-    itemCode: item.itemCode,
-    mrp,
-    saleQty,
-    discountPercent,
-    cgstPercent,
-    sgstPercent,
-    igstPercent,
-    includedInPrintRate,
-    basePricePerUnit: includedInPrintRate && (cgstPercent + sgstPercent + igstPercent) > 0
-      ? mrp / (1 + (cgstPercent + sgstPercent + igstPercent) / 100)
-      : mrp,
-    discountAmount,
-    priceAfterDiscountBase: taxableAmount,
-    cgstAmount,
-    sgstAmount,
-    igstAmount,
-    totalAmount
-  });
-
   // Calculate payer and patient amounts based on co-pay percentage and pre-auth status
   const copayApplies = item.covered && item.preAuthStatus === 'Approved';
   let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
@@ -1089,7 +1047,6 @@ export default function IPDBill() {
   const fetchPricingRules = async (customer: string): Promise<any[]> => {
     try {
       if (!customer || !apiKey || !apiSecret) {
-        console.log('Missing required parameters for pricing rules:', { customer, apiKey, apiSecret });
         return [];
       }
       const authHeaders = getAuthHeaders();
@@ -1102,11 +1059,8 @@ export default function IPDBill() {
 
 
 
-      // Get visit type from patient data, default to "IP" for OPD billing
       const visitType = patientData?.visitType || "IP";
-      console.log('Fetching pricing rules for visit type:', visitType, 'customer:', customer, 'transaction type:', transactionType);
 
-      // Fetch pricing rules for the customer with visit type and transaction type filters
       const encodedCustomer = encodeURIComponent(customer);
       const baseFilters = [
         `["customer","=","${encodedCustomer}"]`,
@@ -1192,8 +1146,6 @@ export default function IPDBill() {
         index === self.findIndex((r) => r.name === rule.name)
       );
 
-      console.log('Fetched pricing rules:', uniqueRules.length, 'rules for transaction type:', transactionType);
-
       if (uniqueRules && Array.isArray(uniqueRules)) {
         // Fetch complete pricing rule documents with their items
         const pricingRulesWithItems = await Promise.all(
@@ -1210,9 +1162,7 @@ export default function IPDBill() {
                 const ruleData = await ruleResponse.json();
                 const fullRule = ruleData.data;
                 rule.items = fullRule.items || [];
-                console.log(`Fetched ${rule.items.length} items for pricing rule ${rule.name}:`, rule.items);
               } else {
-                console.log(`Failed to fetch complete pricing rule ${rule.name}`);
                 rule.items = [];
               }
             } catch (error) {
@@ -1233,10 +1183,6 @@ export default function IPDBill() {
 
             const isValidDate = (!validFrom || currentDate >= validFrom) &&
               (!validTo || currentDate <= validTo);
-
-            if (isValidDate) {
-              console.log('Valid pricing rule found:', rule.name, 'Discount:', rule.discount_percentage + '%');
-            }
 
             return isValidDate;
           }
@@ -1261,11 +1207,8 @@ export default function IPDBill() {
       const pricingRules = await fetchPricingRules(customer);
 
       if (!pricingRules.length) {
-        console.log('No pricing rules found for customer:', customer);
         return items;
       }
-
-      console.log('Applying pricing rules to', items.length, 'items');
 
       return await Promise.all(items.map(async (item) => {
         const updatedItem = { ...item };
@@ -1273,7 +1216,6 @@ export default function IPDBill() {
         for (const rule of pricingRules) {
           // Skip disabled pricing rules
           if (rule.disable) {
-            console.log(`Skipping disabled pricing rule ${rule.name}`);
             continue;
           }
 
@@ -1284,80 +1226,36 @@ export default function IPDBill() {
             // Check if item is in the rule's items list
             if (rule.items && rule.items.length > 0) {
               ruleApplies = rule.items.some((ruleItem: any) => ruleItem.item_code === item.itemCode);
-              if (ruleApplies) {
-                console.log(`Pricing rule ${rule.name} applies to item ${item.itemCode} (found in items list)`);
-              }
             } else {
-              console.log(`Pricing rule ${rule.name} has no items defined, skipping`);
               ruleApplies = false;
             }
           } else if (rule.apply_on === 'Item Group' && rule.item_groups && rule.item_groups.length > 0) {
-            // Check if item belongs to any of the rule's item groups
-            // Note: This would require fetching item group info, for now we'll skip this
             ruleApplies = false;
           } else if (!rule.apply_on || rule.apply_on === 'Grand Total') {
-            // Apply to all items if no specific apply_on or if it's Grand Total
             ruleApplies = true;
           }
 
           if (ruleApplies) {
             const originalRate = updatedItem.rate || 0;
 
-            // Check if landing cost is applicable for this rule
             if (rule.custom_is_landing_cost_applicable) {
-              // For landing cost rules, we need margin_rate_or_amount
               if (rule.margin_rate_or_amount && rule.margin_rate_or_amount > 0) {
-                console.log(`Pricing rule ${rule.name} has landing cost applicable with margin ${rule.margin_rate_or_amount}%, fetching landing cost...`);
-
-                // Fetch landing cost from Item Price
                 const landingCost = await fetchLandingCost(item.itemCode, item.batchNo, 'Standard Selling');
 
                 if (landingCost !== null && landingCost > 0) {
-                  // Use landing cost + margin as the new rate
                   const marginAmount = (landingCost * rule.margin_rate_or_amount) / 100;
                   updatedItem.rate = landingCost + marginAmount;
                   updatedItem.appliedPricingRule = rule.name;
-
-                  console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with landing cost + margin:`);
-                  console.log(`  Original Rate: ${originalRate}`);
-                  console.log(`  Landing Cost: ${landingCost}`);
-                  console.log(`  Margin: ${rule.margin_rate_or_amount}%`);
-                  console.log(`  Margin Amount: ${marginAmount}`);
-                  console.log(`  New Rate: ${updatedItem.rate}`);
-
-                  // Only apply the first matching rule (highest priority)
                   break;
                 } else {
-                  console.log(`No valid landing cost found for ${item.itemCode}, applying margin to original rate instead`);
-                  // Apply margin to original rate if no landing cost found
-                  // const marginAmount = (originalRate * rule.margin_rate_or_amount) / 100;
-                  // updatedItem.rate = originalRate + marginAmount;
                   updatedItem.appliedPricingRule = rule.name;
-
-                  // console.log(`Applied pricing rule ${rule.name} to ${item.itemCode} with original rate + margin:`);
-                  // console.log(`  Original Rate: ${originalRate}`);
-                  // console.log(`  Margin: ${rule.margin_rate_or_amount}%`);
-                  // console.log(`  Margin Amount: ${marginAmount}`);
-                  // console.log(`  New Rate: ${updatedItem.rate}`);
-
-                  // Only apply the first matching rule (highest priority)
                   break;
                 }
-              } else {
-                console.log(`Pricing rule ${rule.name} has landing cost applicable but no margin rate (margin_rate_or_amount: ${rule.margin_rate_or_amount}), skipping`);
               }
             } else if (rule.discount_percentage && rule.discount_percentage > 0) {
-              // Standard pricing rule logic (discount based)
               const discountAmount = (originalRate * rule.discount_percentage) / 100;
               updatedItem.rate = originalRate - discountAmount;
               updatedItem.appliedPricingRule = rule.name;
-
-              console.log(`Applied pricing rule ${rule.name} to ${item.itemCode}:`);
-              console.log(`  Original Rate: ${originalRate}`);
-              console.log(`  Discount: ${rule.discount_percentage}%`);
-              console.log(`  New Rate: ${updatedItem.rate}`);
-
-              // Only apply the first matching rule (highest priority)
               break;
             }
           }
@@ -1372,12 +1270,10 @@ export default function IPDBill() {
     }
   };
 
-  // Function to fetch landing cost from Item Price
+
   const fetchLandingCost = async (itemCode: string, batchNo: string | null, priceList: string): Promise<number | null> => {
     try {
-      // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
@@ -1409,13 +1305,8 @@ export default function IPDBill() {
           (!validUpto || currentDate <= validUpto);
 
         if (isValidPrice && itemPrice.custom_landing_cost) {
-          console.log(`Found landing cost ${itemPrice.custom_landing_cost} for item ${itemCode}, batch ${batchNo}`);
           return itemPrice.custom_landing_cost;
-        } else {
-          console.log(`Landing cost found but not valid for current date for item ${itemCode}, batch ${batchNo}`);
         }
-      } else {
-        console.log(`No landing cost found for item ${itemCode}, batch ${batchNo} in price list ${priceList}`);
       }
     } catch (error) {
       console.error('Error fetching landing cost from Item Price:', error);
@@ -1459,11 +1350,6 @@ export default function IPDBill() {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for item batch data');
-        } else {
-          console.error('Failed to fetch batches:', response.status, response.statusText);
-        }
         return [];
       }
 
@@ -1513,21 +1399,14 @@ export default function IPDBill() {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for item batch data');
-        } else {
-          console.error('Failed to fetch batches:', response.status, response.statusText);
-        }
         return [];
       }
 
       const data = await response.json();
-      console.log('fetchItemBatchesWithParams response for', itemCode, ':', data);
       if (data.message) {
-        console.log('Returning batches:', data.message, 'Type:', typeof data.message, 'Is Array:', Array.isArray(data.message));
         return data.message;
       }
-      console.log('No message in response, returning empty array');
+
       return [];
     } catch (error: any) {
       console.error('Error fetching batches:', error);
@@ -1603,13 +1482,8 @@ export default function IPDBill() {
 
         if (isValidPrice && itemPrice.price_list_rate) {
           rate = itemPrice.price_list_rate;
-          console.log(`Set price ${rate} from Price List for item ${itemCode}, batch ${batchNo}`);
           return rate;
-        } else {
-          console.log(`Price found in Price List but not valid for current date for item ${itemCode}, batch ${batchNo}`);
         }
-      } else {
-        console.log(`No price found in Price List for item ${itemCode}, batch ${batchNo} in price list ${priceList}`);
       }
     } catch (error) {
       console.error('Error fetching item price from Price List:', error);
@@ -1634,15 +1508,12 @@ export default function IPDBill() {
         const data = await response.json();
         if (data.data && data.data.length > 0 && data.data[0].custom_mrp) {
           rate = data.data[0].custom_mrp;
-          console.log(`Set price ${rate} from Batch custom_mrp for item ${itemCode}, batch ${batchNo}`);
-        } else {
-          console.log(`No custom_mrp found for item ${itemCode}, batch ${batchNo}`);
         }
       } catch (error) {
         console.error('Error fetching custom_mrp from Batch:', error);
       }
     }
-    return rate; // Return null if no rate is found
+    return rate;
   };
 
   // Function to fetch bin_location from Item doctype's custom_item_consumption_details
@@ -1657,8 +1528,6 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      console.log(`[BinLocation] Fetching item: ${itemCode}`);
-
       // Fetch the entire Item document
       const response = await fetch(`${API_BASE_URL}/Item/${itemCode}`, {
         method: 'GET',
@@ -1667,28 +1536,18 @@ export default function IPDBill() {
       });
 
       if (!response.ok) {
-        console.log(`[BinLocation] Failed to fetch item ${itemCode}, status: ${response.status}`);
         return "";
       }
 
       const data = await response.json();
-      console.log(`[BinLocation] Item data received:`, data.data);
-
-      // Log all keys in the data object
-      if (data.data) {
-        console.log(`[BinLocation] Available fields:`, Object.keys(data.data));
-      }
 
       // Try different possible field names for the child table
       const childTableNames = ['custom_item_consumption_details', 'item_consumption_details', 'consumption_details'];
 
       for (const fieldName of childTableNames) {
-        console.log(`[BinLocation] Checking field: ${fieldName}`);
         if (data.data?.[fieldName]) {
-          console.log(`[BinLocation] Found field ${fieldName}:`, data.data[fieldName]);
           if (Array.isArray(data.data[fieldName]) && data.data[fieldName].length > 0) {
             const binLocation = data.data[fieldName][0].bin_location;
-            console.log(`[BinLocation] Found bin_location from ${fieldName}:`, binLocation);
             if (binLocation) {
               return binLocation;
             }
@@ -1698,11 +1557,9 @@ export default function IPDBill() {
 
       // If no child table found, try direct bin_location field
       if (data.data?.bin_location) {
-        console.log('[BinLocation] Found direct bin_location field:', data.data.bin_location);
         return data.data.bin_location;
       }
 
-      console.log(`[BinLocation] No bin_location found for item ${itemCode}`);
       return "";
     } catch (error) {
       console.error('[BinLocation] Error fetching bin location:', error);
@@ -1728,8 +1585,6 @@ export default function IPDBill() {
   // Handle barcode scanning
   const handleBarcodeScan = async (scannedBarcode: string) => {
     try {
-      console.log('Scanning barcode:', scannedBarcode);
-      console.log('Selected warehouse:', selectedWarehouse);
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
@@ -1759,8 +1614,6 @@ export default function IPDBill() {
         return;
       }
 
-      console.log('Batch data:', batch);
-
       // Check if batch has stock in selected warehouse
       let stockQty = 0;
       if (selectedWarehouse) {
@@ -1777,21 +1630,14 @@ export default function IPDBill() {
 
           if (batchQtyResponse.ok) {
             const stockData = await batchQtyResponse.json();
-            console.log('Stock balance response:', stockData);
-            // The response structure is {message: number} not {message: [{actual_qty: number}]}
             stockQty = stockData.message || 0;
-          } else {
-            console.log('Stock balance API failed:', batchQtyResponse.status);
           }
         } catch (error) {
           console.error('Error checking stock balance:', error);
         }
       } else {
-        console.log('No warehouse selected, using batch quantity as fallback');
         stockQty = batch.batch_qty || 0;
       }
-
-      console.log('Final stock quantity:', stockQty);
 
       // Only show stock warning if we have a warehouse selected and stock is 0
       if (selectedWarehouse && stockQty <= 0) {
@@ -1812,8 +1658,6 @@ export default function IPDBill() {
 
       const itemData = await itemResponse.json();
       const item = itemData.data;
-
-      console.log('Item data:', item);
 
       // Check if item already exists in the table with the same batch
       const existingItemIndex = items.findIndex(
@@ -1865,11 +1709,9 @@ export default function IPDBill() {
           totalPckgAmt: 0,
           packageName: '',
           binLocation: '',
-          mrp: batch.custom_mrp, // Store MRP from batch
+          mrp: batch.custom_mrp,
           hasStock: stockQty > 0,
         };
-
-        console.log('New item created:', newItem);
 
         // Calculate tax and totals for the new item
         const calculatedItem = calculateItemTaxAndTotals(newItem, item.included_in_print_rate || false);
@@ -2026,7 +1868,6 @@ export default function IPDBill() {
       try {
         const hasPermission = await checkUserRole("Allow Sale Rate Change");
         setCanChangeRate(hasPermission);
-        console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
       } catch (error) {
         console.error("Error checking user role:", error);
         setCanChangeRate(false);
@@ -2040,49 +1881,33 @@ export default function IPDBill() {
 
   // Handle direct return checkbox changes
   useEffect(() => {
-    console.log('Direct return useEffect triggered:', { isReturn, isReturnInvoice, isDirectReturn, itemsLength: items.length });
-
     if (isReturn && !isReturnInvoice) {
-      // Direct return mode enabled (checkbox checked without loading invoice)
-      console.log('Setting direct return mode - Sale Qty column will be hidden');
-      // Set isReturnInvoice to true and isDirectReturn to true
       setIsReturnInvoice(true);
       setIsDirectReturn(true);
-
-      // No need to set saleQty to 0 since the column will be hidden
     } else if (!isReturn && isReturnInvoice) {
-      // Return mode disabled, reset all return states
-      console.log('Disabling return mode');
       setIsReturnInvoice(false);
       setIsDirectReturn(false);
     }
   }, [isReturn]);
 
-  // Reapply pricing rules when transaction type changes
   useEffect(() => {
     if (items.length > 0 && selectedCustomer) {
-      console.log('Transaction type changed, reapplying pricing rules...');
       applyPricingRulesToExistingItems();
     }
   }, [transactionType]);
 
-  // Reapply pricing rules when customer changes
   useEffect(() => {
     if (items.length > 0) {
-      console.log('Customer changed, reapplying pricing rules...');
       applyPricingRulesToExistingItems();
     }
   }, [selectedCustomer]);
 
-  // Reapply pricing rules when visit type changes (from patient data)
   useEffect(() => {
     if (items.length > 0 && selectedCustomer && patientData?.visitType) {
-      console.log('Visit type changed, reapplying pricing rules...');
       applyPricingRulesToExistingItems();
     }
   }, [patientData?.visitType]);
 
-  // Function to apply pricing rules to existing items
   const applyPricingRulesToExistingItems = async () => {
     if (!selectedCustomer || items.length === 0) {
       return;
@@ -2093,9 +1918,6 @@ export default function IPDBill() {
 
       if (updatedItems && updatedItems.length > 0) {
         setItems(updatedItems);
-        console.log('Pricing rules reapplied successfully:', updatedItems.length, 'items updated');
-      } else {
-        console.log('No pricing rules applied, keeping original items');
       }
     } catch (error) {
       console.error('Error reapplying pricing rules:', error);
@@ -2160,18 +1982,12 @@ export default function IPDBill() {
 
       const reqData = await reqResponse.json();
       const requisitionItems = reqData.data?.patient_requisition_item_details || [];
-      console.log("Requisition items for", reqNo, ":", requisitionItems);
 
       // Try different field names for quantity
       const totalQty = requisitionItems.reduce((sum: number, item: any) => {
-        // Debug: Show all available fields
-        console.log("Item fields:", Object.keys(item), "Item data:", item);
         const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
-        console.log("Using quantity field:", qty, "from item:", item);
         return sum + qty;
       }, 0);
-
-      console.log("Total quantity calculated:", totalQty);
 
       // Get invoiced quantity from Sale bills
       const invoiceResponse = await fetch(
@@ -4087,11 +3903,16 @@ export default function IPDBill() {
       custom_uhid: patientData?.mrn || "",
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
+      custom_gender: patientData?.sex || "",
+      custom_visit_type: patientData?.visitType || "",
+      custom_ward: patientData?.wardName || "",
+      custom_patient_category: patientData?.category || "",
+      custom_patient_company: patientData?.company || "",
       custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
-      custom_bed_no: patientData?.bed || "",
+      custom_bed_no: patientData?.bedName || patientData?.bed || "",
       custom_department: selectedDepartment || patientData?.dept || "",
       custom_hospital: selectedHospital || "",
       // Payer details
@@ -4106,6 +3927,10 @@ export default function IPDBill() {
       payer_amount: Number(totalPayerAmount) || 0,
       patient_amount: Number(totalPatientAmount) || 0,
       co_pay: Number(globalCoPayPercent) || 0,
+      visit_type: "IPD",
+      visit_no: patientData?.visitID || "",
+      is_cash_bill: transactionType === 'cash' ? 1 : 0,
+      is_credit_bill: transactionType === 'credit' ? 1 : 0,
     };
 
     console.log('DEBUG: Payload being sent:', JSON.stringify(payload, null, 2));
@@ -5656,10 +5481,10 @@ export default function IPDBill() {
         patientCategory: fullInvoice.custom_patient_category || "",
         consultingDoctor: fullInvoice.custom_doctor_name || fullInvoice.custom_doctor || "",
         departmentName: fullInvoice.custom_department || "",
-        patientVisitType: fullInvoice.custom_visit_type || "",
+        patientVisitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || (fullInvoice.custom_is_ipd_invoice === 1 || fullInvoice.custom_ipd_effect === 1 ? "IPD" : "OPD"),
         patientCompany: fullInvoice.custom_patient_company || "",
-        bedName: fullInvoice.custom_bed_no || "",
-        wardName: fullInvoice.custom_ward || "",
+        bedName: fullInvoice.custom_bed_no || fullInvoice.custom_bed || fullInvoice.bed_no || fullInvoice.bed_name || "",
+        wardName: fullInvoice.custom_ward || fullInvoice.custom_ward_no || fullInvoice.custom_ward_name || fullInvoice.ward || "",
         visitID: fullInvoice.custom_visit_code || "",
         visitNo: fullInvoice.custom_visit_code || "",
         payerType: fullInvoice.custom_payer_category || "",
@@ -5674,9 +5499,9 @@ export default function IPDBill() {
         co_Pay: fullInvoice.co_pay || 0,
       };
 
-      const searchUHID = fullInvoice.custom_uhid || fullInvoice.custom_mrn || fullInvoice.custom_patient_id;
+      const searchUHID = (fullInvoice.custom_uhid || fullInvoice.custom_mrn || fullInvoice.custom_patient_id || "").trim();
 
-      if (searchUHID) {
+      if (searchUHID && searchUHID !== "N/A" && searchUHID !== "undefined") {
         try {
           const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
           const fetchHeaders: any = { 'Content-Type': 'application/json' };
@@ -5716,6 +5541,12 @@ export default function IPDBill() {
       // Set other form fields
       setSelectedCustomer(fullInvoice.customer || '');
       setSelectedCompany(fullInvoice.company || '');
+      if (fullInvoice.custom_hospital) {
+        setSelectedBranch(fullInvoice.custom_hospital);
+      }
+      if (fullInvoice.custom_department) {
+        setSelectedDepartment(fullInvoice.custom_department);
+      }
       setRequisitionNo(fullInvoice.custom_req_no || '');
       setReqId(fullInvoice.custom_req_no || '');
       setIsReqIdReadonly(!!fullInvoice.custom_req_no);
@@ -6117,6 +5948,11 @@ export default function IPDBill() {
           custom_phone: patientData?.phone || '',
           custom_doctor_name: patientData?.doctor || '',
           custom_age: patientData?.age || '',
+          visit_type: "IPD",
+          visit_no: patientData?.visitID || '',
+          transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
+          is_cash_bill: transactionType === 'cash' ? 1 : 0,
+          is_credit_bill: transactionType === 'credit' ? 1 : 0,
           return_items: itemsToReturn.map(item => {
             const returnQty = item.returnQty || 0;
             // const saleQty = item.saleQty || 1;
@@ -6444,6 +6280,11 @@ export default function IPDBill() {
         custom_bed_no: patientData?.bed || "",
         custom_department: selectedDepartment || patientData?.dept || "",
         custom_hospital: selectedHospital || "",
+        visit_type: "IPD",
+        visit_no: patientData?.visitID || "",
+        transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
+        is_cash_bill: transactionType === 'cash' ? 1 : 0,
+        is_credit_bill: transactionType === 'credit' ? 1 : 0,
       };
 
       // Construct the taxes array dynamically
@@ -7451,7 +7292,7 @@ export default function IPDBill() {
                     mrn: invoice.custom_mrn || '',
                     displayNo: invoice.custom_display_no || '',
                     dept: invoice.custom_department || '',
-                    visitType: invoice.custom_visit_type || '',
+                    visitType: invoice.visit_type || invoice.custom_visit_type || '',
                     company: invoice.custom_company || '',
                     visitID: invoice.custom_visit_id || '',
                     bed: invoice.custom_bed || '',
