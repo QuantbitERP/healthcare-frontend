@@ -83,7 +83,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
             <div className="flex flex-row h-8 items-center justify-between">
               <div className="flex flex-row gap-1">
                 <Image
-                  src={"/assets/icons/Cake.svg"}
+                  src={"assets/icons/Cake.svg"}
                   width={16}
                   height={16}
                   alt="Cake"
@@ -100,7 +100,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
             <div className="flex flex-row h-8 items-center justify-between">
               <div className="flex flex-row gap-1 w-fit whitespace-nowrap items-center">
                 <Image
-                  src={"/assets/icons/FirstAidKit.svg"}
+                  src={"assets/icons/FirstAidKit.svg"}
                   width={16}
                   height={16}
                   alt="FirstAidKit"
@@ -117,7 +117,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
             <div className="flex flex-row h-8 items-center justify-between">
               <div className="flex flex-row gap-1">
                 <Image
-                  src={"/assets/icons/Cash.svg"}
+                  src={"assets/icons/Cash.svg"}
                   width={16}
                   height={16}
                   alt="Cash"
@@ -133,7 +133,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
             <div className="flex flex-row h-8 items-center justify-between">
               <div className="flex flex-row gap-1 w-[142px]">
                 <Image
-                  src={"/assets/icons/Building.svg"}
+                  src={"assets/icons/Building.svg"}
                   width={16}
                   height={16}
                   alt="Cash"
@@ -158,10 +158,12 @@ const PatientCard: React.FC<PatientCardProps> = ({
                   type="link-secondary"
                   variant="link-button"
                   className="cursor-pointer"
-                  onClick={() => {setDetailsCardOpen(true)
-                    setLastVisitCardOpen(false);}
+                  onClick={() => {
+                    setDetailsCardOpen(true)
+                    setLastVisitCardOpen(false);
                   }
-                 
+                  }
+
                 >
                   Show more
                 </Button>
@@ -196,7 +198,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
           )}
           {lastVisitCardOpen && (
             <LastVisitCard onClose={() => setLastVisitCardOpen(false)} />
-          )} 
+          )}
         </DialogContent>
       </Dialog>
     </div>

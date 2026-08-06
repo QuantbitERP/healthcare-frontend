@@ -56,7 +56,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
   modalProps: { setOpenFilters },
 }) => {
   const [localFilters, setLocalFilters] = useState({});
-  
+
   // Use the filter options hook
   const { filterOptions, loading: filterLoading, error: filterError } = useFilterOptions();
 
@@ -97,14 +97,14 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
       billType: billType.length > 0 ? [...billType] : null,
       company: company.length > 0 ? [...company] : null,
       associateCompany:
-      associateCompany.length > 0 ? [...associateCompany] : null,
+        associateCompany.length > 0 ? [...associateCompany] : null,
       groupBy: groupBy ? groupBy : null,
     };
 
     setLocalFilters(
       Object.fromEntries(
         Object.entries(count).filter(
-          ([,value]) => value !== null && value !== undefined
+          ([, value]) => value !== null && value !== undefined
         )
       )
     );
@@ -114,17 +114,17 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
       <DialogTrigger>{trigger}</DialogTrigger>
       <DialogContent className="max-w-[640px] p-0 [&>button]:!hidden gap-6">
         <DialogHeader>
-         <div className="flex items-center gap-2 justify-between border-b border-[#D9D9E0] px-6 py-4">
-                     <div className="flex items-center gap-2">
-                       <Image src={"/assets/icons/FilterIcon.svg"} height={24} width={24} alt="filter icon" />
-                     <DialogTitle className="text-base font-semibold text-[#1C2024]">
-                       {t("actionLabels.filters")}
-                     </DialogTitle>
-                     </div>
-                      <DialogClose asChild>
-                     <Image className="border border-[#D9D9E0] cursor-pointer rounded-md p-1" src={"/assets/icons/x.svg"} height={24} width={24} alt="filter icon" />
-                   </DialogClose>
-                   </div>
+          <div className="flex items-center gap-2 justify-between border-b border-[#D9D9E0] px-6 py-4">
+            <div className="flex items-center gap-2">
+              <Image src={"assets/icons/FilterIcon.svg"} height={24} width={24} alt="filter icon" />
+              <DialogTitle className="text-base font-semibold text-[#1C2024]">
+                {t("actionLabels.filters")}
+              </DialogTitle>
+            </div>
+            <DialogClose asChild>
+              <Image className="border border-[#D9D9E0] cursor-pointer rounded-md p-1" src={"assets/icons/x.svg"} height={24} width={24} alt="filter icon" />
+            </DialogClose>
+          </div>
         </DialogHeader>
         <div className="px-6 py-2 flex flex-col space-y-lg items-center w-full">
           <div className="flex items-center gap-2 space-x-lg w-full">
@@ -149,22 +149,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                       : [...prev.filter((status) => status !== value)]
                   )
                 }
-                value={`${
-                  billStatus.length !== 0
+                value={`${billStatus.length !== 0
                     ? `${billStatus.length} Selected`
                     : t("common.createdBy")
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`${t("common.createdBy")}`}>
-                    {`${
-                      billStatus.length !== 0
+                    {`${billStatus.length !== 0
                         ? `${billStatus.length} Selected`
                         : t("actionLabels.all")
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -198,10 +196,10 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                     value
                                       ? [...prev, status.value]
                                       : [
-                                          ...prev.filter(
-                                            (pers) => pers !== status.value
-                                          ),
-                                        ]
+                                        ...prev.filter(
+                                          (pers) => pers !== status.value
+                                        ),
+                                      ]
                                   );
                                 }}
                                 id={status.value}
@@ -236,23 +234,21 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                     setOpenDropdowns(prev => ({ ...prev, billType: false }));
                   }
                 }}
-                onValueChange={() => {}}
-                value={`${
-                  billType.length !== 0
+                onValueChange={() => { }}
+                value={`${billType.length !== 0
                     ? `${billType.length} Selected`
                     : t("common.createdBy")
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`${t("common.createdBy")}`}>
-                    {`${
-                      billType.length !== 0
+                    {`${billType.length !== 0
                         ? `${billType.length} Selected`
                         : t("actionLabels.all")
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -286,8 +282,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                     checked
                                       ? [...prev, billTypeOption.value]
                                       : prev.filter(
-                                          (pers) => pers !== billTypeOption.value
-                                        )
+                                        (pers) => pers !== billTypeOption.value
+                                      )
                                   )
                                 }
                                 id={billTypeOption.value}
@@ -323,23 +319,21 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                     setOpenDropdowns(prev => ({ ...prev, company: false }));
                   }
                 }}
-                onValueChange={() => {}}
-                value={`${
-                  company.length !== 0
+                onValueChange={() => { }}
+                value={`${company.length !== 0
                     ? `${company.length} Selected`
                     : t("table.patientCompany")
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`Patient Company`}>
-                    {`${
-                      company.length !== 0
+                    {`${company.length !== 0
                         ? `${company.length} Selected`
                         : t("actionLabels.all")
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -376,7 +370,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                             >
                               <Checkbox
                                 checked={company.length === filterOptions.companies.length}
-                                onCheckedChange={() => {}}
+                                onCheckedChange={() => { }}
                                 id={t("actionLabels.all")}
                               />
                               <label
@@ -399,8 +393,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                       checked
                                         ? [...prev, companyOption.value]
                                         : prev.filter(
-                                            (pers) => pers !== companyOption.value
-                                          )
+                                          (pers) => pers !== companyOption.value
+                                        )
                                     )
                                   }
                                   id={companyOption.value}
@@ -435,23 +429,21 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                     setOpenDropdowns(prev => ({ ...prev, associateCompany: false }));
                   }
                 }}
-                onValueChange={() => {}}
-                value={`${
-                  associateCompany.length !== 0
+                onValueChange={() => { }}
+                value={`${associateCompany.length !== 0
                     ? `${associateCompany.length} Selected`
                     : t("table.patientCompany")
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`Patient Company`}>
-                    {`${
-                      associateCompany.length !== 0
+                    {`${associateCompany.length !== 0
                         ? `${associateCompany.length} Selected`
                         : t("actionLabels.all")
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -485,8 +477,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                     checked
                                       ? [...prev, associateCompanyOption.value]
                                       : prev.filter(
-                                          (pers) => pers !== associateCompanyOption.value
-                                        )
+                                        (pers) => pers !== associateCompanyOption.value
+                                      )
                                   )
                                 }
                                 id={associateCompanyOption.value}
@@ -521,7 +513,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                     setOpenDropdowns(prev => ({ ...prev, groupBy: false }));
                   }
                 }}
-                onValueChange={() => {}}
+                onValueChange={() => { }}
                 value={groupBy ? groupBy : t("actionLabels.none")}
               >
                 <SelectTrigger className="w-full">
@@ -529,7 +521,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                     {groupBy || t("actionLabels.none")}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"

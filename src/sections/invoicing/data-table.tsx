@@ -370,7 +370,7 @@ export function DataTable({
           <FilterDialogue
             trigger={
               <TableUtilFilterButton
-                icon={"/assets/icons/FilterIcon.svg"}
+                icon={"assets/icons/FilterIcon.svg"}
                 label={t("actionLabels.filters")}
                 badgeCount={Object.keys(filters).length}
               />
@@ -384,7 +384,7 @@ export function DataTable({
           <DropdownMenu onOpenChange={setOpenShowCols} open={openShowCols}>
             <DropdownMenuTrigger asChild>
               <UtilDropDownButton
-                leadingIcon={"/assets/icons/columns.svg"}
+                leadingIcon={"assets/icons/columns.svg"}
                 label={t("actionLabels.showColumns")}
                 tabIndex={5}
               />
@@ -619,7 +619,7 @@ export function DataTable({
                   >
                     <div className="flex flex-col items-center justify-center w-full space-y-3">
                       <Image
-                        src={"/assets/icons/alert-circle.svg"}
+                        src={"assets/icons/alert-circle.svg"}
                         height={24}
                         width={24}
                         alt="no data found"

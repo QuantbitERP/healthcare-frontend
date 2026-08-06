@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MoreHorizontal, Edit2, Check, X } from 'lucide-react';
-import Dropdown from '../dropdownForPatientCard/Dropdown';
+// import Dropdown from '../dropdownForPatientCard/Dropdown';
 import RecordPaymentModal from './RecordPaymentModal';
 import TotalBreakdownModal from './TotalBreakdownModal';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +12,9 @@ interface BillBreakdownProps {
   totalCgstAmount: number;
   totalSgstAmount: number;
   totalIgstAmount: number;
+  totalPayerAmount?: number;
+  totalPatientAmount?: number;
+  showPayerPatientAmounts?: boolean;
   posProfile?: string;
   employeeId?: string; // Added
   employeeBalance?: number; // Added
@@ -40,6 +43,9 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
   totalCgstAmount,
   totalSgstAmount,
   totalIgstAmount,
+  totalPayerAmount = 0,
+  totalPatientAmount = 0,
+  showPayerPatientAmounts = false,
   posProfile,
   employeeId = '', // Default to empty string
   employeeBalance = 0, // Default to 0
@@ -48,11 +54,11 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
   const { apiKey, apiSecret } = useAuth();
   const [showRecordPayment, setShowRecordPayment] = useState(false);
   const [showTotalBreakdown, setShowTotalBreakdown] = useState(false);
-  const [selectedConcession, setSelectedConcession] = useState<string>('');
-  const [selectedConcessionauth, setSelectedConcessionauth] = useState<string>('');
-  const [concessionOptions, setConcessionOptions] = useState<Array<{ value: string, label: string }>>([]);
-  const [concessionauthOptions, setConcessionauthOptions] = useState<Array<{ value: string, label: string }>>([]);
-  const [concessionAmount, setConcessionAmount] = useState<number>(0);
+  // const [selectedConcession, setSelectedConcession] = useState<string>('');
+  // const [selectedConcessionauth, setSelectedConcessionauth] = useState<string>('');
+  const [_concessionOptions, setConcessionOptions] = useState<Array<{ value: string, label: string }>>([]);
+  const [_concessionauthOptions, setConcessionauthOptions] = useState<Array<{ value: string, label: string }>>([]);
+  const [concessionAmount] = useState<number>(0);
   const [isRoundedOff, setIsRoundedOff] = useState<boolean>(true);
   const [recordedPayments, setRecordedPayments] = useState<RecordedPayment[]>([]);
 
@@ -70,7 +76,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
     transactions: '0',
   });
 
-  const FRAPPE_BASE_URL = 'https://demohims.quantcloud.in';
+  const FRAPPE_BASE_URL = 'https://gmcerp.quantcloud.in';
 
   // Fetch concession types and users (unchanged)
   useEffect(() => {
@@ -272,7 +278,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
           ) : (
             <>
               <span className="text-[#1C2024] text-xs font-semibold">
-                {isCurrency ? '₹' : ''}{fieldData.value.toLocaleString()}
+                {isCurrency ? '' : ''}{fieldData.value.toLocaleString()}
               </span>
               <button
                 onClick={() => handleEditToggle(field)}
@@ -308,15 +314,31 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Taxable Amount</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{truncateToTwoDecimals(calculateNetTotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {truncateToTwoDecimals(calculateNetTotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[#1C2024] text-xs font-normal">Grand Total</span>
             <span className="text-[#1C2024] text-xs font-semibold">
-              ₹{truncateToTwoDecimals(totalBillAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {truncateToTwoDecimals(totalBillAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
+          {showPayerPatientAmounts && (
+            <>
+              <div className="flex justify-between items-center">
+                <span className="text-[#1C2024] text-xs font-normal">Payer Amount</span>
+                <span className="text-[#1C2024] text-xs font-semibold">
+                  {truncateToTwoDecimals(totalPayerAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#1C2024] text-xs font-normal">Patient Amount</span>
+                <span className="text-[#1C2024] text-xs font-semibold">
+                  {truncateToTwoDecimals(totalPatientAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </>
+          )}
           <div className="flex items-center justify-between">
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
@@ -330,8 +352,8 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             {isRoundedOff && (
               <span className="text-[#60646C] text-xs font-normal">
                 {calculateRoundOffValues().rounding_adjustment >= 0
-                  ? `+ ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
-                  : `- ₹${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
+                  ? `+ ${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`
+                  : `- ${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
             )}
           </div>
@@ -340,13 +362,13 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
 
               <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                ₹{calculateRoundOffValues().grand_total.toLocaleString()}
+                {calculateRoundOffValues().grand_total.toLocaleString()}
               </span>
             </div>
           )}
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
+              {/* <div className="flex justify-between items-center">
                 <span className="text-[rgb(13_116_206_/var(--tw-text-opacity,_1))] text-xs font-normal">Concession Type</span>
                 <div className="flex items-center space-x-1">
                   <Dropdown
@@ -388,7 +410,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
                     min="0"
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
             {/* Display Total Employee Balance Utilized */}
             {renderEditableField(
@@ -410,7 +432,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             <div className="flex justify-between items-center">
               <h3 className="text-[#1C2024] text-xs font-semibold">Outstanding Amount</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                ₹{calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
             </div>
 

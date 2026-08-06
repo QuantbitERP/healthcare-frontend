@@ -46,15 +46,14 @@ export default function DocumentUpload({ onUpload }: DocumentUploadProps) {
     <div>
       <div
         {...getRootProps()}
-        className={`border-dashed border-2 rounded-lg p-4 text-center cursor-pointer hover:border-primary ${
-          isDragActive ? "border-primary" : "border-gray-300"
-        }`}
+        className={`border-dashed border-2 rounded-lg p-4 text-center cursor-pointer hover:border-primary ${isDragActive ? "border-primary" : "border-gray-300"
+          }`}
       >
         {uploadStatus === "success" && (
           <div className="flex items-center justify-between mb-5 p-3 text-sm bg-green-50 text-green-700 rounded w-full">
             <div className="flex">
               <Image
-                src={"/assets/icons/InfoCircleSuccess.svg"}
+                src={"assets/icons/InfoCircleSuccess.svg"}
                 alt="Success Icon"
                 className="mr-2"
                 width={16}
@@ -70,7 +69,7 @@ export default function DocumentUpload({ onUpload }: DocumentUploadProps) {
           <div className="flex items-center justify-between mb-4 p-3 text-sm bg-pink-50 text-danger rounded w-full">
             <div className="flex">
               <Image
-                src={"/assets/icons/InfoCircleDanger.svg"}
+                src={"assets/icons/InfoCircleDanger.svg"}
                 alt="Error Icon"
                 className="mr-2"
                 width={16}
@@ -107,9 +106,8 @@ export default function DocumentUpload({ onUpload }: DocumentUploadProps) {
             </div>
             <div className="w-full bg-gray-200 rounded h-2 mt-2">
               <div
-                className={`h-2 rounded ${
-                  uploadStatus === "success" ? "bg-green-500" : "bg-red-500"
-                }`}
+                className={`h-2 rounded ${uploadStatus === "success" ? "bg-green-500" : "bg-red-500"
+                  }`}
                 style={{ width: "100%" }}
               ></div>
             </div>

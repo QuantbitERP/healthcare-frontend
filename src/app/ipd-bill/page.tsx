@@ -45,6 +45,7 @@ import SelectInvoiceModal from '@/components/return/SelectInvoiceModal';
 import { useAlert } from "@/components/AlertContext/AlertContext";
 import PaymentTable from '@/components/billbreakdown/PaymentTable'; // New Import
 import SplashScreen from '@/components/SplashScreen/SplashScreen'; // New Import
+import { securePrintPdf } from "@/utils/printHelper";
 interface AlertState {
   show: boolean;
   variant: "success" | "warning" | "danger" | "primary" | "secondary";
@@ -195,7 +196,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
 
   const searchItems = async (query: string, selectedClassification?: string, isGeneric?: boolean, selectedCompany?: string, selectedCustomer?: string): Promise<Item[]> => {
     try {
@@ -293,11 +294,11 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
         // Filter items by business category if company is selected
         if (selectedCompany) {
-          console.log("Filtering items for company:", selectedCompany);
-          console.log("Items before filtering:", fetchedItems.map(item => ({
-            name: item.itemName,
-            business_category: item.custom_business_category
-          })));
+          // console.log("Filtering items for company:", selectedCompany);
+          // console.log("Items before filtering:", fetchedItems.map(item => ({
+          //   name: item.itemName,
+          //   business_category: item.custom_business_category
+          // })));
 
           // Check if any items have matching business categories
           const itemsWithMatchingCategories = fetchedItems.filter(item => {
@@ -308,13 +309,13 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
 
           // If no items match exactly, show all items (fallback behavior)
           if (itemsWithMatchingCategories.length === 0) {
-            console.log("No items match the selected company exactly. Showing all items.");
-            console.log("Items after filtering:", fetchedItems.length);
+            // console.log("No items match the selected company exactly. Showing all items.");
+            // console.log("Items after filtering:", fetchedItems.length);
             // Return all items without filtering
           } else {
             // Filter to show only matching items
             fetchedItems = itemsWithMatchingCategories;
-            console.log("Items after filtering:", fetchedItems.length);
+            // console.log("Items after filtering:", fetchedItems.length);
           }
         }
 
@@ -473,7 +474,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Batch/${batchName}`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Batch/${batchName}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -529,7 +530,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
       use_serial_batch_fields: 1,
       custom_classification: item.custom_classification, // Explicitly preserve custom_classification for high-alert check
     };
-    console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
+    // console.log("handleConfirmedSelectItem - itemWithBatchAndRate: ", itemWithBatchAndRate); // Log here
     onSelectItem(itemWithBatchAndRate);
     // setSearchTerm(''); // Don't clear search term immediately, allow further selections
     // setSuggestions([]);
@@ -1040,9 +1041,9 @@ export default function IPDBill() {
   const { isAuthenticated, posProfile, setPosProfile, isInitialized, apiKey, apiSecret, checkUserRole, currentUser } = useAuth();
   const { classifications, fetchUserDefaultCompany, customers } = useFrappeApi();
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
-  const ITEM_DETAILS_API_URL = 'https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
+  const ITEM_DETAILS_API_URL = 'https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
 
   // Function to fetch pricing rules for a specific customer
   const fetchPricingRules = async (customer: string): Promise<any[]> => {
@@ -1406,7 +1407,7 @@ export default function IPDBill() {
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1460,7 +1461,7 @@ export default function IPDBill() {
           authHeaders;
 
       // Call the new API method that filters by warehouse and company
-      const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_batches_by_warehouse_and_company', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1506,7 +1507,7 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const resp = await fetch('https://demohims.quantcloud.in/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
+      const resp = await fetch('https://gmcerp.quantcloud.in/api/method/erpnext.stock.doctype.batch.batch.get_batch_qty', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -1724,7 +1725,7 @@ export default function IPDBill() {
       let stockQty = 0;
       if (selectedWarehouse) {
         try {
-          const batchQtyResponse = await fetch(`https://demohims.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
+          const batchQtyResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -1956,7 +1957,7 @@ export default function IPDBill() {
       try {
         const hasPermission = await checkUserRole("Allow Sale Rate Change");
         setCanChangeRate(hasPermission);
-        console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
+        // console.log("User has 'Allow Sale Rate Change' role:", hasPermission);
       } catch (error) {
         console.error("Error checking user role:", error);
         setCanChangeRate(false);
@@ -2090,18 +2091,18 @@ export default function IPDBill() {
 
       const reqData = await reqResponse.json();
       const requisitionItems = reqData.data?.patient_requisition_item_details || [];
-      console.log("Requisition items for", reqNo, ":", requisitionItems);
+      // console.log("Requisition items for", reqNo, ":", requisitionItems);
 
       // Try different field names for quantity
       const totalQty = requisitionItems.reduce((sum: number, item: any) => {
         // Debug: Show all available fields
-        console.log("Item fields:", Object.keys(item), "Item data:", item);
+        // console.log("Item fields:", Object.keys(item), "Item data:", item);
         const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
-        console.log("Using quantity field:", qty, "from item:", item);
+        // console.log("Using quantity field:", qty, "from item:", item);
         return sum + qty;
       }, 0);
 
-      console.log("Total quantity calculated:", totalQty);
+      // console.log("Total quantity calculated:", totalQty);
 
       // Get invoiced quantity from Sale bills
       const invoiceResponse = await fetch(
@@ -2120,12 +2121,12 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log("Invoices for requisition", reqNo, ":", invoices);
+      // console.log("Invoices for requisition", reqNo, ":", invoices);
       let invoicedQty = 0;
 
       // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
-        console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
+        // console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
 
         try {
           const fullInvoiceResponse = await fetch(
@@ -2142,10 +2143,10 @@ export default function IPDBill() {
             const fullInvoice = fullInvoiceData.data;
 
             if (fullInvoice?.items) {
-              console.log("Invoice items:", fullInvoice.items);
+              // console.log("Invoice items:", fullInvoice.items);
               const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
               invoicedQty += invoiceQty;
-              console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
+              // console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
             }
           }
         } catch (error) {
@@ -2153,10 +2154,10 @@ export default function IPDBill() {
         }
       }
 
-      console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
+      // console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
       return { total_qty: totalQty, invoiced_qty: invoicedQty };
     } catch (error) {
-      console.error("Error getting requisition quantities:", error);
+      // console.error("Error getting requisition quantities:", error);
       return { total_qty: 0, invoiced_qty: 0 };
     }
   };
@@ -2192,7 +2193,7 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
+      // console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
 
       let totalInvoicedQty = 0;
 
@@ -2212,10 +2213,10 @@ export default function IPDBill() {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
 
-            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
+            // console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
 
             if (fullInvoice?.items) {
-              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
+              // console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
 
               // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
@@ -2300,7 +2301,7 @@ export default function IPDBill() {
         }
       }
 
-      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
+      // console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting prescription item invoiced quantity:", error);
@@ -2329,22 +2330,22 @@ export default function IPDBill() {
 
       if (forceComplete) {
         status = "Completed";
-        console.log("Force completing requisition:", reqNo);
+        // console.log("Force completing requisition:", reqNo);
       } else {
         // Check current status based on quantities
         const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
-        console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
+        // console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
 
         if (total_qty > 0 && invoiced_qty >= total_qty) {
           status = "Completed";
-          console.log("Requisition marked as Completed");
+          // console.log("Requisition marked as Completed");
         } else {
           status = "Pending";
-          console.log("Requisition marked as Pending");
+          // console.log("Requisition marked as Pending");
         }
       }
 
-      console.log("Updating requisition", reqNo, "status to:", status);
+      // console.log("Updating requisition", reqNo, "status to:", status);
 
       // Update the requisition status
       const response = await fetch(
@@ -2415,7 +2416,7 @@ export default function IPDBill() {
       // Remove Content-Type header for FormData uploads to let browser set it with boundary
       delete headers['Content-Type'];
 
-      const response = await fetch('https://demohims.quantcloud.in/api/method/upload_file', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/method/upload_file', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -2446,7 +2447,7 @@ export default function IPDBill() {
               Array.isArray(authHeaders) ?
                 Object.fromEntries(authHeaders) :
                 authHeaders;
-            const fileDocResponse = await fetch('https://demohims.quantcloud.in/api/resource/File', {
+            const fileDocResponse = await fetch('https://gmcerp.quantcloud.in/api/resource/File', {
               method: 'POST',
               headers,
               credentials: 'include',
@@ -2711,7 +2712,7 @@ export default function IPDBill() {
         //   'Content-Type': 'application/json',
         //   'Authorization': `token ${apiKey}:${apiSecret}`,
         // };
-        const taxTemplateResponse = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
+        const taxTemplateResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_template`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2728,7 +2729,7 @@ export default function IPDBill() {
         }
 
         // Fetch Tax Accounts
-        const taxAccountsResponse = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
+        const taxAccountsResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_tax_accounts`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2773,7 +2774,7 @@ export default function IPDBill() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
+        const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_gst_category`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -2818,7 +2819,7 @@ export default function IPDBill() {
             authHeaders;
 
         const response = await fetch(
-          'https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
+          'https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_company_billing_address',
           {
             method: 'POST',
             headers,
@@ -2883,7 +2884,7 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_product_bundle_items`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -3274,6 +3275,7 @@ export default function IPDBill() {
 
     const payload = {
       doctype: "Sale Bill",
+      currency: "QAR",
       customer: selectedCustomer || patientData.mrn || "PQR Ltd",
       pos_profile: posProfile,
       is_pos: 1,
@@ -3586,7 +3588,7 @@ export default function IPDBill() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+        const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -3620,7 +3622,7 @@ export default function IPDBill() {
                   Array.isArray(authHeaders) ?
                     Object.fromEntries(authHeaders) :
                     authHeaders;
-                const fileDocResponse = await fetch('https://demohims.quantcloud.in/api/resource/File', {
+                const fileDocResponse = await fetch('https://gmcerp.quantcloud.in/api/resource/File', {
                   method: 'POST',
                   headers,
                   credentials: 'include',
@@ -3763,7 +3765,7 @@ export default function IPDBill() {
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
         {
           method: "POST",
           headers,
@@ -4834,7 +4836,7 @@ export default function IPDBill() {
       return fileUrl;
     }
     // Otherwise, prepend the server URL
-    return `https://demohims.quantcloud.in/${fileUrl}`;
+    return `https://gmcerp.quantcloud.in/${fileUrl}`;
   };
   // --- END: Function to get full file URL ---
 
@@ -4850,7 +4852,7 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch('https://demohims.quantcloud.in/api/method/frappe.client.get_list', {
+      const response = await fetch('https://gmcerp.quantcloud.in/api/method/frappe.client.get_list', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -5231,10 +5233,10 @@ export default function IPDBill() {
           method: 'PUT',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ 
-          docstatus: 1,
-          custom_ipd_effect: isIpdEffect ? 1 : 0
-        }),
+          body: JSON.stringify({
+            docstatus: 1,
+            custom_ipd_effect: isIpdEffect ? 1 : 0
+          }),
         });
 
         if (!response.ok) {
@@ -5263,14 +5265,14 @@ export default function IPDBill() {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-            window.open(printUrl, '_blank');
+            const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            securePrintPdf(printUrl, getAuthHeaders, showAlert);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://demohims.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-          window.open(printUrl, '_blank');
+          const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          securePrintPdf(printUrl, getAuthHeaders, showAlert);
         }
 
       } catch (error) {
@@ -5356,7 +5358,7 @@ export default function IPDBill() {
               Object.fromEntries(authHeaders) :
               authHeaders;
 
-          const response = await fetch('https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
+          const response = await fetch('https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_return', {
             method: 'POST',
             headers,
             body: JSON.stringify(returnData),
@@ -5373,8 +5375,8 @@ export default function IPDBill() {
 
             // Print the return invoice
             if (returnInvoiceName) {
-              const printUrl = `https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
-              window.open(printUrl, '_blank');
+              const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${returnInvoiceName}&trigger_print=1&format=IP%20SALE%20RETURN%20INVOICE&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+              securePrintPdf(printUrl, getAuthHeaders, showAlert);
             }
 
             // Reset form
@@ -5458,6 +5460,7 @@ export default function IPDBill() {
 
       const payload = {
         doctype: "Sale Bill",
+      currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -5731,7 +5734,7 @@ export default function IPDBill() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
+        const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_invoice_draft`, {
           method: 'POST',
           headers,
           credentials: 'include',
@@ -5759,10 +5762,10 @@ export default function IPDBill() {
           method: 'PUT',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ 
-          docstatus: 1,
-          custom_ipd_effect: isIpdEffect ? 1 : 0
-        }),
+          body: JSON.stringify({
+            docstatus: 1,
+            custom_ipd_effect: isIpdEffect ? 1 : 0
+          }),
         });
 
         if (!submitResponse.ok) {
@@ -5789,7 +5792,7 @@ export default function IPDBill() {
                 Object.fromEntries(authHeaders) :
                 authHeaders;
 
-            const fileDocResponse = await fetch('https://demohims.quantcloud.in/api/resource/File', {
+            const fileDocResponse = await fetch('https://gmcerp.quantcloud.in/api/resource/File', {
               method: 'POST',
               headers,
               credentials: 'include',
@@ -5836,14 +5839,14 @@ export default function IPDBill() {
             console.error("Network printing failed:", error);
             showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
             // Fallback to browser print
-            const printUrl = `https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-            window.open(printUrl, '_blank');
+            const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+            securePrintPdf(printUrl, getAuthHeaders, showAlert);
           }
         } else {
           // Fallback to browser print if network printer not available
           console.warn('Network printer not available, using browser print');
-          const printUrl = `https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
-          window.open(printUrl, '_blank');
+          const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(invoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+          securePrintPdf(printUrl, getAuthHeaders, showAlert);
         }
 
       } catch (error) {
@@ -5872,7 +5875,7 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -5899,66 +5902,69 @@ export default function IPDBill() {
   return (
     <>
       {/* Splash Screen */}
-      <SplashScreen 
-        show={initialLoading} 
-        message="Initializing IPD Billing System..." 
+      <SplashScreen
+        show={initialLoading}
+        message="Initializing IPD Billing System..."
       />
-      
+
       {/* Saving/Submitting Splash Screen */}
-      <SplashScreen 
-        show={isSaving} 
-        message={isReturn ? "Submitting Return... Please wait" : loadedInvoiceName && loadedInvoiceDocstatus === 0 ? "Submitting Invoice... Please wait" : "Saving Invoice... Please wait"} 
+      <SplashScreen
+        show={isSaving}
+        message={isReturn ? "Submitting Return... Please wait" : loadedInvoiceName && loadedInvoiceDocstatus === 0 ? "Submitting Invoice... Please wait" : "Saving Invoice... Please wait"}
       />
-      
+
       <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
-      {/* Alert Component */}
-      {alert.show && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
-          <Alerts
-            heading={alert.heading}
-            content={alert.content}
-            variant={alert.variant}
-            showCloseIcon={true}
-            open={alert.show}
-            disappear={true}
-            onClick={() => setAlert(prev => ({ ...prev, show: false }))}
-          />
-        </div>
-      )}
-      <ToastContainer aria-label="Notifications" />
-      <div className="my-16 px-4 md:px-6">
-        <PageHeader
-          parentTitle="POS"
-          parentLink="/pos"
-          title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New IPD Bill"}
-          icon="../pos/assets/icons/BriefcaseIcon.svg"
-          posProfile={posProfile || undefined}
-          warehouse={selectedWarehouse || undefined}
-          rightButtons={
-            <div className="flex flex-row space-x-2">
-              <Button type="secondary-button" size="button-medium" onClick={() => setShowViewPosInvoicesModal(true)}>
-                View Sale Bills
-              </Button>
-              <Button type="secondary-button" size="button-medium" onClick={handleChangePOSProfile}>
-                Change POS Profile
-              </Button>
-              {/* <Button type="secondary-button" size="button-medium" onClick={logout}>
+        {/* Alert Component */}
+        {alert.show && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
+            <Alerts
+              heading={alert.heading}
+              content={alert.content}
+              variant={alert.variant}
+              showCloseIcon={true}
+              open={alert.show}
+              disappear={true}
+              onClick={() => setAlert(prev => ({ ...prev, show: false }))}
+            />
+          </div>
+        )}
+        <ToastContainer aria-label="Notifications" />
+        <div className="my-16 px-4 md:px-6">
+          <PageHeader
+            parentTitle="POS"
+            parentLink="/pos"
+            title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New IPD Bill"}
+            icon="../pos/assets/icons/BriefcaseIcon.svg"
+            posProfile={posProfile || undefined}
+            warehouse={selectedWarehouse || undefined}
+            rightButtons={
+              <div className="flex flex-row space-x-2">
+                <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
+                  View Sale Bills
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={() => { window.location.href = "https://gmcerp.quantcloud.in/app/home"; }}>
+                  Home
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={handleChangePOSProfile}>
+                  Change POS Profile
+                </Button>
+                {/* <Button type="secondary-button" size="button-medium" onClick={logout}>
                 Logout
               </Button> */}
-              {/* <Button type="danger-button" size="button-medium" onClick={clearPatient}>
+                {/* <Button type="danger-button" size="button-medium" onClick={clearPatient}>
                 Clear Patient
               </Button> */}
-            </div>
-          }
-        />
-      </div>
+              </div>
+            }
+          />
+        </div>
 
-      {/* Main Content */}
-      <div className="flex flex-col lg:flex-row gap-0.5 py-6 px-4 mx-2 md:px-4 pb-24">
-        {/* Left Panel - Patient Search and Cards */}
-        <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
+        {/* Main Content */}
+        <div className="flex flex-col lg:flex-row gap-0.5 py-6 px-4 mx-2 md:px-4 pb-24">
+          {/* Left Panel - Patient Search and Cards */}
+          <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
 
-          {/* <div className="flex flex-col items-center space-y-4">
+            {/* <div className="flex flex-col items-center space-y-4">
              <div className="w-full">
                <SelectInput
                  placeholder="Select Search Type"
@@ -6004,307 +6010,307 @@ export default function IPDBill() {
              </div>
            </div> */}
 
-          <div>
-            <OpdCard
-              patientData={patientData}
-              onPatientChange={(p) => setPatientData(p)}
-              selectedWarehouse={selectedWarehouse}
-              setSelectedWarehouse={setSelectedWarehouse}
-              selectedCustomer={selectedCustomer}
-              setSelectedCustomer={setSelectedCustomer}
-              selectedCompany={selectedCompany}
-              setSelectedCompany={setSelectedCompany}
-              selectedBranch={selectedBranch}
-              setSelectedBranch={setSelectedBranch}
-              selectedDepartment={selectedDepartment}
-              setSelectedDepartment={setSelectedDepartment}
-              selectedSubDepartment={selectedSubDepartment}
-              setSelectedSubDepartment={setSelectedSubDepartment}
-              isReturn={isReturn}
-              onReturnStatusChange={setIsReturn}
+            <div>
+              <OpdCard
+                patientData={patientData}
+                onPatientChange={(p) => setPatientData(p)}
+                selectedWarehouse={selectedWarehouse}
+                setSelectedWarehouse={setSelectedWarehouse}
+                selectedCustomer={selectedCustomer}
+                setSelectedCustomer={setSelectedCustomer}
+                selectedCompany={selectedCompany}
+                setSelectedCompany={setSelectedCompany}
+                selectedBranch={selectedBranch}
+                setSelectedBranch={setSelectedBranch}
+                selectedDepartment={selectedDepartment}
+                setSelectedDepartment={setSelectedDepartment}
+                selectedSubDepartment={selectedSubDepartment}
+                setSelectedSubDepartment={setSelectedSubDepartment}
+                isReturn={isReturn}
+                onReturnStatusChange={setIsReturn}
+              />
+              {patientData && (
+                <div className="mt-2">
+                  <Button size="link-size" type="link-secondary" onClick={clearPatient}>
+                    Change Patient
+                  </Button>
+                </div>
+              )}
+            </div>
+            <BillBreakdown
+              totalBillAmount={totalBillAmount}
+              totalDiscountAmount={totalDiscountAmount}
+              totalCgstAmount={totalCgstAmount}
+              totalSgstAmount={totalSgstAmount}
+              totalIgstAmount={totalIgstAmount}
+              posProfile={posProfile || undefined}
+              onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
+            // onRecordPayments prop is removed
             />
-            {patientData && (
-              <div className="mt-2">
-                <Button size="link-size" type="link-secondary" onClick={clearPatient}>
-                  Change Patient
-                </Button>
-              </div>
-            )}
           </div>
-          <BillBreakdown
-            totalBillAmount={totalBillAmount}
-            totalDiscountAmount={totalDiscountAmount}
-            totalCgstAmount={totalCgstAmount}
-            totalSgstAmount={totalSgstAmount}
-            totalIgstAmount={totalIgstAmount}
-            posProfile={posProfile || undefined}
-            onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
-          // onRecordPayments prop is removed
-          />
-        </div>
 
-        {/* Right Panel - Item Details */}
-        <div className="flex-1 min-w-0 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Item Details</CardTitle>
-            </CardHeader>
+          {/* Right Panel - Item Details */}
+          <div className="flex-1 min-w-0 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Item Details</CardTitle>
+              </CardHeader>
 
-            <CardContent className="space-y-3 overflow-x-auto">
-              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <CardContent className="space-y-3 overflow-x-auto">
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
-                <RenderFormElement
-                  inputType="select"
-                  value={selectedSaleType}
-                  onChange={handleClassificationChange}
-                  data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
-                  placeholder="Select Classification"
-                />
+                  <RenderFormElement
+                    inputType="select"
+                    value={selectedSaleType}
+                    onChange={handleClassificationChange}
+                    data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
+                    placeholder="Select Classification"
+                  />
 
-                <EnhancedItemSearch
-                  onSelectItem={handleAddItemToDetails}
-                  placeholder="Search Items"
-                  fetchItemBatches={fetchItemBatches}
-                  fetchItemPrice={fetchItemPrice}
-                  getBatchQty={getBatchQty}
-                  onNoBatchesFound={handleNoBatchesFound}
-                  selectedWarehouse={selectedWarehouse}
-                  selectedCompany={selectedCompany}
-                  selectedCustomer={selectedCustomer}
-                  applyPricingRules={applyPricingRules}
-                  // showAlert={showAlert}
-                  selectedClassification={selectedSaleType}
-                  isGeneric={isGeneric}
-                  isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
-                  criticalCategoryDialog={criticalCategoryDialog}
-                  setCriticalCategoryDialog={setCriticalCategoryDialog}
-                  className="pt-2"// Pass getBatchQty as a prop
-                />
+                  <EnhancedItemSearch
+                    onSelectItem={handleAddItemToDetails}
+                    placeholder="Search Items"
+                    fetchItemBatches={fetchItemBatches}
+                    fetchItemPrice={fetchItemPrice}
+                    getBatchQty={getBatchQty}
+                    onNoBatchesFound={handleNoBatchesFound}
+                    selectedWarehouse={selectedWarehouse}
+                    selectedCompany={selectedCompany}
+                    selectedCustomer={selectedCustomer}
+                    applyPricingRules={applyPricingRules}
+                    // showAlert={showAlert}
+                    selectedClassification={selectedSaleType}
+                    isGeneric={isGeneric}
+                    isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
+                    criticalCategoryDialog={criticalCategoryDialog}
+                    setCriticalCategoryDialog={setCriticalCategoryDialog}
+                    className="pt-2"// Pass getBatchQty as a prop
+                  />
 
-                <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
-                  <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
-                  <Label htmlFor="terms">Generic</Label>
-                  <Button type="primary-button" size="button-medium" onClick={() => {
-                    console.log('Patient Requisition button clicked');
-                    setShowPatientRequisitionList(true)
-                    console.log('showPatientRequisitionList', showPatientRequisitionList);
-                  }
-                  }>
-                    Patient Requisition
-                  </Button>
-                  <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
-                    Prescription
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-2 xl:col-span-2">
+                    <Checkbox id="terms" checked={isGeneric} onCheckedChange={(checked) => setIsGeneric(checked === true)} />
+                    <Label htmlFor="terms">Generic</Label>
+                    <Button type="primary-button" size="button-medium" onClick={() => {
+                      console.log('Patient Requisition button clicked');
+                      setShowPatientRequisitionList(true)
+                      console.log('showPatientRequisitionList', showPatientRequisitionList);
+                    }
+                    }>
+                      Patient Requisition
+                    </Button>
+                    <Button type="primary-button" size="button-medium" onClick={() => setShowPrescriptionList(true)}>
+                      Prescription
+                    </Button>
 
-                  {/* --- START: Modified Upload Button --- */}
-                  <Button
-                    type={selectedDocument ? "secondary-button" : "primary-button"} // Changes style
-                    size="button-medium"
-                    onClick={() => setShowDocumentUpload(true)} // Still opens the modal
-                  >
-                    {selectedDocument ? (
-                      // --- Show file name if selected ---
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="truncate max-w-[150px]"
-                          title={selectedDocument.name}
-                        >
-                          {selectedDocument.name}
-                        </span>
-                        <X
-                          className="h-4 w-4 text-gray-600 cursor-pointer hover:text-red-500"
-                          onClick={handleClearFile} // Add clear handler
-                        />
-                      </div>
-                    ) : (
-                      // --- Default text ---
-                      'Upload'
-                    )}
-                  </Button>
-                  {/* --- END: Modified Upload Button --- */}
-
-                  {/* --- START: Loaded Attachments Display --- */}
-                  {loadedAttachments.length > 0 && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded border">
-                      <div className="text-sm font-medium text-gray-700 mb-1">Attached Files:</div>
-                      <div className="space-y-1">
-                        {loadedAttachments.map((attachment, index) => (
-                          <div key={index} className="flex items-center justify-between text-xs">
-                            <a
-                              href={getFullFileUrl(attachment.file_url)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 truncate max-w-[200px]"
-                              title={attachment.file_name}
-                              onMouseEnter={(e) => {
-                                setHoveredAttachment(attachment.file_url);
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setPreviewPosition({
-                                  x: rect.right + 10,
-                                  y: rect.top
-                                });
-                              }}
-                              onMouseLeave={() => setHoveredAttachment(null)}
-                            >
-                              {attachment.file_name}
-                            </a>
-                            <span className="text-gray-500">
-                              ({Math.round(attachment.file_size / 1024)}KB)
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* --- END: Loaded Attachments Display --- */}
-
-                  {/* --- START: Attachment Preview Popup --- */}
-                  {hoveredAttachment && (
-                    <div
-                      className="fixed z-50 bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4"
-                      style={{
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '90vw',
-                        height: '90vh',
-                        maxWidth: '1200px',
-                        maxHeight: '800px'
-                      }}
-                      onMouseEnter={() => setHoveredAttachment(hoveredAttachment)}
-                      onMouseLeave={() => setHoveredAttachment(null)}
+                    {/* --- START: Modified Upload Button --- */}
+                    <Button
+                      type={selectedDocument ? "secondary-button" : "primary-button"} // Changes style
+                      size="button-medium"
+                      onClick={() => setShowDocumentUpload(true)} // Still opens the modal
                     >
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="text-sm font-medium text-gray-700">Preview</div>
-                        <button
-                          onClick={() => setHoveredAttachment(null)}
-                          className="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                        >
-                          ✕
-                        </button>
+                      {selectedDocument ? (
+                        // --- Show file name if selected ---
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="truncate max-w-[150px]"
+                            title={selectedDocument.name}
+                          >
+                            {selectedDocument.name}
+                          </span>
+                          <X
+                            className="h-4 w-4 text-gray-600 cursor-pointer hover:text-red-500"
+                            onClick={handleClearFile} // Add clear handler
+                          />
+                        </div>
+                      ) : (
+                        // --- Default text ---
+                        'Upload'
+                      )}
+                    </Button>
+                    {/* --- END: Modified Upload Button --- */}
+
+                    {/* --- START: Loaded Attachments Display --- */}
+                    {loadedAttachments.length > 0 && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded border">
+                        <div className="text-sm font-medium text-gray-700 mb-1">Attached Files:</div>
+                        <div className="space-y-1">
+                          {loadedAttachments.map((attachment, index) => (
+                            <div key={index} className="flex items-center justify-between text-xs">
+                              <a
+                                href={getFullFileUrl(attachment.file_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 truncate max-w-[200px]"
+                                title={attachment.file_name}
+                                onMouseEnter={(e) => {
+                                  setHoveredAttachment(attachment.file_url);
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setPreviewPosition({
+                                    x: rect.right + 10,
+                                    y: rect.top
+                                  });
+                                }}
+                                onMouseLeave={() => setHoveredAttachment(null)}
+                              >
+                                {attachment.file_name}
+                              </a>
+                              <span className="text-gray-500">
+                                ({Math.round(attachment.file_size / 1024)}KB)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="w-full h-full overflow-auto bg-gray-100 rounded">
-                        {hoveredAttachment.toLowerCase().endsWith('.pdf') ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">PDF Document</div>
-                              <div className="text-sm mb-4">PDF files cannot be embedded due to security restrictions.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to open PDF
-                                </a>
+                    )}
+                    {/* --- END: Loaded Attachments Display --- */}
+
+                    {/* --- START: Attachment Preview Popup --- */}
+                    {hoveredAttachment && (
+                      <div
+                        className="fixed z-50 bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4"
+                        style={{
+                          left: '50%',
+                          top: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: '90vw',
+                          height: '90vh',
+                          maxWidth: '1200px',
+                          maxHeight: '800px'
+                        }}
+                        onMouseEnter={() => setHoveredAttachment(hoveredAttachment)}
+                        onMouseLeave={() => setHoveredAttachment(null)}
+                      >
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="text-sm font-medium text-gray-700">Preview</div>
+                          <button
+                            onClick={() => setHoveredAttachment(null)}
+                            className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="w-full h-full overflow-auto bg-gray-100 rounded">
+                          {hoveredAttachment.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center justify-center w-full h-full text-gray-500">
+                              <div className="text-center">
+                                <div className="text-lg font-medium mb-2">PDF Document</div>
+                                <div className="text-sm mb-4">PDF files cannot be embedded due to security restrictions.</div>
+                                <div className="text-sm">
+                                  <a
+                                    href={getFullFileUrl(hoveredAttachment)}
+                                    target=""
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    Click here to open PDF
+                                  </a>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full p-4">
-                            <img
-                              src={getFullFileUrl(hoveredAttachment)}
-                              alt="Preview"
-                              className="max-w-full max-h-full object-contain"
-                              onError={() => {
-                                console.error("Failed to load image preview");
-                              }}
-                            />
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(xlsx|xls|csv)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">
-                                {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV File' : 'Excel Spreadsheet'}
-                              </div>
-                              <div className="text-sm mb-4">Spreadsheet files cannot be previewed in the browser.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download/open {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV file' : 'Excel file'}
-                                </a>
+                          ) : hoveredAttachment.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ? (
+                            <div className="flex items-center justify-center w-full h-full p-4">
+                              <img
+                                src={getFullFileUrl(hoveredAttachment)}
+                                alt="Preview"
+                                className="max-w-full max-h-full object-contain"
+                                onError={() => {
+                                  console.error("Failed to load image preview");
+                                }}
+                              />
+                            </div>
+                          ) : hoveredAttachment.toLowerCase().match(/\.(xlsx|xls|csv)$/i) ? (
+                            <div className="flex items-center justify-center w-full h-full text-gray-500">
+                              <div className="text-center">
+                                <div className="text-lg font-medium mb-2">
+                                  {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV File' : 'Excel Spreadsheet'}
+                                </div>
+                                <div className="text-sm mb-4">Spreadsheet files cannot be previewed in the browser.</div>
+                                <div className="text-sm">
+                                  <a
+                                    href={getFullFileUrl(hoveredAttachment)}
+                                    target=""
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    Click here to download/open {hoveredAttachment.toLowerCase().endsWith('.csv') ? 'CSV file' : 'Excel file'}
+                                  </a>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(docx|doc)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">Word Document</div>
-                              <div className="text-sm mb-4">Word documents cannot be previewed in the browser.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download/open Word document
-                                </a>
+                          ) : hoveredAttachment.toLowerCase().match(/\.(docx|doc)$/i) ? (
+                            <div className="flex items-center justify-center w-full h-full text-gray-500">
+                              <div className="text-center">
+                                <div className="text-lg font-medium mb-2">Word Document</div>
+                                <div className="text-sm mb-4">Word documents cannot be previewed in the browser.</div>
+                                <div className="text-sm">
+                                  <a
+                                    href={getFullFileUrl(hoveredAttachment)}
+                                    target=""
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    Click here to download/open Word document
+                                  </a>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(txt|rtf)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full p-4">
-                            <iframe
-                              src={getFullFileUrl(hoveredAttachment)}
-                              className="w-full h-full border-0 bg-white"
-                              title="Text File Preview"
-                              onError={() => {
-                                console.error("Failed to load text file preview");
-                              }}
-                            />
-                          </div>
-                        ) : hoveredAttachment.toLowerCase().match(/\.(zip|rar|7z|tar|gz)$/i) ? (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">Archive File</div>
-                              <div className="text-sm mb-4">Compressed files cannot be previewed.</div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download archive file
-                                </a>
+                          ) : hoveredAttachment.toLowerCase().match(/\.(txt|rtf)$/i) ? (
+                            <div className="flex items-center justify-center w-full h-full p-4">
+                              <iframe
+                                src={getFullFileUrl(hoveredAttachment)}
+                                className="w-full h-full border-0 bg-white"
+                                title="Text File Preview"
+                                onError={() => {
+                                  console.error("Failed to load text file preview");
+                                }}
+                              />
+                            </div>
+                          ) : hoveredAttachment.toLowerCase().match(/\.(zip|rar|7z|tar|gz)$/i) ? (
+                            <div className="flex items-center justify-center w-full h-full text-gray-500">
+                              <div className="text-center">
+                                <div className="text-lg font-medium mb-2">Archive File</div>
+                                <div className="text-sm mb-4">Compressed files cannot be previewed.</div>
+                                <div className="text-sm">
+                                  <a
+                                    href={getFullFileUrl(hoveredAttachment)}
+                                    target=""
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    Click here to download archive file
+                                  </a>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center w-full h-full text-gray-500">
-                            <div className="text-center">
-                              <div className="text-lg font-medium mb-2">File Preview</div>
-                              <div className="text-sm mb-2">Preview not available for this file type.</div>
-                              <div className="text-xs text-gray-400 mb-4">
-                                Extension: {hoveredAttachment.split('.').pop()?.toUpperCase() || 'Unknown'}
-                              </div>
-                              <div className="text-sm">
-                                <a
-                                  href={getFullFileUrl(hoveredAttachment)}
-                                  target=""
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Click here to download/open file
-                                </a>
+                          ) : (
+                            <div className="flex items-center justify-center w-full h-full text-gray-500">
+                              <div className="text-center">
+                                <div className="text-lg font-medium mb-2">File Preview</div>
+                                <div className="text-sm mb-2">Preview not available for this file type.</div>
+                                <div className="text-xs text-gray-400 mb-4">
+                                  Extension: {hoveredAttachment.split('.').pop()?.toUpperCase() || 'Unknown'}
+                                </div>
+                                <div className="text-sm">
+                                  <a
+                                    href={getFullFileUrl(hoveredAttachment)}
+                                    target=""
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    Click here to download/open file
+                                  </a>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {/* --- END: Attachment Preview Popup --- */}
+                    )}
+                    {/* --- END: Attachment Preview Popup --- */}
 
 
-                  {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
-                  {/* <div className="w-full sm:w-auto flex-1 min-w-[150px]">
+                    {/* <span className="text-xs text-gray-500">This will apply {globalDiscountPercent}% discount to all items</span> */}
+                    {/* <div className="w-full sm:w-auto flex-1 min-w-[150px]">
                     <RenderFormElement
                       inputType="input"
                       InputValueType="text"
@@ -6315,210 +6321,210 @@ export default function IPDBill() {
                   </div> */}
 
 
-                </div>
+                  </div>
 
-                <RenderFormElement
-                  inputType="select"
-                  value={selectedKit}
-                  onChange={handleSelectKit}
-                  data={kitOptions}
-                  placeholder="Select Kit"
-                />
-
-                {/* Global Discount Input */}
-                <div className="flex flex-row items-center gap-3">
-                  <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Discount %:</Label>
-                  <Input
-                    type="number"
-                    value={globalDiscountPercent}
-                    onChange={(e) => setGlobalDiscountPercent(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter discount %"
-                    className="w-32 text-sm"
-                    min="0"
-                    max="100"
-                    step="0.01"
+                  <RenderFormElement
+                    inputType="select"
+                    value={selectedKit}
+                    onChange={handleSelectKit}
+                    data={kitOptions}
+                    placeholder="Select Kit"
                   />
-                  <Button
-                    type="primary-button"
-                    size="button-small"
-                    onClick={handleApplyGlobalDiscount}
-                    className="whitespace-nowrap"
-                  >
-                    Apply Discount
-                  </Button>
-                </div>
 
-              </div>
-              <div className="flex flex-row items-center gap-2">
-                {/* Transaction Type Toggle*/}
-                <div className="flex items-center gap-2 ml-2">
-                  <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
-                  <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
-                    <button
-                      onClick={() => setTransactionType('cash')}
-                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
-                        ? 'bg-blue-500 text-white shadow-sm'
-                        : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                        }`}
+                  {/* Global Discount Input */}
+                  <div className="flex flex-row items-center gap-3">
+                    <Label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Discount %:</Label>
+                    <Input
+                      type="number"
+                      value={globalDiscountPercent}
+                      onChange={(e) => setGlobalDiscountPercent(parseFloat(e.target.value) || 0)}
+                      placeholder="Enter discount %"
+                      className="w-32 text-sm"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                    />
+                    <Button
+                      type="primary-button"
+                      size="button-medium"
+                      onClick={handleApplyGlobalDiscount}
+                      className="whitespace-nowrap"
                     >
-                      Cash
-                    </button>
-                    <button
-                      onClick={() => setTransactionType('credit')}
-                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
-                        ? 'bg-blue-500 text-white shadow-sm'
-                        : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                        }`}
+                      Apply Discount
+                    </Button>
+                  </div>
+
+                </div>
+                <div className="flex flex-row items-center gap-2">
+                  {/* Transaction Type Toggle*/}
+                  <div className="flex items-center gap-2 ml-2">
+                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
+                    <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
+                      <button
+                        onClick={() => setTransactionType('cash')}
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        Cash
+                      </button>
+                      <button
+                        onClick={() => setTransactionType('credit')}
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        Credit
+                      </button>
+                    </div>
+                  </div>
+
+
+                  {/* IPD Effect Checkbox */}
+                  <div className="flex items-center gap-2 pl-2">
+                    <Checkbox
+                      id="ipd-effect"
+                      checked={isIpdEffect}
+                      disabled={transactionType === 'cash'}
+                      onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
+                      className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
+                    />
+                    <Label
+                      htmlFor="ipd-effect"
+                      className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
                     >
-                      Credit
-                    </button>
+                      IPD Effect
+                    </Label>
                   </div>
                 </div>
 
-
-                {/* IPD Effect Checkbox */}
-                <div className="flex items-center gap-2 pl-2">
-                  <Checkbox
-                    id="ipd-effect"
-                    checked={isIpdEffect}
-                    disabled={transactionType === 'cash'}
-                    onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
-                    className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
-                  />
-                  <Label
-                    htmlFor="ipd-effect"
-                    className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
-                  >
-                    IPD Effect
-                  </Label>
-                </div>
-              </div>
-
-              <HorizontallyScrollableTable
-                items={items}
-                setItems={setItems}
-                fetchItemBatches={fetchItemBatches}
-                fetchSubstituteItems={fetchSubstituteItems}
-                fetchItemPrice={fetchItemPrice}
-                getBatchQty={getBatchQty}
-                fetchBinLocationFromItem={fetchBinLocationFromItem}
-                selectedWarehouse={selectedWarehouse}
-                calculateItemTaxAndTotals={calculateItemTaxAndTotals}
-                recalculateTotals={recalculateTotals}
-                fetchTaxDetails={fetchTaxDetails}
-                showAlert={showAlert}
-                isReturnMode={isReturn}
-                isReturnInvoice={isReturnInvoice}
-                isDirectReturn={isDirectReturn}
-                canChangeRate={canChangeRate}
-                barcode={barcode}
-                setBarcode={setBarcode}
-                reqId={reqId}
-                setReqId={setReqId}
-                isReqIdReadonly={isReqIdReadonly}
-                setIsReqIdReadonly={setIsReqIdReadonly}
-                isComplete={isComplete}
-                setIsComplete={setIsComplete}
-                applyPricingRules={applyPricingRules}
-                selectedCustomer={selectedCustomer}
+                <HorizontallyScrollableTable
+                  items={items}
+                  setItems={setItems}
+                  fetchItemBatches={fetchItemBatches}
+                  fetchSubstituteItems={fetchSubstituteItems}
+                  fetchItemPrice={fetchItemPrice}
+                  getBatchQty={getBatchQty}
+                  fetchBinLocationFromItem={fetchBinLocationFromItem}
+                  selectedWarehouse={selectedWarehouse}
+                  calculateItemTaxAndTotals={calculateItemTaxAndTotals}
+                  recalculateTotals={recalculateTotals}
+                  fetchTaxDetails={fetchTaxDetails}
+                  showAlert={showAlert}
+                  isReturnMode={isReturn}
+                  isReturnInvoice={isReturnInvoice}
+                  isDirectReturn={isDirectReturn}
+                  canChangeRate={canChangeRate}
+                  barcode={barcode}
+                  setBarcode={setBarcode}
+                  reqId={reqId}
+                  setReqId={setReqId}
+                  isReqIdReadonly={isReqIdReadonly}
+                  setIsReqIdReadonly={setIsReqIdReadonly}
+                  isComplete={isComplete}
+                  setIsComplete={setIsComplete}
+                  applyPricingRules={applyPricingRules}
+                  selectedCustomer={selectedCustomer}
+                />
+              </CardContent>
+            </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+              <input
+                type="text"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-            </CardContent>
-          </Card>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
-            <input
-              type="text"
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            </div>
+            {/* Payment Table Component for New Bill Page */}
+            <PaymentTable
+              payments={recordedPayments}
+              setPayments={setRecordedPayments}
+              posProfile={posProfile ?? undefined}
+              totalBillAmount={totalBillAmount}
+              transactionType={transactionType}
+              roundedGrandTotal={roundedGrandTotal}
+              isLoadedInvoice={!!loadedInvoiceName}
             />
           </div>
-          {/* Payment Table Component for New Bill Page */}
-          <PaymentTable
-            payments={recordedPayments}
-            setPayments={setRecordedPayments}
-            posProfile={posProfile ?? undefined}
-            totalBillAmount={totalBillAmount}
-            transactionType={transactionType}
-            roundedGrandTotal={roundedGrandTotal}
-            isLoadedInvoice={!!loadedInvoiceName}
-          />
         </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 w-full min-h-16 px-4 md:px-6 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 border-y border-[#D9D9E0] bg-white z-10">
-        <div className="w-full sm:w-fit h-fit flex items-center gap-4 justify-center sm:justify-start">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Image
-                src="/assets/icons/DotsVertical.svg"
-                alt="Dots"
-                width={50}
-                height={50}
-                className="cursor-pointer border rounded-md px-3 py-2 border-[#D9D9E0]"
-              />
-            </PopoverTrigger>
-            <PopoverContent className="bg-white mx-3 border shadow-md rounded p-0 space-y-2 w-40">
-              <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Case Papers</div>
-              <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Export to Word</div>
-              <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Patient Due Details</div>
-            </PopoverContent>
-          </Popover>
-          {/* <Button type="secondary-button" size="button-medium">Preview & Print</Button> */}
-        </div>
-        <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
-          {isReturn ? (
-            // Show Cancel Return button when in return mode
-            <>
-              <Button type="danger-button" size="button-medium" disabled={isSaving} onClick={() => {
-                setIsReturn(false);
-                setIsReturnInvoice(false);
-                setIsDirectReturn(false);
-                setReturnAgainstInvoice('');
-                handleReset();
-              }}>
-                Cancel Return
-              </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
-                Submit Return
-              </Button>
-            </>
-          ) : loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
-            // Show Print and Reset buttons for submitted invoices
-            <>
-              <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
-              <Button
-                type="primary-button"
-                size="button-medium"
-                onClick={async () => {
-                  if (networkPrinter) {
-                    try {
-                      await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
-                      showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
-                    } catch (error) {
-                      console.error("Network printing failed:", error);
-                      showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
-                      // Fallback to browser print
-                      window.open(`https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
+        <div className="fixed bottom-0 left-0 w-full min-h-16 px-4 md:px-6 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 border-y border-[#D9D9E0] bg-white z-10">
+          <div className="w-full sm:w-fit h-fit flex items-center gap-4 justify-center sm:justify-start">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Image
+                  src="assets/icons/DotsVertical.svg"
+                  alt="Dots"
+                  width={50}
+                  height={50}
+                  className="cursor-pointer border rounded-md px-3 py-2 border-[#D9D9E0]"
+                />
+              </PopoverTrigger>
+              <PopoverContent className="bg-white mx-3 border shadow-md rounded p-0 space-y-2 w-40">
+                <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Case Papers</div>
+                <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Export to Word</div>
+                <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Patient Due Details</div>
+              </PopoverContent>
+            </Popover>
+            {/* <Button type="secondary-button" size="button-medium">Preview & Print</Button> */}
+          </div>
+          <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
+            {isReturn ? (
+              // Show Cancel Return button when in return mode
+              <>
+                <Button type="danger-button" size="button-medium" disabled={isSaving} onClick={() => {
+                  setIsReturn(false);
+                  setIsReturnInvoice(false);
+                  setIsDirectReturn(false);
+                  setReturnAgainstInvoice('');
+                  handleReset();
+                }}>
+                  Cancel Return
+                </Button>
+                <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
+                  Submit Return
+                </Button>
+              </>
+            ) : loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
+              // Show Print and Reset buttons for submitted invoices
+              <>
+                <Button type="secondary-button" size="button-medium" onClick={handleReset}>Reset</Button>
+                <Button
+                  type="primary-button"
+                  size="button-medium"
+                  onClick={async () => {
+                    if (networkPrinter) {
+                      try {
+                        await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
+                        showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
+                      } catch (error) {
+                        console.error("Network printing failed:", error);
+                        showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
+                        // Fallback to browser print
+                        securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
+                      }
+                    } else {
+                      // Fallback to browser print if network printer not available
+                      console.warn('Network printer not available, using browser print');
+                      securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
                     }
-                  } else {
-                    // Fallback to browser print if network printer not available
-                    console.warn('Network printer not available, using browser print');
-                    window.open(`https://demohims.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, '_blank');
-                  }
-                }}
-              >
-                Print Invoice
-              </Button>
-            </>
-          ) : (
-            // Show all buttons for new invoices or drafts
-            <>
-              <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
-              <Button type="primary-outlined-button" size="button-medium" disabled={isSaving} onClick={handleSaveAsDraft}>
-              {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Update' : 'Save as Draft'}
-              </Button>
-              {/* <Button
+                  }}
+                >
+                  Print Invoice
+                </Button>
+              </>
+            ) : (
+              // Show all buttons for new invoices or drafts
+              <>
+                <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
+                <Button type="primary-outlined-button" size="button-medium" disabled={isSaving} onClick={handleSaveAsDraft}>
+                  {loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Update' : 'Save as Draft'}
+                </Button>
+                {/* <Button
                 type="primary-outlined-button"
                 size="button-medium"
                 onClick={() => setShowSelectInvoiceModal(true)}
@@ -6526,350 +6532,350 @@ export default function IPDBill() {
               >
                 Return Bill
               </Button> */}
-              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
-                Closing Entry
-              </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
-                {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {showPosProfileSelector && (
-        <POSProfileSelector
-          isOpen={showPosProfileSelector}
-          onSelect={handlePOSProfileSelect}
-        />
-      )}
-
-      {showPatientRequisitionList && (
-        <PatientRequisitionList
-          isOpen={showPatientRequisitionList}
-          onClose={() => {
-            console.log('Closing PatientRequisitionList');
-            setShowPatientRequisitionList(false)
-          }}
-          onSelectRequisition={handleSelectRequisition}
-        />
-      )}
-
-      {showPrescriptionList && (
-        <PrescriptionList
-          isOpen={showPrescriptionList}
-          onClose={() => setShowPrescriptionList(false)}
-          onSelectPrescription={handleSelectPrescription}
-        />
-      )}
-
-      {/* --- START: Modified Modal Call --- */}
-      {showDocumentUpload && (
-        <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-100">
-          <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
-            <Document
-              setOpen={setShowDocumentUpload}
-              onFileSelect={(file) => setSelectedDocument(file)} // Pass the file to state
-            />
+                <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
+                  Closing Entry
+                </Button>
+                <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
+                  {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
+                </Button>
+              </>
+            )}
           </div>
         </div>
-      )}
-      {/* --- END: Modified Modal Call --- */}
 
-      {showViewPosInvoicesModal && (
-        <ViewPosInvoicesModal
-          isOpen={showViewPosInvoicesModal}
-          onClose={() => setShowViewPosInvoicesModal(false)}
+        {showPosProfileSelector && (
+          <POSProfileSelector
+            isOpen={showPosProfileSelector}
+            onSelect={handlePOSProfileSelect}
+          />
+        )}
+
+        {showPatientRequisitionList && (
+          <PatientRequisitionList
+            isOpen={showPatientRequisitionList}
+            onClose={() => {
+              console.log('Closing PatientRequisitionList');
+              setShowPatientRequisitionList(false)
+            }}
+            onSelectRequisition={handleSelectRequisition}
+          />
+        )}
+
+        {showPrescriptionList && (
+          <PrescriptionList
+            isOpen={showPrescriptionList}
+            onClose={() => setShowPrescriptionList(false)}
+            onSelectPrescription={handleSelectPrescription}
+          />
+        )}
+
+        {/* --- START: Modified Modal Call --- */}
+        {showDocumentUpload && (
+          <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-100">
+            <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
+              <Document
+                setOpen={setShowDocumentUpload}
+                onFileSelect={(file) => setSelectedDocument(file)} // Pass the file to state
+              />
+            </div>
+          </div>
+        )}
+        {/* --- END: Modified Modal Call --- */}
+
+        {showViewPosInvoicesModal && (
+          <ViewPosInvoicesModal
+            isOpen={showViewPosInvoicesModal}
+            onClose={() => setShowViewPosInvoicesModal(false)}
+            posProfile={posProfile}
+            showAlert={showAlert}
+            onLoadInvoice={handleLoadInvoice}
+            isIPDPage={true}
+          />
+        )}
+
+        {showAlternativeItemsPopover && itemSeekingAlternatives && (
+          <AlternativeItemsPopover
+            isOpen={showAlternativeItemsPopover}
+            onClose={() => setShowAlternativeItemsPopover(false)}
+            onSelectAlternative={handleSelectAlternativeItem}
+            alternativeItems={alternativeItems}
+            originalItem={itemSeekingAlternatives}
+          />
+        )}
+        <ClosingEntryModal // New ClosingEntryModal component
+          isOpen={showClosingEntryModal}
+          onClose={() => setShowClosingEntryModal(false)}
+          onSelectOpeningEntry={handleCreateClosingEntry}
           posProfile={posProfile}
           showAlert={showAlert}
-          onLoadInvoice={handleLoadInvoice}
-          isIPDPage={true}
         />
-      )}
+        {showSelectInvoiceModal && (
+          <SelectInvoiceModal
+            isOpen={showSelectInvoiceModal}
+            onClose={() => setShowSelectInvoiceModal(false)}
+            isIPDPage={true}
+            onSelect={async (invoices: any[]) => {  // Handle array of invoices
+              try {
+                // Take the first invoice for return processing
+                const invoice = invoices[0];
+                if (!invoice) {
+                  showAlert('warning', 'No Invoice', 'No invoice data received');
+                  return;
+                }
 
-      {showAlternativeItemsPopover && itemSeekingAlternatives && (
-        <AlternativeItemsPopover
-          isOpen={showAlternativeItemsPopover}
-          onClose={() => setShowAlternativeItemsPopover(false)}
-          onSelectAlternative={handleSelectAlternativeItem}
-          alternativeItems={alternativeItems}
-          originalItem={itemSeekingAlternatives}
-        />
-      )}
-      <ClosingEntryModal // New ClosingEntryModal component
-        isOpen={showClosingEntryModal}
-        onClose={() => setShowClosingEntryModal(false)}
-        onSelectOpeningEntry={handleCreateClosingEntry}
-        posProfile={posProfile}
-        showAlert={showAlert}
-      />
-      {showSelectInvoiceModal && (
-        <SelectInvoiceModal
-          isOpen={showSelectInvoiceModal}
-          onClose={() => setShowSelectInvoiceModal(false)}
-          isIPDPage={true}
-          onSelect={async (invoices: any[]) => {  // Handle array of invoices
-            try {
-              // Take the first invoice for return processing
-              const invoice = invoices[0];
-              if (!invoice) {
-                showAlert('warning', 'No Invoice', 'No invoice data received');
-                return;
-              }
+                // Load invoice data into the new_bill page for return processing
+                setIsReturn(true);
+                setIsReturnInvoice(true);
+                setIsDirectReturn(false); // This is not a direct return
+                setReturnAgainstInvoice(invoice.name);
 
-              // Load invoice data into the new_bill page for return processing
-              setIsReturn(true);
-              setIsReturnInvoice(true);
-              setIsDirectReturn(false); // This is not a direct return
-              setReturnAgainstInvoice(invoice.name);
+                // Load customer and patient data
+                setSelectedCustomer(invoice.customer || '');
+                if (invoice.custom_patient_name) {
+                  setPatientData({
+                    name: invoice.custom_patient_name || '',
+                    age: invoice.custom_age || '',
+                    sex: invoice.custom_sex || '',
+                    phone: invoice.custom_phone || '',
+                    ABHAID: invoice.custom_abha_id || '',
+                    category: invoice.custom_category || '',
+                    doctor: invoice.custom_doctor_name || '',
+                    mrn: invoice.custom_mrn || '',
+                    displayNo: invoice.custom_display_no || '',
+                    dept: invoice.custom_department || '',
+                    visitType: invoice.custom_visit_type || '',
+                    company: invoice.custom_company || '',
+                    visitID: invoice.custom_visit_id || '',
+                    bed: invoice.custom_bed || '',
+                  });
+                }
 
-              // Load customer and patient data
-              setSelectedCustomer(invoice.customer || '');
-              if (invoice.custom_patient_name) {
-                setPatientData({
-                  name: invoice.custom_patient_name || '',
-                  age: invoice.custom_age || '',
-                  sex: invoice.custom_sex || '',
-                  phone: invoice.custom_phone || '',
-                  ABHAID: invoice.custom_abha_id || '',
-                  category: invoice.custom_category || '',
-                  doctor: invoice.custom_doctor_name || '',
-                  mrn: invoice.custom_mrn || '',
-                  displayNo: invoice.custom_display_no || '',
-                  dept: invoice.custom_department || '',
-                  visitType: invoice.custom_visit_type || '',
-                  company: invoice.custom_company || '',
-                  visitID: invoice.custom_visit_id || '',
-                  bed: invoice.custom_bed || '',
-                });
-              }
+                // Load company, warehouse, and other settings
+                setSelectedCompany(invoice.company || '');
+                setSelectedWarehouse(invoice.set_warehouse || '');
 
-              // Load company, warehouse, and other settings
-              setSelectedCompany(invoice.company || '');
-              setSelectedWarehouse(invoice.set_warehouse || '');
+                // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
+                const loadedItems: Item[] = await Promise.all(
+                  invoice.items.map(async (item: any, index: number) => {
+                    let alreadyReturnedQty = 0;
 
-              // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
-              const loadedItems: Item[] = await Promise.all(
-                invoice.items.map(async (item: any, index: number) => {
-                  let alreadyReturnedQty = 0;
+                    try {
+                      // Fetch return invoices against this invoice
+                      // Use the same authentication logic as other functions
+                      const authHeaders = getAuthHeaders();
+                      // Convert HeadersInit to plain object for fetch compatibility
+                      const headers = typeof authHeaders === 'string' ?
+                        JSON.parse(authHeaders) :
+                        Array.isArray(authHeaders) ?
+                          Object.fromEntries(authHeaders) :
+                          authHeaders;
 
-                  try {
-                    // Fetch return invoices against this invoice
-                    // Use the same authentication logic as other functions
-                    const authHeaders = getAuthHeaders();
-                    // Convert HeadersInit to plain object for fetch compatibility
-                    const headers = typeof authHeaders === 'string' ?
-                      JSON.parse(authHeaders) :
-                      Array.isArray(authHeaders) ?
-                        Object.fromEntries(authHeaders) :
-                        authHeaders;
+                      const returnResponse = await fetch(
+                        `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                        {
+                          headers,
+                        }
+                      );
+                      const returnData = await returnResponse.json();
 
-                    const returnResponse = await fetch(
-                      `https://demohims.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
-                      {
-                        headers,
-                      }
-                    );
-                    const returnData = await returnResponse.json();
-
-                    if (returnData.data && returnData.data.length > 0) {
-                      for (const returnInv of returnData.data) {
-                        const returnInvResponse = await fetch(
-                          `https://demohims.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
-                          {
-                            headers,
-                          }
-                        );
-                        const returnInvData = await returnInvResponse.json();
-
-                        if (returnInvData.data?.items) {
-                          const returnedItem = returnInvData.data.items.find(
-                            (ri: any) => ri.item_code === item.item_code
+                      if (returnData.data && returnData.data.length > 0) {
+                        for (const returnInv of returnData.data) {
+                          const returnInvResponse = await fetch(
+                            `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
+                            {
+                              headers,
+                            }
                           );
-                          if (returnedItem) {
-                            alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                          const returnInvData = await returnInvResponse.json();
+
+                          if (returnInvData.data?.items) {
+                            const returnedItem = returnInvData.data.items.find(
+                              (ri: any) => ri.item_code === item.item_code
+                            );
+                            if (returnedItem) {
+                              alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                            }
                           }
                         }
                       }
+                    } catch (error) {
+                      console.error('Failed to fetch already returned quantities:', error);
+                      alreadyReturnedQty = 0;
                     }
-                  } catch (error) {
-                    console.error('Failed to fetch already returned quantities:', error);
-                    alreadyReturnedQty = 0;
-                  }
 
-                  return {
-                    id: `${item.item_code}-${item.batch_no || ''}-${index}`,
-                    alternateBatches: '',
-                    substituteItem: '',
-                    itemCode: item.item_code,
-                    itemName: item.item_name,
-                    uom: item.uom,
-                    stockQty: item.actual_qty || 0,
-                    orderedQty: 0,
-                    saleQty: item.qty,
-                    returnQty: 0,
-                    alreadyReturnedQty,
-                    batch: item.batch_no || '',
-                    batchNo: item.batch_no || '',
-                    expiryDate: item.custom_expiry_date || '',
-                    batchStockQty: item.actual_batch_qty || 0,
-                    rate: item.rate,
-                    taxTemplate: item.item_tax_template || '',
-                    description: item.description || '',
-                    itemAmount: item.base_amount || 0,
-                    discountPercent: item.discount_percentage || 0,
-                    discountAmt: item.discount_amount || 0,
-                    cgstPercent: item.cgst_rate || 0,
-                    cgstAmt: item.cgst_amount || 0,
-                    sgstPercent: item.sgst_rate || 0,
-                    sgstAmt: item.sgst_amount || 0,
-                    igstPercent: item.igst_rate || 0,
-                    igstAmt: item.igst_amount || 0,
-                    totalAmt: item.amount || 0,
-                    kitName: '',
-                    totalPckgAmt: 0,
-                    packageName: '',
-                    binLocation: item.custom_bin_location || '',
-                    warehouse: item.warehouse || '',
-                    marginType: item.margin_type || '',
-                    includedInPrintRate: true,
-                    mrp: item.custom_mrp || 0,
-                  };
-                })
-              );
+                    return {
+                      id: `${item.item_code}-${item.batch_no || ''}-${index}`,
+                      alternateBatches: '',
+                      substituteItem: '',
+                      itemCode: item.item_code,
+                      itemName: item.item_name,
+                      uom: item.uom,
+                      stockQty: item.actual_qty || 0,
+                      orderedQty: 0,
+                      saleQty: item.qty,
+                      returnQty: 0,
+                      alreadyReturnedQty,
+                      batch: item.batch_no || '',
+                      batchNo: item.batch_no || '',
+                      expiryDate: item.custom_expiry_date || '',
+                      batchStockQty: item.actual_batch_qty || 0,
+                      rate: item.rate,
+                      taxTemplate: item.item_tax_template || '',
+                      description: item.description || '',
+                      itemAmount: item.base_amount || 0,
+                      discountPercent: item.discount_percentage || 0,
+                      discountAmt: item.discount_amount || 0,
+                      cgstPercent: item.cgst_rate || 0,
+                      cgstAmt: item.cgst_amount || 0,
+                      sgstPercent: item.sgst_rate || 0,
+                      sgstAmt: item.sgst_amount || 0,
+                      igstPercent: item.igst_rate || 0,
+                      igstAmt: item.igst_amount || 0,
+                      totalAmt: item.amount || 0,
+                      kitName: '',
+                      totalPckgAmt: 0,
+                      packageName: '',
+                      binLocation: item.custom_bin_location || '',
+                      warehouse: item.warehouse || '',
+                      marginType: item.margin_type || '',
+                      includedInPrintRate: true,
+                      mrp: item.custom_mrp || 0,
+                    };
+                  })
+                );
 
-              setItems(loadedItems);
+                setItems(loadedItems);
 
-              // Close modal
-              setShowSelectInvoiceModal(false);
+                // Close modal
+                setShowSelectInvoiceModal(false);
 
-              // Show success message
-              showAlert('success', 'Invoice Loaded', `Invoice ${invoice.name} loaded for return. Enter return quantities and submit.`);
-            } catch (err) {
-              console.error('Error loading invoice for return:', err);
-              showAlert('danger', 'Error', 'Failed to load invoice data.');
-            }
-          }}
-        />
-      )}
+                // Show success message
+                showAlert('success', 'Invoice Loaded', `Invoice ${invoice.name} loaded for return. Enter return quantities and submit.`);
+              } catch (err) {
+                console.error('Error loading invoice for return:', err);
+                showAlert('danger', 'Error', 'Failed to load invoice data.');
+              }
+            }}
+          />
+        )}
 
-      {/* High-Alert Confirmation Dialog */}
-      <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
-            <DialogDescription>
-              The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
-              <p className="text-sm text-gray-700">
-                <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
-              </p>
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleHighAlertCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleHighAlertConfirm}
-            >
-              Proceed
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* High-Alert Save/Submit Confirmation Dialog */}
-      <Dialog open={showHighAlertSaveDialog} onOpenChange={setShowHighAlertSaveDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">High Alert Items Warning</DialogTitle>
-            <DialogDescription>
-              The following items in your invoice belong to High Alert Classifications. Please handle with care.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <p className="text-sm font-medium text-yellow-800 mb-2">High Alert Items:</p>
-              {highAlertItems.map((item, index) => (
-                <p key={index} className="text-sm text-gray-700 mb-1">
-                  <strong>{item.itemName}</strong> ({item.itemCode}) - <span className="text-red-600">{item.custom_classification}</span>
+        {/* High-Alert Confirmation Dialog */}
+        <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
+              <DialogDescription>
+                The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
+                <p className="text-sm text-gray-700">
+                  <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
                 </p>
-              ))}
+              </div>
             </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleHighAlertSaveCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleHighAlertSaveConfirm}
-            >
-              Proceed with {pendingSaveAction === 'draft' ? 'Save' : 'Submit'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="flex gap-2">
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleHighAlertCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={handleHighAlertConfirm}
+              >
+                Proceed
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Critical Category Confirmation Dialog */}
-      <Dialog open={criticalCategoryDialog.show} onOpenChange={(open) => !open && handleCriticalCategoryCancel()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-orange-600">Critical Category Alert</DialogTitle>
-            <DialogDescription>
-              The following item belongs to critical categories and requires special handling.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
-              <p className="text-sm font-medium text-orange-800 mb-2">Critical Categories:</p>
-              <p className="text-sm text-gray-700 mb-2">
-                {criticalCategoryDialog.categories?.join(', ')}
-              </p>
-              <p className="text-sm text-gray-700">
-                <strong>Item:</strong> {criticalCategoryDialog.item?.itemName} ({criticalCategoryDialog.item?.itemCode})
+        {/* High-Alert Save/Submit Confirmation Dialog */}
+        <Dialog open={showHighAlertSaveDialog} onOpenChange={setShowHighAlertSaveDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">High Alert Items Warning</DialogTitle>
+              <DialogDescription>
+                The following items in your invoice belong to High Alert Classifications. Please handle with care.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm font-medium text-yellow-800 mb-2">High Alert Items:</p>
+                {highAlertItems.map((item, index) => (
+                  <p key={index} className="text-sm text-gray-700 mb-1">
+                    <strong>{item.itemName}</strong> ({item.itemCode}) - <span className="text-red-600">{item.custom_classification}</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2">
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleHighAlertSaveCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={handleHighAlertSaveConfirm}
+              >
+                Proceed with {pendingSaveAction === 'draft' ? 'Save' : 'Submit'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Critical Category Confirmation Dialog */}
+        <Dialog open={criticalCategoryDialog.show} onOpenChange={(open) => !open && handleCriticalCategoryCancel()}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-orange-600">Critical Category Alert</DialogTitle>
+              <DialogDescription>
+                The following item belongs to critical categories and requires special handling.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                <p className="text-sm font-medium text-orange-800 mb-2">Critical Categories:</p>
+                <p className="text-sm text-gray-700 mb-2">
+                  {criticalCategoryDialog.categories?.join(', ')}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Item:</strong> {criticalCategoryDialog.item?.itemName} ({criticalCategoryDialog.item?.itemCode})
+                </p>
+              </div>
+              <p className="text-sm text-gray-600 mt-3">
+                This item requires special handling. Do you want to proceed?
               </p>
             </div>
-            <p className="text-sm text-gray-600 mt-3">
-              This item requires special handling. Do you want to proceed?
-            </p>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleCriticalCategoryCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleCriticalCategoryConfirm}
-            >
-              Proceed
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="flex gap-2">
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleCriticalCategoryCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={handleCriticalCategoryConfirm}
+              >
+                Proceed
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <style jsx>{`
+        <style jsx>{`
         .autocomplete-dropdown {
           position: absolute;
           top: 100%;
@@ -6925,7 +6931,7 @@ export default function IPDBill() {
           margin-left: 8px;
         }
       `}</style>
-    </div>
+      </div>
     </>
   );
 }

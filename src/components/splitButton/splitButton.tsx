@@ -34,12 +34,12 @@ const SplitButton: React.FC<SplitButtonProps> = ({
 }) => {
   const iconSrc =
     type === "primary-button" || type === "danger-button"
-      ? '/assets/icons/ArrowUp.svg'
+      ? 'assets/icons/ArrowUp.svg'
       : type === "secondary-button"
-      ? '/assets/icons/Up.svg'
-      : type === "primary-outlined-button"
-      ? '/assets/icons/Up.svg'
-      : '/assets/icons/ArrowUp.svg';
+        ? 'assets/icons/Up.svg'
+        : type === "primary-outlined-button"
+          ? 'assets/icons/Up.svg'
+          : 'assets/icons/ArrowUp.svg';
 
   return (
     <div className={cn("button", `${type}-ring`, size, className)} tabIndex={0}>

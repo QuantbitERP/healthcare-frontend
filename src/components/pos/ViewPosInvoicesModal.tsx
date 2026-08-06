@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getAuthHeaders } from '../../utils/sessionAuth';
+import { securePrintPdf } from '@/utils/printHelper';
 import Button from "@/components/buttons/Button";
 import DataTableComponent, { TableCellComponents } from '../DataTable';
 import { Eye, Search, X } from 'lucide-react';
@@ -29,6 +30,29 @@ interface Invoice {
   name: string;
   customer: string;
   custom_patient_name: string;
+  custom_uhid?: string;
+  custom_mrn?: string;
+  custom_doctor_name?: string;
+  custom_age?: string;
+  custom_gender?: string;
+  custom_phone?: string;
+  custom_visit_code?: string;
+  custom_bed_no?: string;
+  custom_ward?: string;
+  custom_patient_category?: string;
+  custom_patient_company?: string;
+  custom_department?: string;
+  custom_payer_category?: string;
+  custom_payer_name?: string;
+  custom_sub_insurance?: string;
+  custom_network?: string;
+  custom_insurance_no?: string;
+  custom_other_no?: string;
+  custom_validity_from?: string;
+  custom_validity_to?: string;
+  co_pay?: number;
+  payer_amount?: number;
+  patient_amount?: number;
   posting_date: string;
   posting_time: string;
   rounded_total: number;
@@ -41,6 +65,8 @@ interface Invoice {
   outstanding_amount: number;
   company: string;
   custom_ipd_effect?: number; // Add IPD effect field
+  custom_opd_effect?: number; // Add OPD effect field
+  visit_type?: string;
 }
 
 const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
@@ -55,7 +81,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const [itemsForModal, setItemsForModal] = useState<any[]>([]);
   
   const { } = useAuth();
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchInvoices = async (invoiceNumber: string, patientName: string, dates: { from: Date | undefined, to: Date | undefined }) => {
@@ -96,16 +122,10 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         filters.push(['custom_patient_name', 'like', `%${patientName}%`]);
       }
       if (dates.from) {
-        // Add one day to the 'to' date to include the full end date
-        const fromDate = new Date(dates.from);
-        fromDate.setHours(0, 0, 0, 0);
-        filters.push(['posting_date', '>=', fromDate.toISOString().split('T')[0]]);
+        filters.push(['posting_date', '>=', dates.from.toISOString().split('T')[0]]);
       }
       if (dates.to) {
-        // Set time to end of day to include the full end date
-        const toDate = new Date(dates.to);
-        toDate.setHours(23, 59, 59, 999);
-        filters.push(['posting_date', '<=', toDate.toISOString().split('T')[0]]);
+        filters.push(['posting_date', '<=', dates.to.toISOString().split('T')[0]]);
       }
 
       // Use the same authentication logic as other functions
@@ -118,7 +138,19 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       const filterStr = JSON.stringify(filters);
-      const url = `${API_BASE_URL}/Sale%20Bill?fields=["name","customer","custom_patient_name","posting_date","posting_time","rounded_total","status","pos_profile","modified","modified_by","paid_amount","outstanding_amount","company","is_return","custom_ipd_effect"]&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
+      const requestedFields = JSON.stringify([
+        "name", "customer", "custom_patient_name", "custom_uhid",
+        "custom_doctor_name", "custom_age", "custom_phone",
+        "custom_visit_code", "custom_bed_no", "custom_req_no",
+        "custom_department", "custom_hospital", "custom_payer_category",
+        "custom_payer_name", "custom_sub_insurance", "custom_network",
+        "custom_insurance_no", "custom_other_no", "custom_validity_from",
+        "custom_validity_to", "co_pay", "payer_amount", "patient_amount",
+        "posting_date", "posting_time", "rounded_total", "status", "pos_profile",
+        "modified", "modified_by", "paid_amount", "outstanding_amount", "company",
+        "is_return", "custom_ipd_effect", "custom_opd_effect", "visit_type"
+      ]);
+      const url = `${API_BASE_URL}/Sale%20Bill?fields=${encodeURIComponent(requestedFields)}&limit_page_length=100000&order_by=posting_date desc,posting_time desc&filters=${encodeURIComponent(filterStr)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -215,7 +247,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     const invoiceName = invoice.name;
     const company = invoice.company;
     console.log('Printing invoice:', invoiceName);
-    const url = 'https://demohims.quantcloud.in/printview?' +
+    const url = 'https://gmcerp.quantcloud.in/printview?' +
       'doctype=Sale Bill&' +
       'name=' + encodeURIComponent(invoiceName) + '&' +
       'format=' + encodeURIComponent(invoice.status === 'Return' ? 'IP SALE RETURN INVOICE' : 'Pos Invoice print Format') + '&' +
@@ -224,7 +256,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       'letterhead=' + encodeURIComponent(company) + '&' +
       'settings=' + encodeURIComponent('{}') + '&' +
       '_lang=en';
-    window.open(url, '_blank');
+    securePrintPdf(url, getAuthHeaders, showAlert);
   };
 
   const handleSubmitInvoice = async (invoice: Invoice) => {
@@ -239,7 +271,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           authHeaders;
 
       // Submit the draft invoice
-      const response = await fetch(`https://demohims.quantcloud.in/api/resource/Sale%20Bill/${invoice.name}`, {
+      const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${invoice.name}`, {
         method: 'PUT',
         headers,
         credentials: 'include',
@@ -326,7 +358,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
         <DataTableComponent
           columns={[
-            { accessorKey: 'idx', header: 'IDX', cell: ({ row }) => row.index + 1 },
+            { accessorKey: 'idx', header: 'IDX', cell: ({ row }: any) => row.index + 1 },
             { accessorKey: 'name', header: 'Invoice No' },
             { accessorKey: 'customer', header: 'Customer' },
             {
@@ -334,48 +366,49 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 <TableCellComponents type="user" value={getValue()} />
               ),
             },
-            { accessorKey: 'posting_date', header: 'Date', cell: ({ row }) => new Date(row.original.posting_date).toLocaleDateString() },
-            { id: 'posting_time', header: 'Time', cell: ({ row }) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
-            { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }) => `₹${row.original.rounded_total.toFixed(2)}` },
-            { accessorKey: 'status', header: 'Status', cell: ({ row }) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
+            { accessorKey: 'posting_date', header: 'Date', cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString() },
+            { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
+            { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${row.original.rounded_total.toFixed(2)}` },
+            { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
+            { accessorKey: 'visit_type', header: 'Visit Type', cell: ({ row }: any) => row.original.visit_type || '-' },
             {
-  id: 'ipd_effect',
-  header: 'IPD Effect',
-  cell: ({ row }) => {
-    const hasIPDEffect = row.original.custom_ipd_effect === 1;
+              id: isIPDPage ? 'ipd_effect' : 'opd_effect',
+              header: isIPDPage ? 'IPD Effect' : 'OPD Effect',
+              cell: ({ row }: any) => {
+                const hasEffect = isIPDPage
+                  ? row.original.custom_ipd_effect === 1
+                  : row.original.custom_opd_effect === 1;
 
-    return (
-      <div className="flex items-center justify-center">
-        {hasIPDEffect ? (
-          // ✔ Green filled circle with check icon
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              viewBox="0 0 24 24"
-            >
-              <path d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        ) : (
-          // — Gray empty circle
-          <div className="">
-            <span className="text-gray-400 text-xs"></span>
-          </div>
-        )}
-      </div>
-    );
-  }
-},
-            { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }) => new Date(row.original.modified).toLocaleDateString() },
+                return (
+                  <div className="flex items-center justify-center">
+                    {hasEffect ? (
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                        <svg
+                          className="w-4 h-4 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="">
+                        <span className="text-gray-400 text-xs"></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            },
+            { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }: any) => new Date(row.original.modified).toLocaleDateString() },
             {
               accessorKey: 'modified_by', header: 'Modified By', cell: ({ getValue }: any) => (
                 <TableCellComponents type="user" value={getValue()} />
               ),
             },
-            { id: 'action', header: 'Actions', cell: ({ row }) => <Button type="secondary-button" size="button-small" onClick={() => handleViewDetails(row.original)}>View</Button> },
+            { id: 'action', header: 'Actions', cell: ({ row }: any) => <Button type="secondary-button" size="button-small" onClick={() => handleViewDetails(row.original)}>View</Button> },
           ]}
           data={invoices}
           loading={loading}
@@ -388,7 +421,8 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             posting_time: 'Time',
             rounded_total: 'Amount',
             status: 'Status',
-            ipd_effect: 'IPD Effect',
+            visit_type: 'Visit Type',
+            ...(isIPDPage ? { ipd_effect: 'IPD Effect' } : { opd_effect: 'OPD Effect' }),
             modified: 'Modified Date',
             modified_by: 'Modified By',
             action: 'Actions',
@@ -429,6 +463,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
               <p><strong>Paid Amount:</strong> ₹{selectedInvoice.paid_amount ? selectedInvoice.paid_amount.toFixed(2) : '0.00'}</p>
               <p><strong>Outstanding Amount:</strong> ₹{selectedInvoice.outstanding_amount ? selectedInvoice.outstanding_amount.toFixed(2) : '0.00'}</p>
               <p><strong>Status:</strong> <span className={`status-badge ${selectedInvoice.status?.toLowerCase()}`}>{selectedInvoice.status}</span></p>
+              <p><strong>Visit Type:</strong> {selectedInvoice.visit_type || 'N/A'}</p>
               <p><strong>Modified:</strong> {new Date(selectedInvoice.modified).toLocaleString()}</p>
               <p><strong>Modified By:</strong> {selectedInvoice.modified_by}</p>
 

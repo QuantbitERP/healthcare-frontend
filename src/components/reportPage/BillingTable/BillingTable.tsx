@@ -37,7 +37,7 @@ export default function BillingTable() {
 
   // Get loading and error state from Redux
   const { loading, error } = useSelector((state: RootState) => state.reportList);
-  
+
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,7 +54,7 @@ export default function BillingTable() {
       isMountedRef.current = false;
     };
   }, []);
-  
+
   const ApplyFilter = useCallback(() => {
     // Clear any existing timer
     if (debounceTimerRef.current) {
@@ -75,7 +75,7 @@ export default function BillingTable() {
         billType: 1,
         patientId: null,
       };
-      
+
       if (serviceGroup.length) payload.serviceGroupIds = serviceGroup;
       if (department.length) payload.serviceDepartmentIds = department;
       if (service.length) payload.serviceIds = service;
@@ -83,7 +83,7 @@ export default function BillingTable() {
       if (companyName.length) payload.companyNameIds = companyName;
       if (groupBy.length) payload.groupBy = groupBy;
       if (searchTerm) payload.searchTerm = searchTerm;
-   
+
       Object.assign(payload, filters);
       dispatch(fetchServicewiseReport(payload) as any);
     }, 300); // 300ms debounce delay
@@ -112,7 +112,7 @@ export default function BillingTable() {
       <div className="flex justify-between items-center p-md border-b border-[#D9D9E0]">
         <div className="flex space-x-2">
           <Image
-            src="/assets/icons/NotepadTimer.svg"
+            src="assets/icons/NotepadTimer.svg"
             alt="Report Icon"
             width={24}
             height={24}
@@ -142,7 +142,7 @@ export default function BillingTable() {
               side="bottom"
               className="z-50 mt-2 w-40 rounded-md border bg-white shadow-md p-0"
             >
-              <div 
+              <div
                 className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100 border-b border-gray-100"
                 onClick={() => {
                   // Handle XLS download
@@ -151,7 +151,7 @@ export default function BillingTable() {
               >
                 Download XLS
               </div>
-              <div 
+              <div
                 className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                 onClick={() => {
                   // Handle PDF download
@@ -179,7 +179,7 @@ export default function BillingTable() {
           /> */}
         </div>
       )}
-      
+
       {/* Success Toast */}
       {showSuccessToast && (
         <div className="mx-lg px-4 py-2">
@@ -193,7 +193,7 @@ export default function BillingTable() {
           />
         </div>
       )}
-      
+
       {/* Filters and Table */}
       <div className="px-4">
         {loading && (
@@ -211,7 +211,7 @@ export default function BillingTable() {
             </div>
           </div>
         )}
-        <BillingTableFilters 
+        <BillingTableFilters
           serviceGroup={serviceGroup}
           setServiceGroup={setServiceGroup}
           department={department}
@@ -232,7 +232,7 @@ export default function BillingTable() {
           onSuccess={handleFilterSuccess}
         />
         <div className="table-wrapper">
-          <DataTable 
+          <DataTable
             dateProps={{ date, setDate }}
             visibleColumns={visibleColumns}
             groupByColumn={groupBy}

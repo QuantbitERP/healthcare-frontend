@@ -32,16 +32,16 @@ const Alerts: React.FC<AlertsProps> = ({
   const getInfoIcon = (): string => {
     switch (variant) {
       case "success":
-        return "/assets/icons/InfoCircleSuccess.svg";
+        return "assets/icons/InfoCircleSuccess.svg";
       case "warning":
-        return "/assets/icons/InfoCircleWarning.svg";
+        return "assets/icons/InfoCircleWarning.svg";
       case "danger":
-        return "/assets/icons/InfoCircleDanger.svg";
+        return "assets/icons/InfoCircleDanger.svg";
       case "primary":
-        return "/assets/icons/InfoCirclePrimary.svg";
+        return "assets/icons/InfoCirclePrimary.svg";
       case "secondary":
       default:
-        return "/assets/icons/InfoCircleSecondary.svg";
+        return "assets/icons/InfoCircleSecondary.svg";
     }
   };
 
@@ -78,7 +78,7 @@ const Alerts: React.FC<AlertsProps> = ({
             onClick={onClick}
           >
             <Image
-              src="/assets/icons/x.svg"
+              src="assets/icons/x.svg"
               alt="close"
               width={24}
               height={24}

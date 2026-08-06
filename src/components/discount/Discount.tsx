@@ -214,7 +214,7 @@ function Discount({ setOpen }: { setOpen: (value: boolean) => void }) {
   return (
     <div className="w-[640px] h-fit rounded-lg flex flex-col bg-white border border-[#D9D9E0] shadow-md">
       <div className="w-full px-6 py-4 border-b border-[#D9D9E0] flex flex-row gap-2">
-        <Image src={'/assets/icons/Discount.svg'} width={24} height={24} alt="Rupee" />
+        <Image src={'assets/icons/Discount.svg'} width={24} height={24} alt="Rupee" />
         <p className="text-[#1C2024] text-base font-semibold">Discount</p>
       </div>
 

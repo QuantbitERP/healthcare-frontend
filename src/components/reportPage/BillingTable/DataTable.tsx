@@ -69,7 +69,7 @@ export default function DataTable({ visibleColumns, groupByColumn, filters }: Da
   const rawData = reportState.items;
   const loading = reportState.loading;
 
-  
+
   const [sortedColumn, setSortedColumn] = useState("srNo");
   const allColumns = useMemo(() => reportColumns(sortedColumn, setSortedColumn), [sortedColumn]);
   const columns = useMemo(
@@ -145,11 +145,11 @@ export default function DataTable({ visibleColumns, groupByColumn, filters }: Da
       setPendingColumnVisibility(initialVisibilities);
     }
   }, [openShowCols, table]);
-  
+
 
   // Metric logic
   const computeMetric = (data: any[], metricType: string, field: string) => {
-  if(!data) return 0;
+    if (!data) return 0;
     if (!data.length) return 0;
     const values = data.map(item => item[field]);
     switch (metricType) {
@@ -161,7 +161,7 @@ export default function DataTable({ visibleColumns, groupByColumn, filters }: Da
       default: return 0;
     }
   };
-  
+
 
   // Update formatValue to remove decimals for all 'Total' metrics
   const formatValue = (value: number, field: string, metricType?: string) => {
@@ -177,10 +177,10 @@ export default function DataTable({ visibleColumns, groupByColumn, filters }: Da
 
 
   const hasGrouping = grouping.length > 0;
- 
+
   const hasFilters = filters && Object.values(filters).some(val => val && val.length > 0);
 
- 
+
   const overallCountValue = (hasGrouping || hasFilters)
     ? computeMetric(rawData, overallCountMetric, "billAmount")
     : 0;
@@ -191,17 +191,17 @@ export default function DataTable({ visibleColumns, groupByColumn, filters }: Da
   const renderCell = (cell: any, index: number) => (
     <TableCell
       key={cell.id}
-              className={`text-nowrap px-4 py-1 h-10 ${index === 0 ? "bg-inherit hover:text-primary hover:font-bold" : ""}`}
+      className={`text-nowrap px-4 py-1 h-10 ${index === 0 ? "bg-inherit hover:text-primary hover:font-bold" : ""}`}
     >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </TableCell>
   );
 
-  
+
 
   return (
     <div className="rounded-md border border-[#D9D9E0] mx-lg flex flex-col overflow-hidden">
-      
+
       <div className="overflow-y-auto relative flex-grow">
         <table className="w-full text-sm text-left border-collapse-separate border-spacing-0 !border-[#D9D9E0]">
           <thead>
@@ -219,128 +219,128 @@ export default function DataTable({ visibleColumns, groupByColumn, filters }: Da
               )}
             </tr>
           </thead>
-            <TableBody>
-              {/* Remove custom summary row styling, use standard row/cell */}
-              <TableRow>
-                <TableCell colSpan={table.getAllLeafColumns().length} className="h-10 font-semibold text-[#1C2024] bg-[#FCFCFD] border-b border-[#D9D9E0] px-4 py-1">
-                  <div className="flex items-center space-x-8 text-xs font-semibold">
-                    <div className="flex items-center space-x-1">
-                      <MetricDropdown value={overallCountMetric} onChange={setOverallCountMetric} />
-                      <span className="text-[#344054] font-bold ml-1">{overallCountValue}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MetricDropdown value={overallTotalMetric} onChange={setOverallTotalMetric} />
-                      <span className="text-[#344054] font-bold ml-1">
-                        ₹{overallTotalMetric === "Total"
-                          ? overallTotalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })
-                          : overallTotalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
+          <TableBody>
+            {/* Remove custom summary row styling, use standard row/cell */}
+            <TableRow>
+              <TableCell colSpan={table.getAllLeafColumns().length} className="h-10 font-semibold text-[#1C2024] bg-[#FCFCFD] border-b border-[#D9D9E0] px-4 py-1">
+                <div className="flex items-center space-x-8 text-xs font-semibold">
+                  <div className="flex items-center space-x-1">
+                    <MetricDropdown value={overallCountMetric} onChange={setOverallCountMetric} />
+                    <span className="text-[#344054] font-bold ml-1">{overallCountValue}</span>
                   </div>
+                  <div className="flex items-center space-x-1">
+                    <MetricDropdown value={overallTotalMetric} onChange={setOverallTotalMetric} />
+                    <span className="text-[#344054] font-bold ml-1">
+                      ₹{overallTotalMetric === "Total"
+                        ? overallTotalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })
+                        : overallTotalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </TableCell>
+            </TableRow>
+            {loading && (!rawData || rawData.length === 0) ? (
+              <TableRow>
+                <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center py-20">
                 </TableCell>
               </TableRow>
-              {loading && (!rawData || rawData.length === 0) ? (
-                <TableRow>
-                  <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center py-20">
-                  </TableCell>
-                </TableRow>
-              ) : loading ? (
-                [...Array(9)].map((_, rowIndex) => (
-                  <React.Fragment key={`skeleton-${rowIndex}`}>
-                    <TableRow>
+            ) : loading ? (
+              [...Array(9)].map((_, rowIndex) => (
+                <React.Fragment key={`skeleton-${rowIndex}`}>
+                  <TableRow>
                     {table.getAllLeafColumns().map((column, colIndex) => (
                       <TableCell key={`skeleton-cell-${colIndex}`}>
                         <div className="h-4 my-2 bg-gray-200 rounded" />
                       </TableCell>
                     ))}
                   </TableRow>
-                  </React.Fragment>
-                ))
-              ) : table.getRowModel().rows.length ? (
+                </React.Fragment>
+              ))
+            ) : table.getRowModel().rows.length ? (
 
-                table.getRowModel().rows.map((row) => {
-                    if (row.getIsGrouped()) {
-                    const groupKey = row.id;
-                    const metrics = groupMetrics[groupKey] || {
-                      countMetric: "Count",
-                      countField: "billAmount",
-                      totalMetric: "Total",
-                      totalField: "billAmount",
-                    };
-                    const groupItems = rawData.filter(item =>
-                      grouping.every(col => (item as any)[col] === row.getValue(col))
-                    );
-                    const countValue = computeMetric(groupItems, metrics.countMetric, metrics.countField);
-                    const totalValue = computeMetric(groupItems, metrics.totalMetric, metrics.totalField);
+              table.getRowModel().rows.map((row) => {
+                if (row.getIsGrouped()) {
+                  const groupKey = row.id;
+                  const metrics = groupMetrics[groupKey] || {
+                    countMetric: "Count",
+                    countField: "billAmount",
+                    totalMetric: "Total",
+                    totalField: "billAmount",
+                  };
+                  const groupItems = rawData.filter(item =>
+                    grouping.every(col => (item as any)[col] === row.getValue(col))
+                  );
+                  const countValue = computeMetric(groupItems, metrics.countMetric, metrics.countField);
+                  const totalValue = computeMetric(groupItems, metrics.totalMetric, metrics.totalField);
 
-                    return (
-                        <React.Fragment key={row.id}>
-                          <TableRow className="hover:bg-[#F5F6FA]">
+                  return (
+                    <React.Fragment key={row.id}>
+                      <TableRow className="hover:bg-[#F5F6FA]">
                         <TableCell
                           className="text-nowrap px-lg py-1 h-10 font-semibold text-[#1C2024] bg-[#FCFCFD] border-b border-[#D9D9E0]"
                           colSpan={table.getAllLeafColumns().length}
                         >
-                              <div className="flex items-center space-x-8 text-sm font-normal">
-                                <button
-                                  onClick={() => row.toggleExpanded()}
-                                  className="flex items-center space-x-2 hover:bg-gray-100 p-1 rounded"
-                                >
-                                  {row.getIsExpanded() ? <ChevronDown size={14} /> : <ChevronRight size={16} />}
-                                  <span className="font-semibold">
-                                    {grouping.map(col => row.getValue(col)).join(" / ")}
-                                  </span>
-                                </button>
-                                <MetricDropdown
-                                  value={metrics.countMetric}
-                                  onChange={val =>
-                                    setGroupMetrics(prev => ({
-                                      ...prev,
-                                      [groupKey]: { ...metrics, countMetric: val }
-                                    }))
-                                  }
-                                />
-                                <span className="text-[#344054] font-bold ml-1">{countValue}</span>
-                               
-                                <MetricDropdown
-                                  value={metrics.totalMetric}
-                                  onChange={val =>
-                                    setGroupMetrics(prev => ({
-                                      ...prev,
-                                      [groupKey]: { ...metrics, totalMetric: val }
-                                    }))
-                                  }
-                                />
-                                <span className="text-[#344054] font-bold ml-1">{formatValue(totalValue, metrics.totalField, metrics.totalMetric)}</span>
-                              
-                              </div>
+                          <div className="flex items-center space-x-8 text-sm font-normal">
+                            <button
+                              onClick={() => row.toggleExpanded()}
+                              className="flex items-center space-x-2 hover:bg-gray-100 p-1 rounded"
+                            >
+                              {row.getIsExpanded() ? <ChevronDown size={14} /> : <ChevronRight size={16} />}
+                              <span className="font-semibold">
+                                {grouping.map(col => row.getValue(col)).join(" / ")}
+                              </span>
+                            </button>
+                            <MetricDropdown
+                              value={metrics.countMetric}
+                              onChange={val =>
+                                setGroupMetrics(prev => ({
+                                  ...prev,
+                                  [groupKey]: { ...metrics, countMetric: val }
+                                }))
+                              }
+                            />
+                            <span className="text-[#344054] font-bold ml-1">{countValue}</span>
+
+                            <MetricDropdown
+                              value={metrics.totalMetric}
+                              onChange={val =>
+                                setGroupMetrics(prev => ({
+                                  ...prev,
+                                  [groupKey]: { ...metrics, totalMetric: val }
+                                }))
+                              }
+                            />
+                            <span className="text-[#344054] font-bold ml-1">{formatValue(totalValue, metrics.totalField, metrics.totalMetric)}</span>
+
+                          </div>
                         </TableCell>
                       </TableRow>
-                          { row.getIsExpanded() && (
-                            <>
-                              {row.subRows?.map((subRow) => (
-                                <TableRow key={subRow.id} data-state={subRow.getIsSelected() && "selected"}>
-                                  {subRow.getVisibleCells().map((cell, index) => renderCell(cell, index))}
-                                </TableRow>
-                              ))}
-                             
-                            </>
-                          )}
-                        </React.Fragment>
-                      );
-                    }
-                })
-              ) : (
-                <TableRow className="hover:!bg-transparent">
-                  <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center py-20">
-                    <div className="flex flex-col items-center justify-center w-full space-y-3">
-                      <Image src="/assets/icons/alert-circle.svg" height={24} width={24} alt="no data found" />
-                      <span className="block text-base">No results Found.</span>
-                      <span className="block text-sm text-[#60646C]">We could not find any result matching your search criteria.</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+                      {row.getIsExpanded() && (
+                        <>
+                          {row.subRows?.map((subRow) => (
+                            <TableRow key={subRow.id} data-state={subRow.getIsSelected() && "selected"}>
+                              {subRow.getVisibleCells().map((cell, index) => renderCell(cell, index))}
+                            </TableRow>
+                          ))}
+
+                        </>
+                      )}
+                    </React.Fragment>
+                  );
+                }
+              })
+            ) : (
+              <TableRow className="hover:!bg-transparent">
+                <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center py-20">
+                  <div className="flex flex-col items-center justify-center w-full space-y-3">
+                    <Image src="assets/icons/alert-circle.svg" height={24} width={24} alt="no data found" />
+                    <span className="block text-base">No results Found.</span>
+                    <span className="block text-sm text-[#60646C]">We could not find any result matching your search criteria.</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
         </table>
       </div>
     </div>

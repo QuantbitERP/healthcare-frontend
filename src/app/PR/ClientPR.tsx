@@ -30,6 +30,7 @@ import PatientRequisitionCard from "@/components/patientRequisitionCard/PatientR
 import { useFrappeApi } from "@/api/api";
 import { useAuth } from "@/context/AuthContext";
 import { getAuthHeaders } from "@/utils/sessionAuth";
+import { securePrintPdf } from '@/utils/printHelper';
 import { Search, X, Plus } from 'lucide-react';
 import { DataTable as EditableDataTable } from "@/components/EditableCellsTable/TableTry";
 import { ColumnDef, getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
@@ -132,7 +133,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   const suggestionsRef = useRef<HTMLUListElement>(null);
   const { } = useAuth();
 
-  const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
 
   const searchItems = async (query: string = '', classification: string = '', generic: boolean = false, company: string = ''): Promise<Item[]> => {
     try {
@@ -481,7 +482,7 @@ const useStockQty = () => {
         if (csrf) headers["X-Frappe-CSRF-Token"] = csrf;
 
         const response = await fetch(
-          `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
+          `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.material_request.get_stock_qty`,
           {
             method: "POST",
             headers,
@@ -508,7 +509,7 @@ const useStockQty = () => {
 };
 
 export default function ClientPR({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-    const API_BASE_URL = 'https://demohims.quantcloud.in/api/resource';
+  const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
 
   const router = useRouter();
   const params = use(searchParams);
@@ -585,7 +586,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       //     Object.fromEntries(authHeaders) : 
       //     authHeaders;
 
-      const batchQtyResponse = await fetch(`https://demohims.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
+      const batchQtyResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/erpnext.stock.utils.get_stock_balance`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -763,7 +764,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_department`,
         {
           method: 'GET',
           headers,
@@ -809,7 +810,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
       }
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.api.pos_api.get_user_default_branch`,
         {
           method: 'GET',
           headers,
@@ -1148,7 +1149,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const FRAPPE_API_BASE_URL = "https://demohims.quantcloud.in/api/resource";
+  const FRAPPE_API_BASE_URL = "https://gmcerp.quantcloud.in/api/resource";
 
   const fetchRequisitionData = async (requisitionNo: string) => {
     try {
@@ -1359,6 +1360,8 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         aadhar_no: patientData.aadhaarNo || "",
         registration_date: patientData.registrationDate,
         remark: trimmedRemark,
+        update_flag: requisitionNo ? 1 : 0,
+        delete_flag: 0,
         patient_requisition_item_details: items.map(item => ({
           item_code: item.itemCode,
           item_name: item.itemName,
@@ -1426,7 +1429,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   const handleFinalize = async () => {
     const docName = await savePatientRequisition(true);
     if (docName) {
-      const printUrl = `https://demohims.quantcloud.in/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
+      const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(docName)}&trigger_print=1&format=Patient%20Requisition&no_letterhead=0&letterhead=City%20Hospital&settings=%7B%7D&_lang=en`;
       window.location.href = printUrl;
     }
   };
@@ -1993,7 +1996,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -2087,7 +2090,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
       // First, check if an amendment already exists
       const checkAmendResponse = await fetch(
-        `https://demohims.quantcloud.in/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
+        `https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition?filters=[["amended_from","=","${requisitionNo}"]]&fields=["name"]&limit_page_length=1`,
         {
           method: 'GET',
           headers,
@@ -2112,7 +2115,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         } else {
           // Fetch the cancelled document
           const fetchResponse = await fetch(
-            `https://demohims.quantcloud.in/api/resource/Patient%20Requisition/${requisitionNo}`,
+            `https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition/${requisitionNo}`,
             {
               method: 'GET',
               headers,
@@ -2167,7 +2170,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
 
           // Create the new amended document
           const createResponse = await fetch(
-            `https://demohims.quantcloud.in/api/resource/Patient%20Requisition`,
+            `https://gmcerp.quantcloud.in/api/resource/Patient%20Requisition`,
             {
               method: 'POST',
               headers,
@@ -2213,7 +2216,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
     }
 
     try {
-      const printUrl = 'https://demohims.quantcloud.in/printview?' +
+      const printUrl = 'https://gmcerp.quantcloud.in/printview?' +
         'doctype=Patient%20Requisition&' +
         'name=' + encodeURIComponent(requisitionNo) + '&' +
         'trigger_print=1&' +
@@ -2222,7 +2225,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
         'settings=%7B%7D&' +
         '_lang=en';
 
-      window.open(printUrl, '_blank');
+      securePrintPdf(printUrl, getAuthHeaders, showAlert);
     } catch (error) {
       console.error("Error printing requisition:", error);
       showAlert("danger", "Error", "Failed to print requisition. Please try again.");
@@ -2283,510 +2286,510 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
   return (
     <>
       {/* Splash Screen */}
-      <SplashScreen 
-        show={initialLoading} 
-        message="Initializing Purchase Requisition System..." 
+      <SplashScreen
+        show={initialLoading}
+        message="Initializing Purchase Requisition System..."
       />
-      
+
       <div className="bg-gray-50 min-h-screen px-3 relative">
-      {/* Debug: Show current user info */}
+        {/* Debug: Show current user info */}
 
 
-      {/* Profile Circle - Top Right Corner - Always visible for testing */}
-      <div className="fixed top-4 right-4 z-[9999] group">
-        <div className="relative">
+        {/* Profile Circle - Top Right Corner - Always visible for testing */}
+        <div className="fixed top-4 right-4 z-[9999] group">
+          <div className="relative">
 
-        </div>
-      </div>
-
-      {alert.show && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] max-w-md">
-          <Alerts
-            heading={alert.heading}
-            content={alert.content}
-            variant={alert.variant}
-            showCloseIcon={true}
-            open={alert.show}
-            disappear={true}
-            onClick={() => setAlert(prev => ({ ...prev, show: false }))}
-          />
-        </div>
-      )}
-
-      {/* Navbar Header */}
-      <PageHeader
-        parentTitle="Patient Requisition"
-        parentLink="/PatientRequistionList"
-        title={requisitionNo ? `Edit Requisition ${requisitionNo}` : "New Requisition"}
-        icon="../pos/assets/icons/BriefcaseIcon.svg"
-        rightButtons={
-          <div className="flex flex-row space-x-2">
           </div>
-        }
-      />
+        </div>
 
-      <div className="flex gap-3 p-1 mt-17">
-        <div className="flex-shrink-0">
-          {!patientData ? (
-            <Card>
-              <CardContent className="p-4 patient-input-group w-[256px] h-[394px] p-4 rounded-lg border border-[#D9D9E0] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="w-full">
-                    <SelectInput
-                      placeholder="Select Search Type"
-                      value={selectedValue}
-                      data={selectOptions}
-                      onValueChange={(v: string) => handleSelectChange(v)}
-                      className="text-[#60646C] text-xs font-normal w-full"
-                    />
-                  </div>
+        {alert.show && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] max-w-md">
+            <Alerts
+              heading={alert.heading}
+              content={alert.content}
+              variant={alert.variant}
+              showCloseIcon={true}
+              open={alert.show}
+              disappear={true}
+              onClick={() => setAlert(prev => ({ ...prev, show: false }))}
+            />
+          </div>
+        )}
 
-                  <div className="relative w-full">
-                    <Input
-                      value={searchValue}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      placeholder="Search Patients"
-                      className="w-full"
-                    />
-                    {isLoading && <div className="loading-text">Searching...</div>}
-                    {showDropdown && (
-                      <div className="autocomplete-dropdown">
-                        {searchResults.length === 0 ? (
-                          <div className="dropdown-item no-results">No patients found</div>
-                        ) : (
-                          searchResults.map((patient) => (
-                            <div
-                              key={patient.id}
-                              className="dropdown-item"
-                              onClick={() => handleSelectPatient(patient)}
-                            >
-                              <div className="patient-dropdown-item">
-                                <div className="patient-name">{patient.patientFullName || "N/A"}</div>
-                                <div className="patient-details">
-                                  <span>MRN: {patient.mrn || "N/A"}</span>
-                                  <span>Visit Id: {patient.visitID || "N/A"}</span>
-                                  <span>Visit Date Time: {patient.visitDateTime || "N/A"}</span>
-                                  <span>Visit Type: {patient.patientVisitType || "N/A"}</span>
+        {/* Navbar Header */}
+        <PageHeader
+          parentTitle="Patient Requisition"
+          parentLink="/PatientRequistionList"
+          title={requisitionNo ? `Edit Requisition ${requisitionNo}` : "New Requisition"}
+          icon="../pos/assets/icons/BriefcaseIcon.svg"
+          rightButtons={
+            <div className="flex flex-row space-x-2">
+            </div>
+          }
+        />
+
+        <div className="flex gap-3 p-1 mt-17">
+          <div className="flex-shrink-0">
+            {!patientData ? (
+              <Card>
+                <CardContent className="p-4 patient-input-group w-[256px] h-[394px] p-4 rounded-lg border border-[#D9D9E0] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="w-full">
+                      <SelectInput
+                        placeholder="Select Search Type"
+                        value={selectedValue}
+                        data={selectOptions}
+                        onValueChange={(v: string) => handleSelectChange(v)}
+                        className="text-[#60646C] text-xs font-normal w-full"
+                      />
+                    </div>
+
+                    <div className="relative w-full">
+                      <Input
+                        value={searchValue}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        placeholder="Search Patients"
+                        className="w-full"
+                      />
+                      {isLoading && <div className="loading-text">Searching...</div>}
+                      {showDropdown && (
+                        <div className="autocomplete-dropdown">
+                          {searchResults.length === 0 ? (
+                            <div className="dropdown-item no-results">No patients found</div>
+                          ) : (
+                            searchResults.map((patient) => (
+                              <div
+                                key={patient.id}
+                                className="dropdown-item"
+                                onClick={() => handleSelectPatient(patient)}
+                              >
+                                <div className="patient-dropdown-item">
+                                  <div className="patient-name">{patient.patientFullName || "N/A"}</div>
+                                  <div className="patient-details">
+                                    <span>MRN: {patient.mrn || "N/A"}</span>
+                                    <span>Visit Id: {patient.visitID || "N/A"}</span>
+                                    <span>Visit Date Time: {patient.visitDateTime || "N/A"}</span>
+                                    <span>Visit Type: {patient.patientVisitType || "N/A"}</span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div>
+                <PatientRequisitionCard
+                  name={patientData.name}
+                  age={patientData.age}
+                  sex={patientData.sex}
+                  phone={patientData.phone}
+                  ABHAID={patientData.ABHAID}
+                  company={patientData.company}
+                  visitType={patientData.visitType}
+                  doctor={patientData.doctor}
+                  departmentName={patientData.departmentName}
+                  wardName={patientData.wardName}
+                  bedName={patientData.bedName}
+                  patientCategory={patientData.patientCategory || "N/A"}
+                  visitId={patientData.visitId || "N/A"}
+                  visitDateTime={patientData.visitDateTime || "N/A"}
+                  aadhaarNo={patientData.aadhaarNo || "N/A"}
+                  registrationDate={patientData.registrationDate || "N/A"}
+                  uhid={patientData.uhid || "N/A"}
+                />
+                <div className="mt-2">
+                  <Button size="link-size" type="link-secondary" onClick={clearPatient}>
+                    Change Patient
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div>
-              <PatientRequisitionCard
-                name={patientData.name}
-                age={patientData.age}
-                sex={patientData.sex}
-                phone={patientData.phone}
-                ABHAID={patientData.ABHAID}
-                company={patientData.company}
-                visitType={patientData.visitType}
-                doctor={patientData.doctor}
-                departmentName={patientData.departmentName}
-                wardName={patientData.wardName}
-                bedName={patientData.bedName}
-                patientCategory={patientData.patientCategory || "N/A"}
-                visitId={patientData.visitId || "N/A"}
-                visitDateTime={patientData.visitDateTime || "N/A"}
-                aadhaarNo={patientData.aadhaarNo || "N/A"}
-                registrationDate={patientData.registrationDate || "N/A"}
-                uhid={patientData.uhid || "N/A"}
-              />
-              <div className="mt-2">
-                <Button size="link-size" type="link-secondary" onClick={clearPatient}>
-                  Change Patient
-                </Button>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="flex-1 space-y-6">
-          <section className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Requisition Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="Requisition No."
-                      inputType="input"
-                      InputValueType="text"
-                      value={requisitionNo}
-                      onChange={setRequisitionNo}
-                      placeholder=""
-                      readonly={true}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="Requisition Date"
-                      inputType="input"
-                      InputValueType="date"
-                      value={requisitionDate}
-                      onChange={setRequisitionDate}
-                      placeholder="Pick a date"
-                      required={true}
-                      readonly={true}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="Requisition From"
-                      inputType="select"
-                      value={requisitionFrom}
-                      onChange={handleRequisitionFromChange}
-                      data={[{ label: "", value: "CLEAR" }, ...warehouses]} // Use special value instead of empty string
-                      placeholder="Select Department"
-                      required={true}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="Requisition To"
-                      inputType="select"
-                      value={requisitionTo}
-                      onChange={handleRequisitionToChange}
-                      data={[{ label: "", value: "CLEAR" }, ...warehouses]} // Use special value instead of empty string
-                      placeholder="Select Department"
-                      required={true}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="To Location"
-                      inputType="select"
-                      value={toLocation}
-                      onChange={handleToLocationChange}
-                      data={[{ label: "", value: "CLEAR" }, ...branches]} // Use special value instead of empty string
-                      placeholder="Select Branch"
-                      required={true}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="Kit"
-                      inputType="select"
-                      value={selectedKit}
-                      onChange={handleKitChange}
-                      data={[{ label: "", value: "CLEAR" }, ...kits]} // Use special value instead of empty string
-                      placeholder="Select Kit"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RenderFormElement
-                      label="Sale Type"
-                      inputType="select"
-                      value={selectedSaleType}
-                      onChange={handleSaleTypeChange}
-                      data={saleTypeOptions}
-                      placeholder="Select Sale Type"
-                      required={true}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-5 gap-6 col-span-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="routine"
-                        checked={priorities.routine}
-                        onCheckedChange={(checked) => handlePriorityChange('routine', checked as boolean)}
-                      />
-                      <Label htmlFor="routine">Routine</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="stat"
-                        checked={priorities.stat}
-                        onCheckedChange={(checked) => handlePriorityChange('stat', checked as boolean)}
-                      />
-                      <Label htmlFor="stat">STAT</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="discharge"
-                        checked={priorities.discharge}
-                        onCheckedChange={(checked) => handlePriorityChange('discharge', checked as boolean)}
-                      />
-                      <Label htmlFor="discharge">Discharge</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="asap"
-                        checked={priorities.asap}
-                        onCheckedChange={(checked) => handlePriorityChange('asap', checked as boolean)}
-                      />
-                      <Label htmlFor="asap">ASAP</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="expired"
-                        checked={priorities.expired}
-                        onCheckedChange={(checked) => handlePriorityChange('expired', checked as boolean)}
-                      />
-                      <Label htmlFor="expired">Expired</Label>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          <section className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Item Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <RenderFormElement
-                    inputType="select"
-                    value={selectedClassification}
-                    onChange={handleClassificationChange}
-                    data={[{ label: "", value: "CLEAR" }, ...classifications]} // Use special value instead of empty string
-                    placeholder="Select Classification"
-                  />
-                  <div className="flex items-center space-x-2 col-span-2">
-                    <Checkbox
-                      id="terms"
-                      checked={isGeneric}
-                      onCheckedChange={(checked) => setIsGeneric(checked as boolean)}
-                    />
-                    <Label htmlFor="terms">Generic</Label>
-                    <EnhancedItemSearch
-                      onSelectItem={handleAddItemToDetails}
-                      placeholder="Search Items"
-                      className="pt-2"
-                      selectedClassification={selectedClassification}
-                      isGeneric={isGeneric}
-                      selectedCompany={patientData?.company}
-                    />
-
-                    <div className="ml-4 w-full">
+          <div className="flex-1 space-y-6">
+            <section className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Requisition Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="space-y-2">
                       <RenderFormElement
+                        label="Requisition No."
                         inputType="input"
                         InputValueType="text"
-                        value={barcodeValue}
-                        onChange={setBarcodeValue}
-                        placeholder="Barcode"
+                        value={requisitionNo}
+                        onChange={setRequisitionNo}
+                        placeholder=""
+                        readonly={true}
                       />
                     </div>
-                  </div>
-                </div>
-                <div className="w-full">
-                  <EditableDataTable
-                    columns={columns as any}
-                    initialData={items}
-                    table={table as any}
-                    dataProps={{ data: items, setData: setItems }}
-                    addButton={true}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="patientRemark">Remark</Label>
-                  <Textarea
-                    id="patientRemark"
-                    value={patientRemark}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value.length <= 255) {
-                        setPatientRemark(value);
-                      } else {
-                        showAlert("warning", "Warning", "Remark cannot exceed 255 characters.");
-                      }
-                    }}
-                    placeholder="Enter remark"
-                    className="w-full"
-                    maxLength={255}
-                  />
-                  <div className="text-xs text-gray-500">
-                    {patientRemark.length}/255 characters
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 w-full h-16 px-6 flex justify-between items-center border-y border-[#D9D9E0] bg-white z-100">
-        <div className="w-fit h-fit flex items-center gap-4">
-          {/* Status Badge */}
-          {requisitionNo && (
-            <div className="text-xs font-medium">
-              {docstatus === 0 && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Draft</span>}
-              {docstatus === 1 && <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Submitted</span>}
-              {docstatus === 2 && <span className="px-2 py-1 bg-red-100 text-red-800 rounded">Cancelled</span>}
-            </div>
-          )}
+                    <div className="space-y-2">
+                      <RenderFormElement
+                        label="Requisition Date"
+                        inputType="input"
+                        InputValueType="date"
+                        value={requisitionDate}
+                        onChange={setRequisitionDate}
+                        placeholder="Pick a date"
+                        required={true}
+                        readonly={true}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RenderFormElement
+                        label="Requisition From"
+                        inputType="select"
+                        value={requisitionFrom}
+                        onChange={handleRequisitionFromChange}
+                        data={[{ label: "", value: "CLEAR" }, ...warehouses]} // Use special value instead of empty string
+                        placeholder="Select Department"
+                        required={true}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RenderFormElement
+                        label="Requisition To"
+                        inputType="select"
+                        value={requisitionTo}
+                        onChange={handleRequisitionToChange}
+                        data={[{ label: "", value: "CLEAR" }, ...warehouses]} // Use special value instead of empty string
+                        placeholder="Select Department"
+                        required={true}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RenderFormElement
+                        label="To Location"
+                        inputType="select"
+                        value={toLocation}
+                        onChange={handleToLocationChange}
+                        data={[{ label: "", value: "CLEAR" }, ...branches]} // Use special value instead of empty string
+                        placeholder="Select Branch"
+                        required={true}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RenderFormElement
+                        label="Kit"
+                        inputType="select"
+                        value={selectedKit}
+                        onChange={handleKitChange}
+                        data={[{ label: "", value: "CLEAR" }, ...kits]} // Use special value instead of empty string
+                        placeholder="Select Kit"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RenderFormElement
+                        label="Sale Type"
+                        inputType="select"
+                        value={selectedSaleType}
+                        onChange={handleSaleTypeChange}
+                        data={saleTypeOptions}
+                        placeholder="Select Sale Type"
+                        required={true}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-5 gap-6 col-span-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="routine"
+                          checked={priorities.routine}
+                          onCheckedChange={(checked) => handlePriorityChange('routine', checked as boolean)}
+                        />
+                        <Label htmlFor="routine">Routine</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="stat"
+                          checked={priorities.stat}
+                          onCheckedChange={(checked) => handlePriorityChange('stat', checked as boolean)}
+                        />
+                        <Label htmlFor="stat">STAT</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="discharge"
+                          checked={priorities.discharge}
+                          onCheckedChange={(checked) => handlePriorityChange('discharge', checked as boolean)}
+                        />
+                        <Label htmlFor="discharge">Discharge</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="asap"
+                          checked={priorities.asap}
+                          onCheckedChange={(checked) => handlePriorityChange('asap', checked as boolean)}
+                        />
+                        <Label htmlFor="asap">ASAP</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="expired"
+                          checked={priorities.expired}
+                          onCheckedChange={(checked) => handlePriorityChange('expired', checked as boolean)}
+                        />
+                        <Label htmlFor="expired">Expired</Label>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Item Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <RenderFormElement
+                      inputType="select"
+                      value={selectedClassification}
+                      onChange={handleClassificationChange}
+                      data={[{ label: "", value: "CLEAR" }, ...classifications]} // Use special value instead of empty string
+                      placeholder="Select Classification"
+                    />
+                    <div className="flex items-center space-x-2 col-span-2">
+                      <Checkbox
+                        id="terms"
+                        checked={isGeneric}
+                        onCheckedChange={(checked) => setIsGeneric(checked as boolean)}
+                      />
+                      <Label htmlFor="terms">Generic</Label>
+                      <EnhancedItemSearch
+                        onSelectItem={handleAddItemToDetails}
+                        placeholder="Search Items"
+                        className="pt-2"
+                        selectedClassification={selectedClassification}
+                        isGeneric={isGeneric}
+                        selectedCompany={patientData?.company}
+                      />
+
+                      <div className="ml-4 w-full">
+                        <RenderFormElement
+                          inputType="input"
+                          InputValueType="text"
+                          value={barcodeValue}
+                          onChange={setBarcodeValue}
+                          placeholder="Barcode"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full">
+                    <EditableDataTable
+                      columns={columns as any}
+                      initialData={items}
+                      table={table as any}
+                      dataProps={{ data: items, setData: setItems }}
+                      addButton={true}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="patientRemark">Remark</Label>
+                    <Textarea
+                      id="patientRemark"
+                      value={patientRemark}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 255) {
+                          setPatientRemark(value);
+                        } else {
+                          showAlert("warning", "Warning", "Remark cannot exceed 255 characters.");
+                        }
+                      }}
+                      placeholder="Enter remark"
+                      className="w-full"
+                      maxLength={255}
+                    />
+                    <div className="text-xs text-gray-500">
+                      {patientRemark.length}/255 characters
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          </div>
         </div>
-        <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
-          {/* Draft State Buttons */}
-          {docstatus === 0 && (
-            <>
-              <Button type="secondary-button" size="button-medium" onClick={handleReset}>
-                Reset
-              </Button>
+
+        <div className="fixed bottom-0 left-0 w-full h-16 px-6 flex justify-between items-center border-y border-[#D9D9E0] bg-white z-100">
+          <div className="w-fit h-fit flex items-center gap-4">
+            {/* Status Badge */}
+            {requisitionNo && (
+              <div className="text-xs font-medium">
+                {docstatus === 0 && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Draft</span>}
+                {docstatus === 1 && <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Submitted</span>}
+                {docstatus === 2 && <span className="px-2 py-1 bg-red-100 text-red-800 rounded">Cancelled</span>}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-row gap-4 items-center text-[#60646C] text-xs font-normal">
+            {/* Draft State Buttons */}
+            {docstatus === 0 && (
+              <>
+                <Button type="secondary-button" size="button-medium" onClick={handleReset}>
+                  Reset
+                </Button>
+                <Button
+                  type="primary-outlined-button"
+                  size="button-medium"
+                  onClick={handleSave}
+                  disabled={isSaving || !isFormValid}
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  type="primary-button"
+                  size="button-medium"
+                  onClick={handleFinalize}
+                  disabled={isSaving || !isFormValid}
+                >
+                  {isSaving ? "Finalizing..." : "Finalize and Print"}
+                </Button>
+                <Button
+                  type="secondary-button"
+                  size="button-medium"
+                  onClick={handleDeleteRequisition}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Deleting..." : "Delete"}
+                </Button>
+              </>
+            )}
+
+            {/* Submitted State Buttons */}
+            {docstatus === 1 && (
+              <>
+                <Button type="primary-button" size="button-medium" onClick={handleClick}>
+                  Show Requisition
+                </Button>
+                <Button type="primary-outlined-button" size="button-medium" onClick={handlePrintRequisition}>
+                  Print
+                </Button>
+                <Button
+                  type="secondary-button"
+                  size="button-medium"
+                  onClick={handleCancelRequisition}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Cancelling..." : "Cancel"}
+                </Button>
+              </>
+            )}
+
+            {/* Cancelled State Buttons */}
+            {docstatus === 2 && (
+              <>
+                <Button type="primary-button" size="button-medium" onClick={handleClick}>
+                  Show Requisition
+                </Button>
+                <Button
+                  type="primary-outlined-button"
+                  size="button-medium"
+                  onClick={handleAmendRequisition}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Amending..." : "Amend"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* High-Alert Confirmation Dialog */}
+        <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
+              <DialogDescription>
+                The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
+                <p className="text-sm text-gray-700">
+                  <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
+                </p>
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2">
               <Button
-                type="primary-outlined-button"
+                type="secondary-button"
                 size="button-medium"
-                onClick={handleSave}
-                disabled={isSaving || !isFormValid}
+                onClick={handleHighAlertCancel}
               >
-                {isSaving ? "Saving..." : "Save"}
+                Cancel
               </Button>
               <Button
                 type="primary-button"
                 size="button-medium"
-                onClick={handleFinalize}
-                disabled={isSaving || !isFormValid}
+                onClick={handleHighAlertConfirm}
               >
-                {isSaving ? "Finalizing..." : "Finalize and Print"}
+                Proceed
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Critical Category Confirmation Dialog */}
+        <Dialog open={criticalCategoryDialog.show} onOpenChange={(open) => !open && handleCriticalCategoryCancel()}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-orange-600">Critical Category Alert</DialogTitle>
+              <DialogDescription>
+                The following item belongs to critical categories and requires special handling.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                <p className="text-sm font-medium text-orange-800 mb-2">Critical Categories:</p>
+                <p className="text-sm text-gray-700 mb-2">
+                  {criticalCategoryDialog.categories?.join(', ')}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Item:</strong> {criticalCategoryDialog.item?.itemName} ({criticalCategoryDialog.item?.itemCode})
+                </p>
+              </div>
+              <p className="text-sm text-gray-600 mt-3">
+                This item requires special handling. Do you want to proceed?
+              </p>
+            </div>
+            <DialogFooter className="flex gap-2">
               <Button
                 type="secondary-button"
                 size="button-medium"
-                onClick={handleDeleteRequisition}
-                disabled={isSaving}
+                onClick={handleCriticalCategoryCancel}
               >
-                {isSaving ? "Deleting..." : "Delete"}
-              </Button>
-            </>
-          )}
-
-          {/* Submitted State Buttons */}
-          {docstatus === 1 && (
-            <>
-              <Button type="primary-button" size="button-medium" onClick={handleClick}>
-                Show Requisition
-              </Button>
-              <Button type="primary-outlined-button" size="button-medium" onClick={handlePrintRequisition}>
-                Print
+                Cancel
               </Button>
               <Button
-                type="secondary-button"
+                type="primary-button"
                 size="button-medium"
-                onClick={handleCancelRequisition}
-                disabled={isSaving}
+                onClick={handleCriticalCategoryConfirm}
               >
-                {isSaving ? "Cancelling..." : "Cancel"}
+                Proceed
               </Button>
-            </>
-          )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-          {/* Cancelled State Buttons */}
-          {docstatus === 2 && (
-            <>
-              <Button type="primary-button" size="button-medium" onClick={handleClick}>
-                Show Requisition
-              </Button>
-              <Button
-                type="primary-outlined-button"
-                size="button-medium"
-                onClick={handleAmendRequisition}
-                disabled={isSaving}
-              >
-                {isSaving ? "Amending..." : "Amend"}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* High-Alert Confirmation Dialog */}
-      <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
-            <DialogDescription>
-              The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
-              <p className="text-sm text-gray-700">
-                <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
-              </p>
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleHighAlertCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleHighAlertConfirm}
-            >
-              Proceed
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Critical Category Confirmation Dialog */}
-      <Dialog open={criticalCategoryDialog.show} onOpenChange={(open) => !open && handleCriticalCategoryCancel()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-orange-600">Critical Category Alert</DialogTitle>
-            <DialogDescription>
-              The following item belongs to critical categories and requires special handling.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
-              <p className="text-sm font-medium text-orange-800 mb-2">Critical Categories:</p>
-              <p className="text-sm text-gray-700 mb-2">
-                {criticalCategoryDialog.categories?.join(', ')}
-              </p>
-              <p className="text-sm text-gray-700">
-                <strong>Item:</strong> {criticalCategoryDialog.item?.itemName} ({criticalCategoryDialog.item?.itemCode})
-              </p>
-            </div>
-            <p className="text-sm text-gray-600 mt-3">
-              This item requires special handling. Do you want to proceed?
-            </p>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleCriticalCategoryCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleCriticalCategoryConfirm}
-            >
-              Proceed
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <style jsx>{`
+        <style jsx>{`
         .autocomplete-dropdown {
           position: absolute;
           top: 100%;
@@ -2851,7 +2854,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
           margin-left: 8px;
         }
       `}</style>
-    </div>
+      </div>
     </>
   );
 }

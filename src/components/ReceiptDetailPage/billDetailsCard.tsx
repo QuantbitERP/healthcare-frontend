@@ -85,11 +85,11 @@ function CostBreakdownCard({
         return (
           <div className="flex flex-row items-center justify-between">
             <div className={`flex flex-row items-center ${isCancelled ? "line-through text-[#1C2024]" : ""}`}>
-               <Checkbox
-                          checked={row.getIsSelected()}
-                          onCheckedChange={(value: boolean) => row.toggleSelected(value)}
-                          aria-label="Select row"
-                />
+              <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value: boolean) => row.toggleSelected(value)}
+                aria-label="Select row"
+              />
               <button onClick={() => setOpen(true)}>
                 <span className="mr-2">{getValue() as string}</span>
               </button>
@@ -117,7 +117,7 @@ function CostBreakdownCard({
     },
     {
       accessorKey: "type",
-      header: ({  }) => (
+      header: ({ }) => (
         <Button variant="ghost" className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold">
           Type
         </Button>
@@ -126,7 +126,7 @@ function CostBreakdownCard({
     },
     {
       accessorKey: "quantity",
-      header: ({  }) => (
+      header: ({ }) => (
         <Button variant="ghost" className="hover:bg-transparent p-0 text-[#60646C] text-xs font-semibold">
           Quantity
         </Button>
@@ -179,9 +179,9 @@ function CostBreakdownCard({
     <div className="w-[640px] max-h-[889px] flex flex-col gap-6 pt-6 bg-[#FFF] border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)] rounded-lg">
       {/* header */}
       <div className="w-full h-fit flex flex-row px-6 gap-2 items-center">
-        <Image src={"/assets/icons/Hash.svg"} width={24} height={24} alt="" />
+        <Image src={"assets/icons/Hash.svg"} width={24} height={24} alt="" />
         <span className="text-[#1C2024] font-semibold text-base w-full">{header}</span>
-        <Buttons iconSrc={"/assets/icons/ThreeDots.svg"} size="button-icon-small" type="secondary-button" variant="icon" />
+        <Buttons iconSrc={"assets/icons/ThreeDots.svg"} size="button-icon-small" type="secondary-button" variant="icon" />
       </div>
 
       {/* body */}
@@ -190,14 +190,14 @@ function CostBreakdownCard({
           <div className="w-full h-fit flex flex-row">
             <div className="w-full h-fit px-6 py-5 border border-[#D9D9E0] border-l-0 flex flex-row gap-4 text-[#1C2024] text-sm whitespace-nowrap items-center">
               <div className="w-full h-fit flex flex-row gap-1">
-                <Image src={"/assets/icons/user.svg"} width={16} height={16} alt="" />
+                <Image src={"assets/icons/user.svg"} width={16} height={16} alt="" />
                 <span className="font-normal">Patient Name</span>
               </div>
               <span className="font-medium">{patientName}</span>
             </div>
             <div className="w-full h-fit px-6 py-5 border-y border-[#D9D9E0] flex flex-row gap-4 text-[#1C2024] text-sm whitespace-nowrap items-center">
               <div className="w-full h-fit flex flex-row gap-1">
-                <Image src={"/assets/icons/GenderMale.svg"} width={16} height={16} alt="Gender" />
+                <Image src={"assets/icons/GenderMale.svg"} width={16} height={16} alt="Gender" />
                 <span className="font-normal">Gender</span>
               </div>
               <span className="font-medium">{gender}</span>
@@ -206,14 +206,14 @@ function CostBreakdownCard({
           <div className="w-full h-fit flex flex-row">
             <div className="w-full h-fit px-6 py-5 border border-[#D9D9E0] border-l-0 border-t-0 flex flex-row gap-4 text-[#1C2024] text-sm whitespace-nowrap items-center">
               <div className="w-full h-fit flex flex-row gap-1">
-                <Image src={"/assets/icons/calendar.svg"} width={16} height={16} alt="Calendar" />
+                <Image src={"assets/icons/calendar.svg"} width={16} height={16} alt="Calendar" />
                 <span className="font-normal">Bill Date</span>
               </div>
               <span className="font-medium">{date}</span>
             </div>
             <div className="w-full h-fit px-6 py-5 border-b border-[#D9D9E0] flex flex-row gap-4 text-[#1C2024] text-sm whitespace-nowrap items-center">
               <div className="w-full h-fit flex flex-row gap-1">
-                <Image src={"/assets/icons/RupeeIcon.svg"} width={16} height={16} alt="Rupee" />
+                <Image src={"assets/icons/RupeeIcon.svg"} width={16} height={16} alt="Rupee" />
                 <span className="font-normal">Total Amount</span>
               </div>
               <span className="font-medium">{amount}</span>

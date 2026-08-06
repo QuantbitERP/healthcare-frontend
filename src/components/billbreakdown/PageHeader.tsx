@@ -39,13 +39,13 @@ function PageHeader(props: PageHeaderProps) {
 
   // Define available pages for search
   const availablePages: SearchSuggestion[] = [
-    { label: 'OPD', route: '/new_bill', icon: '🏥', type: 'page' },
-    { label: 'IPD', route: '/ipd-bill', icon: '🛏️', type: 'page' },
+    { label: 'OPD', route: '/opd-sale-bill', icon: '🏥', type: 'page' },
+    { label: 'IPD', route: '/sale_bill', icon: '🛏️', type: 'page' },
     { label: 'Patient Requisition', route: '/PR', icon: '📋', type: 'page' },
     { label: 'Patient Requisition List', route: '/PatientRequistionList', icon: '📑', type: 'page' },
     { label: 'Return', route: '/return', icon: '↩️', type: 'page' },
-    { label: 'Home', route: 'https://demohims.quantcloud.in/app/home', icon: '🏠', type: 'page' },
-    { label: 'ERP', route: 'https://demohims.quantcloud.in/app/home', icon: '🏢', type: 'page' },
+    { label: 'Home', route: 'https://gmcerp.quantcloud.in/app/home', icon: '🏠', type: 'page' },
+    { label: 'ERP', route: 'https://gmcerp.quantcloud.in/app/home', icon: '🏢', type: 'page' },
   ];
 
   // Search Frappe for pages and documents
@@ -69,7 +69,7 @@ function PageHeader(props: PageHeaderProps) {
             authHeaders;
 
         const response = await fetch(
-          `https://demohims.quantcloud.in/api/method/frappe.client.get_list?doctype=Page&filters=[["name","like","%${query}%"]]&fields=["name","title"]&limit_page_length=5`,
+          `https://gmcerp.quantcloud.in/api/method/frappe.client.get_list?doctype=Page&filters=[["name","like","%${query}%"]]&fields=["name","title"]&limit_page_length=5`,
           {
             method: 'GET',
             headers,
@@ -83,7 +83,7 @@ function PageHeader(props: PageHeaderProps) {
             data.message.forEach((page: any) => {
               frappeResults.push({
                 label: page.title || page.name,
-                route: `https://demohims.quantcloud.in/app/${page.name.toLowerCase().replace(/ /g, '-')}`,
+                route: `https://gmcerp.quantcloud.in/app/${page.name.toLowerCase().replace(/ /g, '-')}`,
                 icon: '📄',
                 type: 'page',
               });
@@ -109,7 +109,7 @@ function PageHeader(props: PageHeaderProps) {
               authHeaders;
 
           const response = await fetch(
-            `https://demohims.quantcloud.in/api/method/frappe.client.get_list?doctype=${doctype}&filters=[["name","like","%${query}%"]]&fields=["name"]&limit_page_length=3`,
+            `https://gmcerp.quantcloud.in/api/method/frappe.client.get_list?doctype=${doctype}&filters=[["name","like","%${query}%"]]&fields=["name"]&limit_page_length=3`,
             {
               method: 'GET',
               headers,
@@ -123,7 +123,7 @@ function PageHeader(props: PageHeaderProps) {
               data.message.forEach((doc: any) => {
                 frappeResults.push({
                   label: `${doc.name} (${doctype})`,
-                  route: `https://demohims.quantcloud.in/app/${(doctype.toLowerCase().replace(/ /g, '-') === 'grn' ? 'purchase-receipt' : doctype.toLowerCase().replace(/ /g, '-'))}/${doc.name}`,
+                  route: `https://gmcerp.quantcloud.in/app/${(doctype.toLowerCase().replace(/ /g, '-') === 'grn' ? 'purchase-receipt' : doctype.toLowerCase().replace(/ /g, '-'))}/${doc.name}`,
                   icon: '📋',
                   type: 'document',
                 });
@@ -290,7 +290,7 @@ function PageHeader(props: PageHeaderProps) {
       <div className="flex items-center gap-4">
         {/* Search Input */}
         <div className="relative">
-          <div className="relative flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div className="relative flex items-center gap-2 bg-white rounded-lg px-2 py-1 border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -302,7 +302,7 @@ function PageHeader(props: PageHeaderProps) {
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               onFocus={() => searchQuery && setShowSuggestions(true)}
-              className="w-64 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
+              className="w-48 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
             />
             {isSearching && (
               <div className="animate-spin">

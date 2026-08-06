@@ -56,7 +56,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
           authHeaders;
 
       const response = await fetch(
-        `https://demohims.quantcloud.in/api/resource/Sale Bill?filters=[["return_against","=","${invoice.name}"]]&fields=["name"]`,
+        `https://gmcerp.quantcloud.in/api/resource/Sale Bill?filters=[["return_against","=","${invoice.name}"]]&fields=["name"]`,
         {
           method: 'GET',
           headers,
@@ -81,7 +81,7 @@ const CreateReturnEntryModal: React.FC<CreateReturnEntryModalProps> = ({ isOpen,
                 authHeaders;
 
             const detailResponse = await fetch(
-              `https://demohims.quantcloud.in/api/resource/Sale Bill/${returnInvoice.name}`,
+              `https://gmcerp.quantcloud.in/api/resource/Sale Bill/${returnInvoice.name}`,
               {
                 method: 'GET',
                 headers,

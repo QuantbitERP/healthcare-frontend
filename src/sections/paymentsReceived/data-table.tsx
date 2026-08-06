@@ -203,7 +203,7 @@ export function DataTable({
 
   useEffect(() => {
     if (!receiptData?.payments) return;
-    
+
     const { ...filterKeys } = filters || {};
     let filtered = [...receiptData.payments];
 
@@ -303,7 +303,7 @@ export function DataTable({
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             size={20}
-       
+
           />
           {/* change placeholder overtime */}
           <Input
@@ -317,12 +317,12 @@ export function DataTable({
                 searchTerm === "empty"
                   ? []
                   : receiptData?.payments?.filter((row: Payment) =>
-                      Object.values(row).some((value) =>
-                        String(value)
-                          .toLowerCase()
-                          .includes(searchTerm.toLowerCase())
-                      )
-                    ) ?? []
+                    Object.values(row).some((value) =>
+                      String(value)
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
+                    )
+                  ) ?? []
               );
             }}
           />
@@ -337,7 +337,7 @@ export function DataTable({
           <FilterDialogue
             trigger={
               <TableUtilFilterButton
-                icon={"/assets/icons/FilterIcon.svg"}
+                icon={"assets/icons/FilterIcon.svg"}
                 label={"Filters"}
                 badgeCount={Object.keys(filters).length}
               />
@@ -351,7 +351,7 @@ export function DataTable({
           <DropdownMenu onOpenChange={setOpenShowCols} open={openShowCols}>
             <DropdownMenuTrigger asChild>
               <UtilDropDownButton
-                leadingIcon={"/assets/icons/columns.svg"}
+                leadingIcon={"assets/icons/columns.svg"}
                 label={"Show Columns"}
               />
             </DropdownMenuTrigger>
@@ -440,7 +440,7 @@ export function DataTable({
                         />
 
                         <label className="pl-2 pr-4 cursor-pointer">
-                        {all_columns.find((col: ColumnConfig) => col.id === column.id)?.name || column.id}
+                          {all_columns.find((col: ColumnConfig) => col.id === column.id)?.name || column.id}
                         </label>
                       </div>
                     );
@@ -452,10 +452,10 @@ export function DataTable({
                   type="secondary-button"
                   variant="button"
                   onClick={() => {
-                      setColumnVisibility(pendingColumnVisibility);
-                      // const selectedColsToSave = all_columns.filter((col: ColumnConfig) => pendingColumnVisibility[col.id]);
-                      // dispatch(saveColumnConfig(selectedColsToSave));
-                      setOpenShowCols(false);
+                    setColumnVisibility(pendingColumnVisibility);
+                    // const selectedColsToSave = all_columns.filter((col: ColumnConfig) => pendingColumnVisibility[col.id]);
+                    // dispatch(saveColumnConfig(selectedColsToSave));
+                    setOpenShowCols(false);
                   }}
                 >
                   Save
@@ -478,18 +478,17 @@ export function DataTable({
                         className={`text-left px-lg [&>button]:hover:bg-transparent [&>button]:px-0 bg-[#FCFCFD] 
                            border border-x-0 border-t-0 border-b-[#CDCED6] 
                           ${index === 0 ? "sticky left-0 z-20" : ""}
-                          ${
-                            index === columns.length - 1
-                              ? "sticky right-0 z-20"
-                              : ""
+                          ${index === columns.length - 1
+                            ? "sticky right-0 z-20"
+                            : ""
                           }`}
                       >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     );
                   })}
@@ -513,11 +512,10 @@ export function DataTable({
                           <div className="flex items-center">
                             <ChevronDownIcon
                               size={16}
-                              className={`mr-2 transition-transform ${
-                                expandedGroups[groupKey]
+                              className={`mr-2 transition-transform ${expandedGroups[groupKey]
                                   ? "-rotate-180"
                                   : "rotate-0"
-                              }`}
+                                }`}
                             />
                             {`#${groupKey}`}
                           </div>
@@ -539,16 +537,14 @@ export function DataTable({
                               {tableRow.getVisibleCells().map((cell, index) => (
                                 <TableCell
                                   key={cell.id}
-                                  className={`text-nowrap px-lg cursor-pointer py-0 h-10 ${
-                                    index === 0
+                                  className={`text-nowrap px-lg cursor-pointer py-0 h-10 ${index === 0
                                       ? "sticky left-0 bg-inherit z-10 hover:text-primary"
                                       : ""
-                                  }
-                                   ${
-                                     index === columns.length - 1
-                                       ? "sticky right-0 bg-inherit z-10 ml-0 hover:text-primary"
-                                       : "pl-6"
-                                   }`}
+                                    }
+                                   ${index === columns.length - 1
+                                      ? "sticky right-0 bg-inherit z-10 ml-0 hover:text-primary"
+                                      : "pl-6"
+                                    }`}
                                 >
                                   {flexRender(
                                     cell.column.columnDef.cell,
@@ -578,16 +574,14 @@ export function DataTable({
                     {row.getVisibleCells().map((cell, index) => (
                       <TableCell
                         key={cell.id}
-                        className={`text-nowrap px-lg cursor-pointer py-0 h-10 ${
-                          index === 0
+                        className={`text-nowrap px-lg cursor-pointer py-0 h-10 ${index === 0
                             ? "sticky left-0 bg-inherit z-10 hover:text-primary"
                             : ""
-                        }
-                         ${
-                           index === columns.length - 1
-                             ? "sticky right-0 bg-inherit z-10 hover:text-primary"
-                             : ""
-                         }`}
+                          }
+                         ${index === columns.length - 1
+                            ? "sticky right-0 bg-inherit z-10 hover:text-primary"
+                            : ""
+                          }`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -605,7 +599,7 @@ export function DataTable({
                   >
                     <div className="flex flex-col items-center justify-center w-full space-y-3">
                       <Image
-                        src={"/assets/icons/alert-circle.svg"}
+                        src={"assets/icons/alert-circle.svg"}
                         height={24}
                         width={24}
                         alt="no data found"
@@ -683,8 +677,8 @@ export function DataTable({
             }
           }}
           setOpenCancelBill={setOpenCancelBill}
-          setOpenSubmitBill={() => {}}
-          setSelectedForSubmit={() => {}}
+          setOpenSubmitBill={() => { }}
+          setSelectedForSubmit={() => { }}
         />
       </div>
       <div className="flex justify-between items-center px-6 py-4">
@@ -713,9 +707,8 @@ export function DataTable({
                 type={
                   currentPage === page ? "primary-button" : "secondary-button"
                 }
-                className={`h-8 w-8 p-0 ${
-                  currentPage === page ? "bg-primary text-white" : ""
-                }`}
+                className={`h-8 w-8 p-0 ${currentPage === page ? "bg-primary text-white" : ""
+                  }`}
                 onClick={() =>
                   typeof page === "number" && table.setPageIndex(page)
                 }

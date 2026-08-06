@@ -106,26 +106,26 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
 
   // const validateAmounts = (updatedData: RowData[]): string[] => {
   //   const errors: string[] = [];
-    
+
   //   // Row 3 (Deposit Utilized) should not be greater than Row 1 (Balance Deposit)
   //   const balanceDeposit = updatedData[0]?.amount ?? 0;
   //   const depositUtilized = updatedData[2]?.amount ?? 0;
   //   if (depositUtilized > balanceDeposit) {
   //     errors.push("Deposit Utilized cannot be greater than Balance Deposit");
   //   }
-    
+
   //   // Row 2 (Employee Balance) should not be greater than Row 4 (Employee Balance Utilized)
   //   const employeeBalance = updatedData[1]?.amount ?? 0;
   //   const employeeBalanceUtilized = updatedData[3]?.amount ?? 0;
   //   if (employeeBalance > employeeBalanceUtilized) {
   //     errors.push("Employee Balance cannot be greater than Employee Balance Utilized");
   //   }
-    
+
   //   // Row 4 (Employee Balance Utilized) should not be less than Row 2 (Employee Balance)
   //   if (employeeBalanceUtilized < employeeBalance) {
   //     errors.push("Employee Balance Utilized cannot be less than Employee Balance");
   //   }
-    
+
   //   return errors;
   // };
 
@@ -155,8 +155,8 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
       );
 
       // Check validation before accepting the value
-     // const errors = validateAmounts(tempUpdated);
-      
+      // const errors = validateAmounts(tempUpdated);
+
       // If there are validation errors for this specific change, reject the value
       const balanceDeposit = tempUpdated[0]?.amount ?? 0;
       const depositUtilized = tempUpdated[2]?.amount ?? 0;
@@ -220,14 +220,14 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
       {/* Header */}
       <div className="px-6 py-4 border-b border-[#D9D9E0] flex items-center gap-2">
         <Image
-          src={"/assets/icons/RupeeIcon.svg"}
+          src={"assets/icons/RupeeIcon.svg"}
           width={24}
           height={24}
           alt="Rupee"
         />
         <p className="text-[#1C2024] text-base font-semibold">Balance Utilized</p>
       </div>
-  
+
       {/* Scrollable Content (Table + Errors) */}
       <div className="flex-1 overflow-y-auto">
         {/* Table */}
@@ -282,12 +282,12 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
                                 handleAmountChange(index, "");
                               } else if (!isNaN(Number(cleaned))) {
                                 const parsed = parseFloat(cleaned);
-  
+
                                 // validation check
                                 const tempUpdated = data.map((row, i) =>
                                   i === index ? { ...row, amount: parsed } : row
                                 );
-  
+
                                 const balanceDeposit =
                                   tempUpdated[0]?.amount ?? 0;
                                 const depositUtilized =
@@ -296,7 +296,7 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
                                   tempUpdated[1]?.amount ?? 0;
                                 const employeeBalanceUtilized =
                                   tempUpdated[3]?.amount ?? 0;
-  
+
                                 if (
                                   index === 2 &&
                                   depositUtilized > balanceDeposit
@@ -321,7 +321,7 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
                                     data[index].amount?.toString() || "";
                                   return;
                                 }
-  
+
                                 handleAmountChange(index, cleaned);
                               }
                             }}
@@ -329,9 +329,8 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
                               handleAmountChange(index, e.target.value)
                             }
                             onKeyDown={(e) => handleKeyDown(e, index)}
-                            className={`block w-full text-black px-3 py-3 ${
-                              inputErrors[index] ? "outline-red-400" : ""
-                            } outline-[#0090FF] text-right focus:text-left`}
+                            className={`block w-full text-black px-3 py-3 ${inputErrors[index] ? "outline-red-400" : ""
+                              } outline-[#0090FF] text-right focus:text-left`}
                           />
                         ) : (
                           <span className="font-bold text-lg text-[#1C2024] px-2 py-4">
@@ -346,7 +345,7 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
             </Table>
           </div>
         </div>
-  
+
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="px-6 py-3 border-t border-[#D9D9E0]">
@@ -382,7 +381,7 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
           </div>
         )}
       </div>
-  
+
       {/* Footer Buttons (always pinned) */}
       <div className="px-6 py-3 border-t border-[#D9D9E0] flex justify-end gap-4 bg-white">
         <Buttons
@@ -411,7 +410,7 @@ const EditableAmountTable: React.FC<EditableAmountCellProps> = ({
       </div>
     </div>
   );
-  
+
 };
 
 export default EditableAmountTable;

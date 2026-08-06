@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-table";
 import { Skeleton } from "../ui/skeleton";
 
-const TransferDetailsTable = ({data,columns,loading}) => {
+const TransferDetailsTable = ({ data, columns, loading }) => {
   const table = useReactTable({
     data,
     columns,
@@ -35,18 +35,17 @@ const TransferDetailsTable = ({data,columns,loading}) => {
                       className={`text-left px-lg [&>button]:hover:bg-transparent [&>button]:px-0 bg-[#FCFCFD] 
                        border border-x-0 border-t-0 border-b-[#CDCED6] 
                       ${index === 0 ? "sticky left-0 z-20" : ""}
-                      ${
-                        index === columns.length - 1
+                      ${index === columns.length - 1
                           ? "sticky right-0 z-20"
                           : ""
-                      }`}
+                        }`}
                     >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
@@ -64,16 +63,14 @@ const TransferDetailsTable = ({data,columns,loading}) => {
                   {row.getVisibleCells().map((cell, index) => (
                     <TableCell
                       key={cell.id}
-                      className={`text-nowrap px-lg cursor-pointer py-0 h-10 ${
-                        index === 0
+                      className={`text-nowrap px-lg cursor-pointer py-0 h-10 ${index === 0
                           ? "sticky left-0 bg-inherit z-10 hover:text-primary"
                           : ""
-                      }
-                     ${
-                       index === columns.length - 1
-                         ? "sticky right-0 bg-inherit z-10 hover:text-primary"
-                         : ""
-                     }`}
+                        }
+                     ${index === columns.length - 1
+                          ? "sticky right-0 bg-inherit z-10 hover:text-primary"
+                          : ""
+                        }`}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -91,7 +88,7 @@ const TransferDetailsTable = ({data,columns,loading}) => {
                 >
                   <div className="flex flex-col items-center justify-center w-full space-y-3">
                     <Image
-                      src={"/assets/icons/alert-circle.svg"}
+                      src={"assets/icons/alert-circle.svg"}
                       height={24}
                       width={24}
                       alt="no data found"

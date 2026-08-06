@@ -76,15 +76,15 @@ const PatientCard: React.FC<PatientCardProps> = ({
                 </div>
 
                 <div className='flex flex-col gap-2'>
-                    <InfoRow icon="/assets/icons/Cake.svg" label="Age / Gender" value={`${displayAge}`} />
-                    <InfoRow icon="/assets/icons/Phone.svg" label="Contact" value={displayPhone} />
-                    <InfoRow icon="/assets/icons/Id.svg" label="ABHA ID" value={displayABHAID} />
-                    <InfoRow icon="/assets/icons/Building.svg" label="Company" value={displayCompany} />
-                    <InfoRow icon="/assets/icons/DoorEnter.svg" label="Visit Type" value={displayVisitType} />
-                    <InfoRow icon="/assets/icons/FirstAidKit.svg" label="Consulting Doctor" value={displayDoctor} />
-                    <InfoRow icon="/assets/icons/FirstAidKit.svg" label="Department" value={displayDepartmentName} />
-                    <InfoRow icon="/assets/icons/FirstAidKit.svg" label="Ward" value={displayWardName} />
-                    <InfoRow icon="/assets/icons/FirstAidKit.svg" label="Bed" value={displayBedName} />
+                    <InfoRow icon="assets/icons/Cake.svg" label="Age / Gender" value={`${displayAge}`} />
+                    <InfoRow icon="assets/icons/Phone.svg" label="Contact" value={displayPhone} />
+                    <InfoRow icon="assets/icons/Id.svg" label="ABHA ID" value={displayABHAID} />
+                    <InfoRow icon="assets/icons/Building.svg" label="Company" value={displayCompany} />
+                    <InfoRow icon="assets/icons/DoorEnter.svg" label="Visit Type" value={displayVisitType} />
+                    <InfoRow icon="assets/icons/FirstAidKit.svg" label="Consulting Doctor" value={displayDoctor} />
+                    <InfoRow icon="assets/icons/FirstAidKit.svg" label="Department" value={displayDepartmentName} />
+                    <InfoRow icon="assets/icons/FirstAidKit.svg" label="Ward" value={displayWardName} />
+                    <InfoRow icon="assets/icons/FirstAidKit.svg" label="Bed" value={displayBedName} />
                     <DialogTrigger asChild>
                         <div className='w-fit h-fit flex justify-start'>
                             <Button size="link-size" type="link-secondary" variant="link-button" className="cursor-pointer">

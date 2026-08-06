@@ -107,7 +107,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
               {displayValue || placeholder}
             </span>
             <Image
-              src="/assets/icons/CaretDownDark.svg"
+              src="assets/icons/CaretDownDark.svg"
               height={16}
               width={16}
               alt="dropdown"
@@ -443,37 +443,37 @@ const OTServicePercentageCreatePanel = ({
       prev.map((service) =>
         service.id === selectedServiceForModal?.id
           ? {
-              ...service,
-              baseHrs: data.cappingHrs,
-              cappingHours: data.cappingHrs,
-              isCapping: true,
-              opd: data.opd,
-              // Update capping room categories structure using billing classes
-              cappingRoomCategorys:
-                billingClasses && billingClasses.length > 0
-                  ? billingClasses
-                      .map((billingClass) => {
-                        const fieldKey = `roomCategory_${billingClass.key}`;
-                        const amount = data[fieldKey] || 0;
+            ...service,
+            baseHrs: data.cappingHrs,
+            cappingHours: data.cappingHrs,
+            isCapping: true,
+            opd: data.opd,
+            // Update capping room categories structure using billing classes
+            cappingRoomCategorys:
+              billingClasses && billingClasses.length > 0
+                ? billingClasses
+                  .map((billingClass) => {
+                    const fieldKey = `roomCategory_${billingClass.key}`;
+                    const amount = data[fieldKey] || 0;
 
-                        // Find existing capping room category to get detailID
-                        const existingCappingRoomCategory =
-                          service.cappingRoomCategorys?.find(
-                            (rc: any) =>
-                              rc.cappingRoomCategoryId === billingClass.key
-                          );
+                    // Find existing capping room category to get detailID
+                    const existingCappingRoomCategory =
+                      service.cappingRoomCategorys?.find(
+                        (rc: any) =>
+                          rc.cappingRoomCategoryId === billingClass.key
+                      );
 
-                        return {
-                          ...(existingCappingRoomCategory?.detailID
-                            ? { detailID: existingCappingRoomCategory.detailID }
-                            : {}),
-                          cappingRoomCategoryId: billingClass.key,
-                          cappingAmountorPercentage: amount,
-                        };
-                      })
-                      .filter((item) => item.cappingAmountorPercentage > 0)
-                  : [],
-            }
+                    return {
+                      ...(existingCappingRoomCategory?.detailID
+                        ? { detailID: existingCappingRoomCategory.detailID }
+                        : {}),
+                      cappingRoomCategoryId: billingClass.key,
+                      cappingAmountorPercentage: amount,
+                    };
+                  })
+                  .filter((item) => item.cappingAmountorPercentage > 0)
+                : [],
+          }
           : service
       )
     );
@@ -917,9 +917,9 @@ const OTServicePercentageCreatePanel = ({
                       // Initialize room category arrays
                       roomCategorys: billingClasses
                         ? billingClasses.map((billingClass) => ({
-                            roomCategoryId: billingClass.key,
-                            amountorPercentage: 0,
-                          }))
+                          roomCategoryId: billingClass.key,
+                          amountorPercentage: 0,
+                        }))
                         : [],
                       cappingRoomCategorys: [],
                       isCapping: false,

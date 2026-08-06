@@ -123,7 +123,7 @@ export function DistributeDataTable({
   const selectedRows = table.getSelectedRowModel?.().rows?.map((row) => ({
     ...row.original,
   })) ?? [];
-  
+
 
   const [showRowActions, setShowRowActions] = useState(
     selectedRows.length !== 0
@@ -220,9 +220,8 @@ export function DistributeDataTable({
               />
             )}
             <div
-              className={`transition-all duration-300 ease-in-out  ${
-                showSearch ? "w-64 opacity-100 ml-2" : "w-0 opacity-0"
-              }`}
+              className={`transition-all duration-300 ease-in-out  ${showSearch ? "w-64 opacity-100 ml-2" : "w-0 opacity-0"
+                }`}
             >
               <div className="w-full">
                 <Input
@@ -237,12 +236,12 @@ export function DistributeDataTable({
                       searchTerm.trim() === "empty"
                         ? []
                         : tableData.filter((row) =>
-                            Object.values(row).some((value) =>
-                              String(value)
-                                .toLowerCase()
-                                .includes(searchTerm.toLowerCase())
-                            )
+                          Object.values(row).some((value) =>
+                            String(value)
+                              .toLowerCase()
+                              .includes(searchTerm.toLowerCase())
                           )
+                        )
                     );
                   }}
                 />
@@ -252,7 +251,7 @@ export function DistributeDataTable({
           <FilterDialogue
             trigger={
               <TableUtilFilterButton
-                icon={"/assets/icons/FilterIcon.svg"}
+                icon={"assets/icons/FilterIcon.svg"}
                 label={"Filters"}
                 badgeCount={Object.keys(filters).length}
               />
@@ -267,7 +266,7 @@ export function DistributeDataTable({
             <DropdownMenuTrigger asChild>
               <UtilDropDownButton
                 className="flex flex-row gap-1"
-                leadingIcon="/assets/icons/upload.svg"
+                leadingIcon="assets/icons/upload.svg"
                 label=""
               />
             </DropdownMenuTrigger>
@@ -304,7 +303,7 @@ export function DistributeDataTable({
           <DropdownMenu onOpenChange={setOpenShowCols} open={openShowCols}>
             <DropdownMenuTrigger asChild>
               <UtilDropDownButton
-                leadingIcon={"/assets/icons/columns.svg"}
+                leadingIcon={"assets/icons/columns.svg"}
                 label={""}
               />
             </DropdownMenuTrigger>
@@ -425,18 +424,16 @@ export function DistributeDataTable({
                     <TableHead
                       key={header.id}
                       className={`min-h-0 px-2 py-0 bg-[#F9F9FB] hover:bg-[#F9F9FB] border border-x-0 border-t-0 border-b-[#CDCED6] text-[#60646C] hover:text-[#1C2024] font-semibold cursor-pointer
-                    ${
-                      ["hospitals", "hospital", "Hospital"].includes(
+                    ${["hospitals", "hospital", "Hospital"].includes(
                         header.column.id
                       )
-                        ? "sticky left-0 z-50 bg-[#F9F9FB]"
-                        : ""
-                    }
-                    ${
-                      header.column.id === "totalAmount"
-                        ? "sticky right-0 z-50 bg-[#F9F9FB]"
-                        : ""
-                    }`}
+                          ? "sticky left-0 z-50 bg-[#F9F9FB]"
+                          : ""
+                        }
+                    ${header.column.id === "totalAmount"
+                          ? "sticky right-0 z-50 bg-[#F9F9FB]"
+                          : ""
+                        }`}
                     >
                       <div className="flex items-center">
                         {flexRender(
@@ -458,7 +455,7 @@ export function DistributeDataTable({
                   >
                     <div className="flex flex-col items-center justify-center w-full space-y-3">
                       <Image
-                        src={"/assets/icons/alert-circle.svg"}
+                        src={"assets/icons/alert-circle.svg"}
                         height={24}
                         width={24}
                         alt="no data found"
@@ -480,15 +477,13 @@ export function DistributeDataTable({
                     {row.getVisibleCells().map((cell, index) => (
                       <TableCell
                         key={cell.id}
-                        className={`whitespace-nowrap px-lg cursor-pointer py-0 h-10 ${
-                          index === 0
+                        className={`whitespace-nowrap px-lg cursor-pointer py-0 h-10 ${index === 0
                             ? "sticky left-0 bg-inherit z-[10] hover:text-primary"
                             : ""
-                        } ${
-                          index === columns.length - 1
+                          } ${index === columns.length - 1
                             ? "sticky right-0 bg-inherit  hover:text-primary"
                             : ""
-                        }`}
+                          }`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -540,7 +535,7 @@ export function DistributeDataTable({
           onRemoveRows={handleRemoveRows}
           setOpenSubmitBill={setOpenDistribute}
           totalRowCount={tableData.length}
-          setSelectedForSubmit={() => {}}
+          setSelectedForSubmit={() => { }}
         />
       </div>
       <div className="w-[344px] h-[280px] bg-[#F9F9FB] mt-8 rounded-md p-4 flex flex-col justify-between ml-auto">

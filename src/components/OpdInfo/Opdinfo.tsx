@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import Image from 'next/image';
 import Avatar from 'react-avatar';
 import Button from '../buttons/Button';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import Tags from '@/components/statusTags/Tags';
+// import Tags from '@/components/statusTags/Tags';
 
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import PosInfoCardDetails from '../posInfoCard/posInfoCardDetails';
 import { useFrappeApi } from "@/api/api";
 import { useAuth } from "@/context/AuthContext";
 import SelectInput from "@/components/form/Select";
-import Cash from "@/assets/icons/Cash.svg";
+// import Cash from "@/assets/icons/Cash.svg";
 import Dropdown from '../dropdownForPatientCard/Dropdown';
 import axios from "axios";
 import { debounce } from "lodash";
@@ -29,7 +29,7 @@ interface PatientCardProps {
     visitType?: string;
     doctor?: string;
     patientData?: SelectedPatient | null;
-    onPatientChange?: (p: SelectedPatient) => void;
+    onPatientChange?: (p: SelectedPatient, rawPatient?: any) => void;
     selectedWarehouse?: string;
     setSelectedWarehouse?: (value: string) => void;
     selectedCustomer?: string;
@@ -44,6 +44,7 @@ interface PatientCardProps {
     setSelectedSubDepartment?: (value: string) => void;
     isReturn: boolean;
     onReturnStatusChange: (status: boolean) => void;
+    isIPDPage?: boolean;
 }
 
 type SelectOption = { label: string; value: string };
@@ -62,11 +63,28 @@ type SelectedPatient = {
     visitType?: string;
     company?: string;
     visitID?: string;
+    visitNo?: string;
+    bedName?: string;
+    wardName?: string;
+    payerType?: string;
+    payerName?: string;
+    network?: string;
+    insuranceNo?: string;
+    subInsurance?: string;
+    otherNo?: string;
+    validityFrom?: string;
+    expiryValidityTo?: string;
+    hospitalId?: string;
+    coPay?: number;
 };
 
-const PATIENT_API_BASE_URL = "https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
+const PATIENT_API_BASE_URL = "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.patient_api.search_patient";
 
-const OpdCard: React.FC<PatientCardProps> = ({
+export interface OpdCardRef {
+    handleSelectPatient: (patient: any) => void;
+}
+
+const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     name = '',
     age = '22',
     sex = 'Male',
@@ -82,8 +100,8 @@ const OpdCard: React.FC<PatientCardProps> = ({
     setSelectedWarehouse,
     selectedCustomer = '',
     setSelectedCustomer,
-    selectedCompany = '',
-    setSelectedCompany,
+    selectedCompany: _selectedCompany = '',
+    setSelectedCompany: _setSelectedCompany,
     selectedBranch = '',
     setSelectedBranch,
     selectedDepartment = '',
@@ -92,9 +110,10 @@ const OpdCard: React.FC<PatientCardProps> = ({
     // setSelectedSubDepartment,
     isReturn,
     onReturnStatusChange,
-}) => {
+    isIPDPage = false,
+}, ref) => {
     const [open, setOpen] = useState<boolean>(false);
-    const { fetchWarehouses, fetchBranch, customers, companies, departments, fetchDoctors } = useFrappeApi();
+    const { fetchWarehouses, fetchBranch, customers, companies: _companies, departments, fetchDoctors } = useFrappeApi();
     const { apiKey, apiSecret, isInitialized } = useAuth();
     // fetchWarehouseForSubdepartment
     const { showAlert } = useAlert();
@@ -117,10 +136,21 @@ const OpdCard: React.FC<PatientCardProps> = ({
         displayNo: patientData?.displayNo,
         dept: patientData?.dept,
         visitID: patientData?.visitID ?? '',
+        visitNo: patientData?.visitNo ?? '',
+        bedName: patientData?.bedName ?? '',
+        wardName: patientData?.wardName ?? '',
+        payerType: patientData?.payerType ?? '',
+        payerName: patientData?.payerName ?? '',
+        network: patientData?.network ?? '',
+        insuranceNo: patientData?.insuranceNo ?? '',
+        subInsurance: patientData?.subInsurance ?? '',
+        otherNo: patientData?.otherNo ?? '',
+        validityFrom: patientData?.validityFrom ?? '',
+        expiryValidityTo: patientData?.expiryValidityTo ?? '',
     });
 
     const [warehouses, setWarehouses] = useState<{ label: string; value: string }[]>([]);
-    const [branches, setBranches] = useState<{ label: string; value: string }[]>([]);
+    const [branches, setBranches] = useState<{ label: string; value: string; custom_hospital_id?: string }[]>([]);
     const [defaultBranch] = useState<string>("");
     // const [selectedWarehouse, setSelectedWarehouse] = useState<string>(''); // Removed
     // const [selectedCustomer, setSelectedCustomer] = useState<string>(''); // Removed
@@ -140,7 +170,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     const selectOptions: SelectOption[] = [
         { label: "UHID", value: "uhid" },
-        { label: "Aadhaar No", value: "aadharCardNo" },
+        // { label: "Aadhaar No", value: "aadharCardNo" },
         { label: "Mobile No", value: "mobile" },
         { label: "Full Name", value: "fullName" },
     ];
@@ -160,28 +190,60 @@ const OpdCard: React.FC<PatientCardProps> = ({
     // Update internal state when patientData prop changes
     useEffect(() => {
         if (patientData) {
+            let parsedSex = patientData.sex || "";
+            if (!parsedSex || parsedSex === "N/A") {
+                if (patientData.age && typeof patientData.age === "string") {
+                    const upperAge = patientData.age.toUpperCase();
+                    if (upperAge.includes("/M")) parsedSex = "Male";
+                    else if (upperAge.includes("/F")) parsedSex = "Female";
+                }
+            }
+            if (parsedSex && parsedSex.toUpperCase() === "M") parsedSex = "Male";
+            if (parsedSex && parsedSex.toUpperCase() === "F") parsedSex = "Female";
+
             setEditedPatient({
-                name: patientData.name ?? name,
-                age: patientData.age ?? age,
-                sex: patientData.sex ?? sex,
-                phone: patientData.phone ?? phone,
-                ABHAID: patientData.ABHAID ?? ABHAID,
-                category: patientData.category ?? category,
-                company: patientData.company ?? company,
-                visitType: patientData.visitType ?? visitType,
-                doctor: patientData.doctor ?? doctor,
-                mrn: patientData.mrn,
-                displayNo: patientData.displayNo,
-                dept: patientData.dept,
-                visitID: patientData.visitID,
+                name: patientData.name || "N/A",
+                age: patientData.age || "N/A",
+                sex: parsedSex || "N/A",
+                phone: patientData.phone || "N/A",
+                ABHAID: patientData.ABHAID || "N/A",
+                category: patientData.category || "N/A",
+                company: patientData.company || "N/A",
+                visitType: (patientData.visitType && patientData.visitType !== "N/A") ? patientData.visitType : (isIPDPage ? "IP" : "OP"),
+                doctor: patientData.doctor || "N/A",
+                mrn: patientData.mrn || "N/A",
+                displayNo: patientData.displayNo || patientData.mrn || "N/A",
+                dept: patientData.dept || "N/A",
+                visitID: patientData.visitID || "N/A",
+                visitNo: patientData.visitNo || patientData.visitID || "N/A",
+                bedName: patientData.bedName || "N/A",
+                wardName: patientData.wardName || "N/A",
+                payerType: patientData.payerType || '',
+                payerName: patientData.payerName || '',
+                network: patientData.network || '',
+                insuranceNo: patientData.insuranceNo || '',
+                subInsurance: patientData.subInsurance || '',
+                otherNo: patientData.otherNo || '',
+                validityFrom: patientData.validityFrom || '',
+                expiryValidityTo: patientData.expiryValidityTo || '',
             });
-            setSearchValue(`${patientData.name} (${patientData.mrn})`);
+            const displayName = patientData.name && patientData.name !== "N/A" ? patientData.name : "";
+            const displayMRN = patientData.mrn && patientData.mrn !== "N/A" ? patientData.mrn : "";
+            setSearchValue(displayName ? `${displayName}${displayMRN ? ` (${displayMRN})` : ''}` : '');
         } else {
             // Clear patient data when patientData is null
             setEditedPatient({
                 name: '', age: '', sex: '', phone: '', ABHAID: '',
                 category: '', doctor: '', company: '', visitType: '',
-                visitID: '',
+                visitID: '', visitNo: '', bedName: '', wardName: '',
+                payerType: '',
+                payerName: '',
+                network: '',
+                insuranceNo: '',
+                subInsurance: '',
+                otherNo: '',
+                validityFrom: '',
+                expiryValidityTo: '',
             });
             setSearchValue('');
         }
@@ -231,7 +293,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
             try {
                 const apiParam = searchType === "uhid" ? "UHID" : searchType === "aadharCardNo" ? "Aadhar No" : searchType === "mobile" ? "Mobile No" : searchType === "fullName" ? "Full Name" : "Aadhar No";
                 console.log("API call with param:", apiParam, "and value:", value);
-                
+
                 const response = await axios.get(PATIENT_API_BASE_URL, {
                     params: {
                         search_type: apiParam,
@@ -249,9 +311,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 setShowDropdown(patients.length > 0);
             } catch (error: any) {
                 console.error("Patient search failed:", error);
-                
+
                 // Handle authentication errors specifically
-                if (error.response?.status === 401 || 
+                if (error.response?.status === 401 ||
                     (error.response?.data?.exception && error.response?.data?.exception.includes("AuthenticationError"))) {
                     showAlert('danger', 'Authentication Error', 'Authentication failed. Please check your login credentials and try again.');
                 } else if (error.response?.data?.exception) {
@@ -259,7 +321,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 } else {
                     showAlert('danger', 'Error', 'Search failed. Please try again.');
                 }
-                
+
                 setSearchResults([]);
                 setShowDropdown(false);
             } finally {
@@ -327,6 +389,12 @@ const OpdCard: React.FC<PatientCardProps> = ({
         );
     };
 
+    useImperativeHandle(ref, () => ({
+        handleSelectPatient: (patient: any) => {
+            handleSelectPatient(patient);
+        }
+    }));
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -339,32 +407,82 @@ const OpdCard: React.FC<PatientCardProps> = ({
     }, []);
 
     const handleSelectPatient = (patient: any) => {
+        console.log('Selected patient from search:', patient);
+        console.log('Payer details in search response:', {
+            payerType: patient.payerType,
+            payerName: patient.payerName,
+            network: patient.network,
+            insurnaceNo: patient.insurnaceNo,
+            subInsurance: patient.subInsurance,
+            otherNo: patient.otherNo,
+            validateFrom: patient.validateFrom,
+            expiryDate: patient.expiryDate
+        });
+
+        const rawAge = patient.ageDisplay || patient.custom_age || patient.age || "N/A";
+        let rawSex = patient.genderValue || patient.custom_gender || patient.sex || "";
+        if (!rawSex || rawSex === "N/A") {
+            if (rawAge && typeof rawAge === "string") {
+                const upperAge = rawAge.toUpperCase();
+                if (upperAge.includes("/M")) rawSex = "Male";
+                else if (upperAge.includes("/F")) rawSex = "Female";
+            }
+        }
+        if (rawSex && rawSex.toUpperCase() === "M") rawSex = "Male";
+        if (rawSex && rawSex.toUpperCase() === "F") rawSex = "Female";
+
         const newPatientData = {
-            name: patient.patientFullName || "N/A",
-            age: patient.ageDisplay || "N/A",
-            sex: patient.genderValue || "N/A",
-            phone: patient.mobileNo || patient.phoneNo || "N/A",
-            ABHAID: patient.aadharCardNo || "N/A",
-            category: patient.patientCategory || "N/A",
-            doctor: patient.consultingDoctor || "N/A",
-            mrn: patient.mrn || "N/A",
-            displayNo: patient.displayNo || "N/A",
-            dept: patient.departmentName || "N/A",
-            visitType: patient.patientVisitType || "N/A",
-            company: patient.patientCompany || "N/A",
-            Bed: patient.bedName || "N/A",
-            visitID: patient.visitID || "N/A",
+            name: patient.patientFullName || patient.custom_patient_name || patient.patient_name || patient.name || "N/A",
+            age: rawAge,
+            sex: rawSex || "N/A",
+            phone: patient.mobileNo || patient.phoneNo || patient.custom_phone || patient.contact_mobile || patient.phone || "N/A",
+            ABHAID: patient.aadharCardNo || patient.custom_aadhar || patient.ABHAID || "N/A",
+            category: patient.patientCategory || patient.custom_patient_category || patient.category || "N/A",
+            doctor: patient.consultingDoctor || patient.custom_doctor_name || patient.custom_doctor || patient.doctor || "N/A",
+            mrn: patient.mrn || patient.custom_uhid || patient.custom_mrn || patient.custom_patient_id || "N/A",
+            displayNo: patient.displayNo || patient.custom_uhid || patient.mrn || "N/A",
+            dept: patient.departmentName || patient.custom_department || patient.dept || "N/A",
+            visitType: patient.patientVisitType || patient.custom_visit_type || patient.visitType || "N/A",
+            company: patient.patientCompany || patient.custom_patient_company || patient.company || "N/A",
+            bedName: patient.bedName || patient.custom_bed_no || patient.custom_bed || patient.bed_no || patient.bed_name || patient.bed || "N/A",
+            wardName: patient.wardName || patient.custom_ward || patient.custom_ward_no || patient.custom_ward_name || patient.ward || "N/A",
+            visitID: patient.visitID || patient.custom_visit_code || "N/A",
+            visitNo: patient.visitNo || patient.visitNumber || patient.patientVisitNo || patient.custom_visit_code || patient.visitID || "N/A",
+            // Payer details from search response
+            payerType: patient.payerType || patient.custom_payer_category || "",
+            payerName: patient.payerName || patient.custom_payer_name || "",
+            network: patient.network || patient.custom_network || "",
+            insuranceNo: patient.insurnaceNo || patient.custom_insurance_no || "",
+            subInsurance: patient.subInsurance || patient.custom_sub_insurance || "",
+            otherNo: patient.otherNo || patient.custom_other_no || "",
+            validityFrom: patient.validateFrom || patient.custom_validity_from || "",
+            expiryValidityTo: patient.expiryDate || patient.custom_validity_to || "",
+            hospitalId: patient.hospitalId || patient.custom_hospital || "",
+            coPay: patient.co_Pay || patient.co_pay || 0,
         };
+
+        console.log('New patient data being set:', newPatientData);
+
         setEditedPatient(newPatientData);
         if (onPatientChange) {
-            onPatientChange(newPatientData);
+            onPatientChange(newPatientData, patient);
+        }
+
+        // Auto-set hospital based on patient's hospitalId
+        if (patient.hospitalId && setSelectedBranch) {
+            // Find the branch where custom_hospital_id matches patient.hospitalId
+            // Branches might not be populated if this is called early, so we also use a useEffect
+            const matchingBranch = branches.find((b: any) => b.custom_hospital_id === patient.hospitalId);
+            if (matchingBranch) {
+                setSelectedBranch(matchingBranch.value);
+            }
         }
 
         // Auto-set customer based on patient's company or default to self-paid
         if (setSelectedCustomer && customers.length > 0) {
             // If patient has a company, try to find matching customer
             if (newPatientData.company && newPatientData.company !== "N/A") {
-                const matchingCustomer = customers.find((customer: any) => 
+                const matchingCustomer = customers.find((customer: any) =>
                     customer.label === newPatientData.company || customer.value === newPatientData.company
                 );
                 if (matchingCustomer) {
@@ -425,7 +543,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
             });
         }
 
-        setSearchValue(`${patient.patientFullName} (${patient.mrn})`);
+        const displayName = newPatientData.name !== "N/A" ? newPatientData.name : patient.patientFullName || patient.name || "";
+        const displayMRN = newPatientData.mrn !== "N/A" ? newPatientData.mrn : patient.mrn || "";
+        setSearchValue(displayName ? `${displayName}${displayMRN ? ` (${displayMRN})` : ''}` : '');
         setShowDropdown(false);
         setHighlightedIndex(-1);
         console.log("Selected patient data:", newPatientData);
@@ -443,7 +563,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     useEffect(() => {
         if (!isInitialized) return; // Wait for auth initialization
-        
+
         const loadWarehouses = async () => {
             setLoading(true);
             try {
@@ -466,9 +586,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
 
     useEffect(() => {
         if (!isInitialized) return; // Wait for auth initialization
-        
+
         // Fetch and set default branch (hospital) from session
-        
+
         const loadBranches = async () => {
             setLoading(true);
             try {
@@ -476,6 +596,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                 const branchOptions = branchData.map((branch: any) => ({
                     label: branch.name || 'Unnamed Branch',
                     value: branch.name,
+                    custom_hospital_id: branch.custom_hospital_id,
                 }));
                 setBranches(branchOptions);
             } catch (error) {
@@ -496,18 +617,18 @@ const OpdCard: React.FC<PatientCardProps> = ({
         [setSelectedWarehouse]
     );
 
-    const handleCustomerChange = useCallback(
+    const _handleCustomerChange = useCallback(
         (value: string) => {
             setSelectedCustomer?.(value);
         },
         [setSelectedCustomer]
     );
 
-    const handleCompanyChange = useCallback(
+    const _handleCompanyChange = useCallback(
         (value: string) => {
-            setSelectedCompany?.(value);
+            _setSelectedCompany?.(value);
         },
-        [setSelectedCompany]
+        [_setSelectedCompany]
     );
 
     const handleBranchChange = useCallback(
@@ -549,6 +670,17 @@ const OpdCard: React.FC<PatientCardProps> = ({
         }
     };
 
+
+    // Auto-select hospital when branches load if a patient with hospitalId is already selected
+    useEffect(() => {
+        if (editedPatient.hospitalId && branches.length > 0 && setSelectedBranch && !selectedBranch) {
+            const matchingBranch = branches.find(b => b.custom_hospital_id === editedPatient.hospitalId);
+            if (matchingBranch) {
+                setSelectedBranch(matchingBranch.value);
+            }
+        }
+    }, [editedPatient.hospitalId, branches, setSelectedBranch, selectedBranch]);
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <div className='flex flex-col w-[280px] h-fit gap-4 p-4 rounded-lg border border-[#D9D9E0] bg-[#FFF] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]'>
@@ -565,17 +697,17 @@ const OpdCard: React.FC<PatientCardProps> = ({
                             /> */}
                         </div>
                     </div>
-                    <div className='flex flex-row gap-2'>
+                    {/* <div className='flex flex-row gap-2'>
                         <Tags variant="tag" tagText="Medical Legal Case" type="cyan" border />
                         <Tags variant="tag" tagText="No Coverage" type="warning" border />
-                    </div>
+                    </div> */}
                 </div>
                 <div className="flex flex-col items-center space-y-4">
                     <div className="w-full">
                         <div className="flex flex-col gap-2 w-full">
                             <div className='flex flex-row h-8 items-center justify-between'>
                                 <div className='flex flex-row gap-1'>
-                                    <Image src={Cash} width={16} height={16} alt='Cash' />
+                                    <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                     <span className='w-full text-[#1C2024] text-xs font-normal'>Patient</span>
                                 </div>
                                 <div className='flex flex-row h-8 items-center justify-between'>
@@ -680,7 +812,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Store / Department</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -699,43 +831,46 @@ const OpdCard: React.FC<PatientCardProps> = ({
                         </div>
                     </div>
                     <InfoRow
-                        icon="pos/assets/icons/Cake.svg"
+                        icon="assets/icons/Cake.svg"
                         label="Gender"
-                        value={editedPatient.age}
+                        value={editedPatient.sex}
                         selectValue={editedPatient.sex}
                         // onChange={(value) => handleFieldChange('age', value)}
                         onSelectChange={(value) => handleFieldChange('sex', value)}
                         selectOptions={sexOptions}
+                        disabled={true}
                     />
                     {/* This is the new row for Age only */}
                     <InfoRow
-                        icon="pos/assets/icons/Cake.svg"
+                        icon="assets/icons/Cake.svg"
                         label="Age"
                         value={editedPatient.age}
                         onChange={(value) => handleFieldChange('age', value)}
+                        disabled={true}
                     />
-                    <InfoRow
-                        icon="pos/assets/icons/Phone.svg"
+                    {/* <InfoRow
+                        icon="assets/icons/Phone.svg"
                         label="Contact"
                         value={editedPatient.phone}
                         onChange={(value) => handleFieldChange('phone', value)}
-                    />
+                        disabled={true}
+                    /> */}
                     <InfoRow
-                        icon="pos/assets/icons/Id.svg"
+                        icon="assets/icons/Id.svg"
                         label="Visit No"
-                        value={editedPatient.visitID || ''}
+                        value={editedPatient.visitNo || editedPatient.visitID || ''}
                         disabled={true}
                     />
-                    <InfoRow
-                        icon="pos/assets/icons/Id.svg"
+                    {/* <InfoRow
+                        icon="assets/icons/Id.svg"
                         label="ABHA ID"
                         value={editedPatient.ABHAID}
                         onChange={(value) => handleFieldChange('ABHAID', value)}
-                    />
-                    <div className="flex flex-col gap-2 w-full">
+                    /> */}
+                    {/* <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Customer</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -747,15 +882,15 @@ const OpdCard: React.FC<PatientCardProps> = ({
                                     value={selectedCustomer}
                                     onChange={handleCustomerChange}
                                     placeholder="Self Paid"
-                                    disabled={customers.length === 0}
+                                    disabled={true}
                                 />
                             </div>
                         </div>
-                    </div>
-                    <div className="flex flex-col gap-2 w-full">
+                    </div> */}
+                    {/* <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Company</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -767,29 +902,29 @@ const OpdCard: React.FC<PatientCardProps> = ({
                                     value={selectedCompany}
                                     onChange={handleCompanyChange}
                                     placeholder="Select company"
-                                    disabled={companies.length === 0}
+                                    disabled={true}
                                 />
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Hospital</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
                                 {defaultBranch ? (
-    <div className="relative w-full">
-        
-        <input
-            value={defaultBranch}
-            disabled
-            className="text-xs font-semibold placeholder:text-[#B0B3B9] focus:outline-none cursor-not-allowed transition-all  text-right w-full"
-            style={{ textAlign: 'right' }}
-        />
-    </div>
-) : (
+                                    <div className="relative w-full">
+
+                                        <input
+                                            value={defaultBranch}
+                                            disabled
+                                            className="text-xs font-semibold placeholder:text-[#B0B3B9] focus:outline-none cursor-not-allowed transition-all  text-right w-full"
+                                            style={{ textAlign: 'right' }}
+                                        />
+                                    </div>
+                                ) : (
                                     <Dropdown
                                         reasons={branches.map(branch => ({
                                             key: branch.value,
@@ -798,7 +933,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                                         value={selectedBranch}
                                         onChange={handleBranchChange}
                                         placeholder="Select Hospital"
-                                        disabled={branches.length === 0}
+                                        disabled={true}
                                     />
                                 )}
                             </div>
@@ -807,7 +942,7 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
-                                <Image src={Cash} width={16} height={16} alt='Cash' />
+                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
                                 <span className='w-full text-[#1C2024] text-xs font-normal'>Patient Department</span>
                             </div>
                             <div className='flex flex-row h-8 items-center justify-between'>
@@ -819,32 +954,46 @@ const OpdCard: React.FC<PatientCardProps> = ({
                                     value={selectedDepartment}
                                     onChange={handleDepartmentChange}
                                     placeholder="Select department"
-                                    disabled={departments.length === 0}
+                                    disabled={true}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <InfoRow
-                        icon="pos/assets/icons/Building.svg"
+                    {/* <InfoRow
+                        icon="assets/icons/Building.svg"
                         label="Customer Name"
                         value={editedPatient.name || ''}
                         onChange={(value) => handleFieldChange('name', value)}
-                    />
+                        disabled={true}
+                    /> */}
                     <InfoRow
-                        icon="pos/assets/icons/DoorEnter.svg"
+                        icon="assets/icons/DoorEnter.svg"
                         label="Visit Type"
                         value={editedPatient.visitType || ''}
                         disabled={true} // <-- 1. THIS IS YOUR ORIGINAL GOAL
                     />
                     <InfoRow
-                        icon="pos/assets/icons/FirstAidKit.svg"
+                        icon="assets/icons/FirstAidKit.svg"
                         label="Consulting Doctor"
                         value={editedPatient.doctor}
                         onChange={(value) => handleFieldChange('doctor', value)}
                         selectOptions={localDoctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
                         selectValue={editedPatient.doctor}
                         onSelectChange={(value) => handleFieldChange('doctor', value)}
+                        disabled={true}
+                    />
+                    <InfoRow
+                        icon="assets/icons/Id.svg"
+                        label="Bed Name"
+                        value={editedPatient.bedName || ''}
+                        disabled={true}
+                    />
+                    <InfoRow
+                        icon="assets/icons/Id.svg"
+                        label="Ward Name"
+                        value={editedPatient.wardName || ''}
+                        disabled={true}
                     />
                     <DialogTrigger asChild>
                         <div className='w-fit h-fit flex justify-start'>
@@ -872,7 +1021,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
                     phone={editedPatient.phone}
                     ABHAID={editedPatient.ABHAID}
                     category={editedPatient.category}
-                    company={editedPatient.company}
+                    company={_companies?.find((c: any) => c.value === _selectedCompany)?.label || _selectedCompany || editedPatient.company}
+                    customer={customers?.find((c: any) => c.value === selectedCustomer)?.label || selectedCustomer}
+                    customerName={editedPatient.name}
                     doctor={editedPatient.doctor}
                     onClose={() => setOpen(false)}
                     isReturn={isReturn}
@@ -881,7 +1032,9 @@ const OpdCard: React.FC<PatientCardProps> = ({
             </DialogContent>
         </Dialog>
     );
-};
+});
+
+OpdCard.displayName = "OpdCard";
 
 export default OpdCard;
 
@@ -917,7 +1070,7 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, selectValue, onCh
                 value={value || ''}
                 onChange={(e) => onChange && onChange(e.target.value)}
                 className='text-[#1C2024] text-xs font-semibold w-[120px]'
-                disabled={disabled} // <-- 4. FIXED: CHANGED FROM 'true' TO 'disabled'
+                disabled={disabled}
             />
         )}
     </div>

@@ -59,7 +59,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({ employeeData }) => {
   const onSave = async () => {
     if (formState && formState.length > 0) {
       setLoading(true);
-      
+
       try {
         await dispatch(
           updateTransferLimit({
@@ -74,21 +74,21 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({ employeeData }) => {
             },
           })
         ).unwrap();
-        
+
         // Success case
         setAlertMessage(t("success.employeeTransferUpdated"));
         setAlertType("success");
         setShowAlert(true);
-        
+
         // Redirect to listing page with success message
         setTimeout(() => {
           router.push("/employee_transfers?success=updated");
         }, 0);
-        
+
       } catch (error: any) {
         // Extract actual error message from API response using utility function
         const errorMessage = extractApiErrorMessage(error);
-        
+
         setAlertMessage(errorMessage);
         setAlertType("danger");
         setShowAlert(true);
@@ -217,7 +217,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({ employeeData }) => {
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="Dots"
                 width={50}
                 height={50}

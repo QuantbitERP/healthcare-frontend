@@ -81,11 +81,11 @@ const Document: React.FC<DocumentProps> = ({ setOpen, onFileSelect }) => {
       {/* Header */}
       <div className="w-full px-6 py-4 border-b border-b-[#D9D9E0] flex flex-row justify-between">
         <div className="flex flex-row gap-2">
-          <Image src={'/assets/icons/Paper.svg'} width={24} height={24} alt="Rupee" />
+          <Image src={'assets/icons/Paper.svg'} width={24} height={24} alt="Rupee" />
           <p className="text-[#1C2024] text-base font-semibold">Document Upload</p>
         </div>
         <Image
-          src={'/assets/icons/CloseIcon.svg'}
+          src={'assets/icons/CloseIcon.svg'}
           width={24}
           height={24}
           alt="Close Icon"
@@ -116,7 +116,7 @@ const Document: React.FC<DocumentProps> = ({ setOpen, onFileSelect }) => {
             onDrop={handleDrop}
           >
             <div className="flex flex-col gap-2 items-center justify-center pointer-events-none">
-              <Image src={'/assets/icons/UploadDoc.svg'} width={20} height={20} alt="Upload Icon" />
+              <Image src={'assets/icons/UploadDoc.svg'} width={20} height={20} alt="Upload Icon" />
               <div className="flex flex-row gap-1 text-[#1C2024] text-xs font-medium">
                 <span>Drag & Drop or</span>
                 <span className="text-[#0D74CE] font-semibold">Choose File</span>
@@ -138,7 +138,7 @@ const Document: React.FC<DocumentProps> = ({ setOpen, onFileSelect }) => {
               </span>
             </div>
             <Image
-              src={'/assets/icons/CloseIcon.svg'}
+              src={'assets/icons/CloseIcon.svg'}
               width={20}
               height={20}
               alt="Remove File"

@@ -95,10 +95,10 @@ function TotalBreakdownCard({
     setSponsoredbyName,
     setPendingPaybleAmount,
     setRemainingPaybleAmount,
-    
+
   } = useGlobalTables();
 
-  console.log(serviceCalculations,patientServicesTable);
+  console.log(serviceCalculations, patientServicesTable);
 
   useEffect(() => {
     OpdBillService.getApiVOpdBillOpdbillsPatientPaidby("1", "")
@@ -116,10 +116,10 @@ function TotalBreakdownCard({
   }, []);
 
   useEffect(() => {
-    if(selectedPatientBill || billData){
+    if (selectedPatientBill || billData) {
       const selectedOption =
-                  paidByOptions.find((item) => item.value === selectedValue) ||
-                  null;
+        paidByOptions.find((item) => item.value === selectedValue) ||
+        null;
       setPaidBy(selectedOption);
       setPaidByName(selectedPatientBill?.paidByName ?? billData?.paidByName ?? "");
       setSponsoredbyName(selectedPatientBill?.sponsoredbyName ?? billData?.sponsoredbyName ?? "")
@@ -129,15 +129,15 @@ function TotalBreakdownCard({
       setPendingPaybleAmount(currentTotalAmount);
       setRemainingPaybleAmount(currentTotalAmount);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[paidByOptions, selectedPatientBill, billData, selectedValue, setPaidBy, setPaidByName, setPendingPaybleAmount, setSponsoredbyName, patientServicesTable]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paidByOptions, selectedPatientBill, billData, selectedValue, setPaidBy, setPaidByName, setPendingPaybleAmount, setSponsoredbyName, patientServicesTable]);
 
   // Update pending payable amount whenever patient services table changes
   useEffect(() => {
     const currentTotalAmount = calculateTotalAmount(patientServicesTable);
     setPendingPaybleAmount(currentTotalAmount);
     setRemainingPaybleAmount(currentTotalAmount);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientServicesTable, setPendingPaybleAmount]);
 
   // Also update when serviceCalculations change (for real-time updates)
@@ -145,7 +145,7 @@ function TotalBreakdownCard({
     const currentTotalAmount = calculateTotalAmount(patientServicesTable);
     setPendingPaybleAmount(currentTotalAmount);
     setRemainingPaybleAmount(currentTotalAmount);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceCalculations, patientServicesTable, setPendingPaybleAmount]);
 
   useEffect(() => {
@@ -163,7 +163,7 @@ function TotalBreakdownCard({
           amount: item.amount ?? 0,     // convert null → 0 (or undefined, depending on what you want)
         })) as InsertReceiptPayment[]
       );
-      
+
     }
   }, [selectedPatientBill?.receiptPayments, setPatientRecordPayment, setPatientRecordPaymentInUpdate]);
 
@@ -182,7 +182,7 @@ function TotalBreakdownCard({
       }
     }
   }, [gstList, selectedPatientBill?.billGstId, setGSTID]);
-  
+
 
   const handleSelect = (value: string) => {
     setSelectedValue(value);
@@ -236,7 +236,7 @@ function TotalBreakdownCard({
       return sum + amount;
     }, 0);
   };
- const calculateTotalAmount = (patientServicesTable: any[]) => {
+  const calculateTotalAmount = (patientServicesTable: any[]) => {
     return patientServicesTable.reduce((total, row) => {
       const rate = parseFloat(row.rate) || 0;
       const quantity = parseFloat(row.quantity) || 0;
@@ -253,7 +253,7 @@ function TotalBreakdownCard({
 
   const totalAmountforConcession = calculateTotalAmount(patientServicesTable);
   const concessionOnBill = getTotalConcessionAmount(
-   patientBillConcession
+    patientBillConcession
   );
 
   // Extract unique GST percentages from serviceCalculations
@@ -302,7 +302,7 @@ function TotalBreakdownCard({
               <p className="text-[#1C2024] text-xs font-semibold">
                 {billData && "finalBillAmount" in billData
                   ? billData.finalBillAmount : billData && "billTotalAmount" in billData ? billData?.billTotalAmount
-                  : calculateTotalAmount(patientServicesTable)}
+                    : calculateTotalAmount(patientServicesTable)}
               </p>
             </div>
             <div className="flex flex-row justify-between items-center h-8 ">
@@ -322,7 +322,7 @@ function TotalBreakdownCard({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Image
-                        src={"/assets/icons/ExclamationCircle.svg"}
+                        src={"assets/icons/ExclamationCircle.svg"}
                         width={16}
                         height={16}
                         alt="Exclaim"
@@ -390,7 +390,7 @@ function TotalBreakdownCard({
                       {selectedValue ? `GST (${selectedValue}%)` : "GST"}
                     </p>
                     <Image
-                      src={"/assets/icons/CaretDownDark.svg"}
+                      src={"assets/icons/CaretDownDark.svg"}
                       width={16}
                       height={16}
                       alt="Caret"
@@ -450,7 +450,7 @@ function TotalBreakdownCard({
           </div>
           <div>
             <Image
-              src={"/assets/icons/DividerHorizontal.svg"}
+              src={"assets/icons/DividerHorizontal.svg"}
               width={224}
               height={220}
               alt="Divider"

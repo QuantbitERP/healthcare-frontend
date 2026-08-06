@@ -1,4 +1,4 @@
- 
+
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -38,7 +38,7 @@ export default function SearchInput({
   const [, setData] = useState<string>();
   const searchRef = useRef<HTMLDivElement>(null);
 
- 
+
 
   const handleSearchFocus = () => {
     setShowServiceResults(true);
@@ -62,7 +62,7 @@ export default function SearchInput({
     <div className="flex flex-row items-center relative" ref={searchRef}>
       {inputImage && (
         <Image
-          src={'/assets/icons/Search.svg'}
+          src={'assets/icons/Search.svg'}
           alt="Search"
           width={24}
           height={24}
@@ -77,12 +77,11 @@ export default function SearchInput({
         }
         placeholder={placeholder || "Search Services"}
         value={serviceSearchTerm}
-        onChange={(e)=> {
-           setServiceSearchTerm(e.target.value)
-           setShowServiceResults(true);
-          if(handleServiceSearchChange)
-            { handleServiceSearchChange(e.target.value)}
-           
+        onChange={(e) => {
+          setServiceSearchTerm(e.target.value)
+          setShowServiceResults(true);
+          if (handleServiceSearchChange) { handleServiceSearchChange(e.target.value) }
+
         }}
         onFocus={handleSearchFocus}
       />
@@ -92,7 +91,7 @@ export default function SearchInput({
             <CommandList className="p-0">
               <CommandEmpty className="w-full h-[144px] px-4 py-2 flex flex-col gap-2 items-center justify-center">
                 <Image
-                  src={'/assets/icons/Emoji.svg'}
+                  src={'assets/icons/Emoji.svg'}
                   alt="Sad"
                   width={32}
                   height={32}
@@ -109,9 +108,9 @@ export default function SearchInput({
                       .toLowerCase()
                       .includes(serviceSearchTerm.toLowerCase())
                   )
-                  .map((service,index) => (
+                  .map((service, index) => (
                     <CommandItem
-                      key={service+index}
+                      key={service + index}
                       value={service}
                       onSelect={() => {
                         setData(service);

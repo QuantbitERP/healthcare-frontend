@@ -46,7 +46,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       const fetchPOSProfiles = async () => {
         try {
           console.log("Fetching POS Profiles for user:", currentUser);
-          const url = `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
+          const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_pos_profiles_for_user`;
 
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
@@ -128,7 +128,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
         }
 
         const response = await fetch(
-          `https://demohims.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
+          `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.check_pos_opening_entry_conflict`,
           {
             method: "POST",
             headers: headers,

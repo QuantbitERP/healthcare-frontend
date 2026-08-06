@@ -54,13 +54,13 @@ const PatientCard: React.FC<PatientCardProps> = ({
         </div>
 
         <div className='flex flex-col gap-2'>
-          <InfoRow icon="/assets/icons/Cake.svg" label="Age / Gender" value={`${age} / ${sex.charAt(0).toUpperCase()}`} />
-          <InfoRow icon="/assets/icons/Phone.svg" label="Contact" value={phone} />
-          <InfoRow icon="/assets/icons/Id.svg" label="ABHA ID" value={ABHAID} />
-          <InfoRow icon="/assets/icons/Cash.svg" label="Category" value={category} />
-          <InfoRow icon="/assets/icons/Building.svg" label="Company" value={company} />
-          <InfoRow icon="/assets/icons/DoorEnter.svg" label="Visit Type" value={visitType} />
-          <InfoRow icon="/assets/icons/FirstAidKit.svg" label="Referral Doctor" value={doctor} />
+          <InfoRow icon="assets/icons/Cake.svg" label="Age / Gender" value={`${age} / ${sex.charAt(0).toUpperCase()}`} />
+          <InfoRow icon="assets/icons/Phone.svg" label="Contact" value={phone} />
+          <InfoRow icon="assets/icons/Id.svg" label="ABHA ID" value={ABHAID} />
+          <InfoRow icon="assets/icons/Cash.svg" label="Category" value={category} />
+          <InfoRow icon="assets/icons/Building.svg" label="Company" value={company} />
+          <InfoRow icon="assets/icons/DoorEnter.svg" label="Visit Type" value={visitType} />
+          <InfoRow icon="assets/icons/FirstAidKit.svg" label="Referral Doctor" value={doctor} />
 
           <DialogTrigger asChild>
             <div className='w-fit h-fit flex justify-start'>

@@ -294,7 +294,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
         });
       },
       updateCell(rowIndex, columnId, value) {
-        setData((old) => {  
+        setData((old) => {
           const copy = [...old];
           copy[rowIndex] = { ...copy[rowIndex], [columnId]: value };
           return copy;
@@ -603,7 +603,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
           ) : (
             <div className="search-component relative">
               <Image
-                src={"/assets/icons/Search.svg"}
+                src={"assets/icons/Search.svg"}
                 alt="Search"
                 width={24}
                 height={24}
@@ -635,7 +635,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         /* Show "No Service Found" if term >= 3 and no results */
                         <CommandEmpty className="w-full h-[144px] px-4 py-2 flex flex-col gap-2 items-center justify-center">
                           <Image
-                            src={"/assets/icons/Emoji.svg"}
+                            src={"assets/icons/Emoji.svg"}
                             alt="Sad"
                             width={32}
                             height={32}
@@ -801,7 +801,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
               showCustomAlert={showCustomAlert}
             />
           </div>
-         {selectedPatient ? ( <div className="w-full flex flex-col h-fit gap-3 p-4  border border-[#D9D9E0]  shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]  max-w-5xl  rounded-xl space-y-3">
+          {selectedPatient ? (<div className="w-full flex flex-col h-fit gap-3 p-4  border border-[#D9D9E0]  shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]  max-w-5xl  rounded-xl space-y-3">
             <div className="flex flex-col gap-4">
               <div>
                 <h2 className="text-lg font-semibold">Patient Details</h2>
@@ -885,7 +885,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                           {insuranceCompany}
                         </SelectValue>
                         <Image
-                          src="/assets/icons/CaretDownDark.svg"
+                          src="assets/icons/CaretDownDark.svg"
                           height={16}
                           width={16}
                           alt="dropdown"
@@ -946,7 +946,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
             </div>
           </div>) : (
             <PatientDetailsSkeleton />
-          ) }
+          )}
         </div>
 
         <Footer

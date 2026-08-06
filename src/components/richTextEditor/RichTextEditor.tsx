@@ -30,7 +30,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ showToolbar, company, o
       setCanUndo(document.queryCommandEnabled("undo"));
       setCanRedo(document.queryCommandEnabled("redo"));
     }
-},[]);
+  }, []);
 
   const handleInput = useCallback(() => {
     updateUndoRedoState();
@@ -40,7 +40,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ showToolbar, company, o
       onContentChange(content);
     }
   }, [updateUndoRedoState, onContentChange]); // add dependencies if needed
-  
+
 
   useEffect(() => {
     updateUndoRedoState();
@@ -70,16 +70,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ showToolbar, company, o
   }, [initialContent, onContentChange]);
 
   const toolbarItems: ToolbarItem[] = [
-    { id: "fontSize", icon: "/assets/icons/TextSize.svg", command: "fontSize", value: "3" },
-    { id: "underline", icon: "/assets/icons/Underline.svg", command: "underline" },
-    { id: "bold", icon: "/assets/icons/Bold.svg", command: "bold" },
-    { id: "italic", icon: "/assets/icons/Italic.svg", command: "italic" },
-    { id: "link", icon: "/assets/icons/Link.svg", command: "createLink", value: "https://example.com" },
-    { id: "attachment", icon: "/assets/icons/Attachment.svg", command: "custom-attachment" },
-    { id: "cut", icon: "/assets/icons/CutText.svg", command: "cut" },
-    { id: "copy", icon: "/assets/icons/CopyText.svg", command: "copy" },
-    { id: "undo", icon: "/assets/icons/Undo.svg", command: "undo" },
-    { id: "redo", icon: "/assets/icons/Redo.svg", command: "redo" },
+    { id: "fontSize", icon: "assets/icons/TextSize.svg", command: "fontSize", value: "3" },
+    { id: "underline", icon: "assets/icons/Underline.svg", command: "underline" },
+    { id: "bold", icon: "assets/icons/Bold.svg", command: "bold" },
+    { id: "italic", icon: "assets/icons/Italic.svg", command: "italic" },
+    { id: "link", icon: "assets/icons/Link.svg", command: "createLink", value: "https://example.com" },
+    { id: "attachment", icon: "assets/icons/Attachment.svg", command: "custom-attachment" },
+    { id: "cut", icon: "assets/icons/CutText.svg", command: "cut" },
+    { id: "copy", icon: "assets/icons/CopyText.svg", command: "copy" },
+    { id: "undo", icon: "assets/icons/Undo.svg", command: "undo" },
+    { id: "redo", icon: "assets/icons/Redo.svg", command: "redo" },
   ];
 
   const handleCommandClick = (item: ToolbarItem) => {

@@ -53,13 +53,13 @@ function BillingTable(): JSX.Element {
   });
 
   // Use the API hook for data fetching
-  const { 
-    data: apiData, 
-    loading, 
-    error, 
-    metadata, 
-    refetch, 
-    updateFilters 
+  const {
+    data: apiData,
+    loading,
+    error,
+    metadata,
+    refetch,
+    updateFilters
   } = useInvoicingData();
 
   // Use the delete hook
@@ -74,18 +74,18 @@ function BillingTable(): JSX.Element {
     []
   );
 
-      // Consolidated API call effect - only one API call per filter change
-      useEffect(() => {
-        // Make API call with current date range
-        updateFilters({
-          startDate: date?.from?.toISOString() || new Date().toISOString(),
-          endDate: date?.to?.toISOString() || new Date().toISOString(),
-          priorAuthDoneBy: meMode ? "Me" : undefined,
-          billFinalizedBy: meMode ? "Me" : undefined,
-          pageNumber: pageNumber,
-          pageSize: pageSize,
-        });
-      }, [date?.from, date?.to, meMode, pageNumber, pageSize, updateFilters]);
+  // Consolidated API call effect - only one API call per filter change
+  useEffect(() => {
+    // Make API call with current date range
+    updateFilters({
+      startDate: date?.from?.toISOString() || new Date().toISOString(),
+      endDate: date?.to?.toISOString() || new Date().toISOString(),
+      priorAuthDoneBy: meMode ? "Me" : undefined,
+      billFinalizedBy: meMode ? "Me" : undefined,
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+    });
+  }, [date?.from, date?.to, meMode, pageNumber, pageSize, updateFilters]);
 
   // Update filteredData when API data changes
   useEffect(() => {
@@ -169,7 +169,7 @@ function BillingTable(): JSX.Element {
     try {
       // Extract IDs from selected rows - try different ID fields
       const ids = selectedRows.map(row => row.invId || row.id || row.billId).filter(Boolean) as string[];
-      
+
       if (ids.length === 0) {
         return;
       }
@@ -184,7 +184,7 @@ function BillingTable(): JSX.Element {
   const handleFiltersChange = useCallback((filters: Record<string, unknown>) => {
     // Convert filters to the format expected by the API
     const apiFilters: any = {};
-    
+
     if (filters.searchTerm && typeof filters.searchTerm === 'string') {
       apiFilters.searchTerm = filters.searchTerm;
     }
@@ -200,7 +200,7 @@ function BillingTable(): JSX.Element {
     if (filters.associateCompany && Array.isArray(filters.associateCompany)) {
       apiFilters.associateCompany = filters.associateCompany;
     }
-    
+
     // Update API filters
     updateFilters(apiFilters);
   }, [updateFilters]);
@@ -210,7 +210,7 @@ function BillingTable(): JSX.Element {
       <div className="flex justify-between items-center p-md border-b border-[#D9D9E0]">
         <div className="flex space-x-2">
           <Image
-            src="/assets/icons/receipt-rupee.svg"
+            src="assets/icons/receipt-rupee.svg"
             alt="Rupee icon"
             width={24}
             height={24}

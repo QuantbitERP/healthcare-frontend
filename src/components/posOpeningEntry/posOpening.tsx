@@ -87,7 +87,7 @@ const POSOpeningEntry: React.FC = () => {
             authHeaders;
         
         const companyRes = await fetch(
-          "https://demohims.quantcloud.in/api/resource/Company?fields=[\"name\"]",
+          "https://gmcerp.quantcloud.in/api/resource/Company?fields=[\"name\"]",
           {
             method: "GET",
             headers,
@@ -103,7 +103,7 @@ const POSOpeningEntry: React.FC = () => {
 
         // Fetch POS Profiles
         const posRes = await fetch(
-          "https://demohims.quantcloud.in/api/resource/POS Profile?fields=[\"name\"]",
+          "https://gmcerp.quantcloud.in/api/resource/POS Profile?fields=[\"name\"]",
           {
             method: "GET",
             headers,
@@ -119,7 +119,7 @@ const POSOpeningEntry: React.FC = () => {
 
         // Fetch Modes of Payment
         const mopRes = await fetch(
-          "https://demohims.quantcloud.in/api/resource/Mode of Payment?fields=[\"name\"]",
+          "https://gmcerp.quantcloud.in/api/resource/Mode of Payment?fields=[\"name\"]",
           {
             method: "GET",
             headers,
@@ -212,7 +212,7 @@ const POSOpeningEntry: React.FC = () => {
           authHeaders;
       
       const response = await fetch(
-        "https://demohims.quantcloud.in/api/resource/Opening Entry",
+        "https://gmcerp.quantcloud.in/api/resource/Opening Entry",
         {
           method: "POST",
           headers,

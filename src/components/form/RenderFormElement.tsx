@@ -237,6 +237,7 @@ const RenderFormElement: React.FC<RenderFormElementProps> = ({
           selValue={value}
           onValueChange={onChange}
           borderLess={borderLess}
+          disabled={readonly}
         />
       )}
 

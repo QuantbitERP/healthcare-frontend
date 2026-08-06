@@ -44,7 +44,7 @@ import {
 } from "../ui/tooltip";
 import { TooltipArrow } from "@radix-ui/react-tooltip";
 import { Textarea } from "../ui/textarea";
-import {hospitalBillEntries} from './TableData'
+import { hospitalBillEntries } from './TableData'
 
 interface BodyProps {
   receiptId: string | null;
@@ -162,11 +162,10 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
             <div
               key={type}
               onClick={() => setActive(type as "company" | "patient")}
-              className={`w-1/2 text-center py-2 text-xs font-medium cursor-pointer transition-all duration-200 rounded-md ${
-                active === type
+              className={`w-1/2 text-center py-2 text-xs font-medium cursor-pointer transition-all duration-200 rounded-md ${active === type
                   ? "bg-white shadow-md"
                   : "bg-[#F9F9FB] text-[#6B7280]"
-              }`}
+                }`}
             >
               {type === "company" ? "Company" : "Patient"}
             </div>
@@ -187,7 +186,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                       {insuranceCompany}
                     </SelectValue>
                     <Image
-                      src="/assets/icons/CaretDownDark.svg"
+                      src="assets/icons/CaretDownDark.svg"
                       height={16}
                       width={16}
                       alt="dropdown"
@@ -281,7 +280,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                             {patient.label} ({patient.value})
                           </SelectValue>
                           <Image
-                            src="/assets/icons/CaretDownDark.svg"
+                            src="assets/icons/CaretDownDark.svg"
                             height={16}
                             width={16}
                             alt="dropdown"
@@ -360,7 +359,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                     {paymentMode}
                   </SelectValue>
                   <Image
-                    src="/assets/icons/CaretDownDark.svg"
+                    src="assets/icons/CaretDownDark.svg"
                     height={16}
                     width={16}
                     alt="dropdown"
@@ -369,8 +368,8 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
 
                 <SelectContent className="border border-[#D9D9E0] [&>div]:!px-0 [&>div]:!py-0">
                   <Command>
-                    <CommandInput 
-                      placeholder="Search payment modes..." 
+                    <CommandInput
+                      placeholder="Search payment modes..."
                       className="h-9 border-0 focus:ring-0 focus:ring-offset-0"
                     />
                     <CommandList className="max-h-[200px] [&>div]:!px-0 [&>div]:!mx-0 [&>div]:!pb-2">
@@ -444,7 +443,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
 
         {isConcession && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-             <div className="flex flex-col space-y-3">
+            <div className="flex flex-col space-y-3">
               <Label>Concession Category</Label>
               <Select
                 onValueChange={(value) => setConcessionCategory(value)}
@@ -455,7 +454,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                     {concessionCategory}
                   </SelectValue>
                   <Image
-                    src="/assets/icons/CaretDownDark.svg"
+                    src="assets/icons/CaretDownDark.svg"
                     height={16}
                     width={16}
                     alt="dropdown"
@@ -512,7 +511,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                     {concessionDoctor}
                   </SelectValue>
                   <Image
-                    src="/assets/icons/CaretDownDark.svg"
+                    src="assets/icons/CaretDownDark.svg"
                     height={16}
                     width={16}
                     alt="dropdown"
@@ -541,7 +540,7 @@ const ReceiptDetailPanel: React.FC<BodyProps> = ({
                 </SelectContent>
               </Select>
             </div>
-           
+
             <div className="md:col-span-1 flex flex-col space-y-3">
               <Label>Concession Remark</Label>
               <Input

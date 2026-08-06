@@ -54,9 +54,9 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [showCompanyDropdown, setShowCompanyDropdown] =
     useState<boolean>(false);
-    const [selectedCategory, setSelectedCategory] = useState<{ id: string; value: string } | null>(null);
-    const [selectedCompany, setSelectedCompany] = useState<{ id: string; value: string } | null>(null);
-    
+  const [selectedCategory, setSelectedCategory] = useState<{ id: string; value: string } | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<{ id: string; value: string } | null>(null);
+
 
   const [isClosing, setIsClosing] = useState(false);
 
@@ -82,13 +82,13 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
         id: selectedCategory?.id ?? prev.category.id,
         value: selectedCategory?.value ?? prev.category.value,
       },
-    }));    
-  
+    }));
+
     setIsClosing(true);
     setTimeout(() => {
       setOpen(false);
     }, 300);
-  };  
+  };
   const ipd_bills = false;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -116,18 +116,16 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
     <>
       {ipd_bills && (
         <div
-          className={`${
-            size === "small"
-              ? "w-[640px] pt-6"
-              : size === "medium"
+          className={`${size === "small"
+            ? "w-[640px] pt-6"
+            : size === "medium"
               ? "w-[960px] pt-6"
               : "w-screen pt-4"
-          } flex flex-col bg-[#FFF] rounded-lg border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),_0px_10px_10px_0px_rgba(0,0,0,0.04)]`}
+            } flex flex-col bg-[#FFF] rounded-lg border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),_0px_10px_10px_0px_rgba(0,0,0,0.04)]`}
         >
           <div
-            className={`${
-              size === "large" ? "pb-4 border-b border-[#D9D9E0]" : ""
-            } name flex flex-row px-6 gap-2 w-full`}
+            className={`${size === "large" ? "pb-4 border-b border-[#D9D9E0]" : ""
+              } name flex flex-row px-6 gap-2 w-full`}
           >
             <Avatar
               name={patient?.patientName?.charAt(0)}
@@ -148,12 +146,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                 <Button
                   type={"secondary-button"}
                   size={"button-small"}
-                  // onClick={handleEditPatient}
+                // onClick={handleEditPatient}
                 >
                   Edit Patient
                 </Button>
                 <Button
-                  iconSrc={"/assets/icons/x.svg"}
+                  iconSrc={"assets/icons/x.svg"}
                   size="button-icon-small"
                   type="secondary-button"
                   variant="icon"
@@ -164,20 +162,18 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
           </div>
           <div className="Details flex flex-col w-full pb-4">
             <div
-              className={`${
-                size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
-              } flex flex-row w-full pt-4`}
+              className={`${size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
+                } flex flex-row w-full pt-4`}
             >
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${
-                  size === "large"
-                    ? "border-l rounded-tl-lg"
-                    : "border-r-0 border-l-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${size === "large"
+                  ? "border-l rounded-tl-lg"
+                  : "border-r-0 border-l-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image
-                    src={"/assets/icons/Phone.svg"}
+                    src={"assets/icons/Phone.svg"}
                     alt="Phone"
                     width={16}
                     height={16}
@@ -191,13 +187,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                 </div>
               </div>
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${
-                  size === "large" ? "border-l-0 rounded-tr-lg" : "border-r-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${size === "large" ? "border-l-0 rounded-tr-lg" : "border-r-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image
-                    src={"/assets/icons/Cake.svg"}
+                    src={"assets/icons/Cake.svg"}
                     alt="Cake"
                     width={16}
                     height={16}
@@ -213,20 +208,18 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
               </div>
             </div>
             <div
-              className={`${
-                size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
-              } flex flex-row`}
+              className={`${size === "large" ? "px-[calc((100vw-960px)/2)]" : ""
+                } flex flex-row`}
             >
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${
-                  size === "large"
-                    ? "border-l border-t-0 rounded-bl-lg"
-                    : "border-t-0 border-l-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border border-[#D9D9E0] ${size === "large"
+                  ? "border-l border-t-0 rounded-bl-lg"
+                  : "border-t-0 border-l-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image
-                    src={"/assets/icons/Icon.svg"}
+                    src={"assets/icons/Icon.svg"}
                     alt="Location"
                     width={16}
                     height={16}
@@ -240,13 +233,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                 </div>
               </div>
               <div
-                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border-b border-[#D9D9E0] ${
-                  size === "large" ? "rounded-br-lg border-r" : "border-r-0"
-                } items-center justify-between`}
+                className={`flex flex-row gap-1 text w-full h-fit px-6 py-5 border-b border-[#D9D9E0] ${size === "large" ? "rounded-br-lg border-r" : "border-r-0"
+                  } items-center justify-between`}
               >
                 <div className="gap-1 flex flex-row">
                   <Image
-                    src={"/assets/icons/Clock.svg"}
+                    src={"assets/icons/Clock.svg"}
                     alt="Clock"
                     width={16}
                     height={16}
@@ -281,20 +273,18 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
           )}
 
           <div
-            className={`${
-              size === "large" ? "h-[calc(100vh-300px)]" : "max-h-[600px]"
-            } overflow-auto no-scrollbar flex flex-col gap-6 pb-4`}
+            className={`${size === "large" ? "h-[calc(100vh-300px)]" : "max-h-[600px]"
+              } overflow-auto no-scrollbar flex flex-col gap-6 pb-4`}
             onScroll={handleScroll}
           >
             <div
               ref={generalRef}
-              className={`${
-                size === "small"
-                  ? "px-6"
-                  : size === "medium"
+              className={`${size === "small"
+                ? "px-6"
+                : size === "medium"
                   ? "px-8"
                   : "px-[calc((100vw-960px)/2)]"
-              } generalInfo flex flex-col gap-4`}
+                } generalInfo flex flex-col gap-4`}
             >
               <span className="text-[#1C2024] font-semibold text-lg">
                 General Information
@@ -331,9 +321,9 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                   <span className="text-[#1C2024] text-sm">
                     {patient?.patientRegistrationDate
                       ? format(
-                          new Date(patient.patientRegistrationDate),
-                          "dd/MM/yyyy hh:mm a"
-                        )
+                        new Date(patient.patientRegistrationDate),
+                        "dd/MM/yyyy hh:mm a"
+                      )
                       : "—"}
                   </span>
                 </div>
@@ -341,13 +331,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
             </div>
             <div
               ref={lastVisitRef}
-              className={`${
-                size === "small"
-                  ? "px-6"
-                  : size === "medium"
+              className={`${size === "small"
+                ? "px-6"
+                : size === "medium"
                   ? "px-8"
                   : "px-[calc((100vw-960px)/2)]"
-              } lastVisit flex flex-col gap-4`}
+                } lastVisit flex flex-col gap-4`}
             >
               <span className="text-[#1C2024] font-semibold text-lg">
                 Last Visit Information
@@ -375,13 +364,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
             {showInsuranceDetails && (
               <div
                 ref={insuranceRef}
-                className={`${
-                  size === "small"
-                    ? "px-6"
-                    : size === "medium"
+                className={`${size === "small"
+                  ? "px-6"
+                  : size === "medium"
                     ? "px-8"
                     : "px-[calc((100vw-960px)/2)]"
-                } insuranceDetails flex flex-col gap-4`}
+                  } insuranceDetails flex flex-col gap-4`}
               >
                 <span className="text-[#1C2024] font-semibold text-lg">
                   Insurance Details
@@ -474,18 +462,16 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
         </div>
       )}
       <div
-        className={`fixed inset-0 z-50 bg-black/30 flex items-end justify-center  ${
-          isClosing ? "animate-slideDown" : "animate-slideUp"
-        }`}
+        className={`fixed inset-0 z-50 bg-black/30 flex items-end justify-center  ${isClosing ? "animate-slideDown" : "animate-slideUp"
+          }`}
       >
         <div
-          className={`${
-            size === "small"
-              ? "w-[640px]"
-              : size === "medium"
+          className={`${size === "small"
+            ? "w-[640px]"
+            : size === "medium"
               ? "w-[960px]"
               : "w-full"
-          } h-[93%] bg-white rounded-t-2xl shadow-xl overflow-hidden flex flex-col transition-transform duration-300 
+            } h-[93%] bg-white rounded-t-2xl shadow-xl overflow-hidden flex flex-col transition-transform duration-300 
               ${isClosing ? "animate-slideDown" : "animate-slideUp"}  `}
         >
           {/* Header Section */}
@@ -510,12 +496,12 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
               <Button
                 type="secondary-button"
                 size="button-small"
-                // onClick={handleEditPatient}
+              // onClick={handleEditPatient}
               >
                 Edit Patient
               </Button>
               <Button
-                iconSrc={"/assets/icons/DotsVertical.svg"}
+                iconSrc={"assets/icons/DotsVertical.svg"}
                 size="button-icon-small"
                 type="secondary-button"
                 variant="icon"
@@ -530,29 +516,28 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
             <div className="flex flex-col w-full border border-[#D9D9E0] rounded-md text-sm">
               <div className="flex w-full border-b border-[#D9D9E0]">
                 <InfoRowItem
-                  icon={"/assets/icons/Phone.svg"}
+                  icon={"assets/icons/Phone.svg"}
                   label="Contact"
                   value={patient?.patientMobileno}
                 />
                 <InfoRowItem
-                  icon={"/assets/icons/Cake.svg"}
+                  icon={"assets/icons/Cake.svg"}
                   label="Age"
-                  value={`${patient?.patientAgeYears}/${
-                    patient?.patientGender
-                      ? patient?.patientGender.charAt(0).toUpperCase()
-                      : "N/A"
-                  }
+                  value={`${patient?.patientAgeYears}/${patient?.patientGender
+                    ? patient?.patientGender.charAt(0).toUpperCase()
+                    : "N/A"
+                    }
                  `}
                 />
               </div>
               <div className="flex w-full border-b border-[#D9D9E0]">
                 <InfoRowItem
-                  icon={"/assets/icons/Icon.svg"}
+                  icon={"assets/icons/Icon.svg"}
                   label="Aadhar Card"
                   value={patient?.adharCardNo}
                 />
                 <InfoRowItem
-                  icon={"/assets/icons/Clock.svg"}
+                  icon={"assets/icons/Clock.svg"}
                   label="Last Visit"
                   value={formattedVisit}
                 />
@@ -560,26 +545,24 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
             </div>
             <div id="tableData" className="flex w-full flex-col gap-3">
               <div
-                className={`${
-                  size === "small"
-                    ? "px-6"
-                    : size === "medium"
+                className={`${size === "small"
+                  ? "px-6"
+                  : size === "medium"
                     ? "px-8"
                     : "px-2"
-                } flex flex-col gap-4`}
+                  } flex flex-col gap-4`}
               >
                 <span className="text-[#1C2024] text-lg font-semibold flex items-center">
                   Services · {table.getCoreRowModel().rows.length}
                 </span>
               </div>
               <div
-                className={`${
-                  size === "small"
-                    ? "px-6"
-                    : size === "medium"
+                className={`${size === "small"
+                  ? "px-6"
+                  : size === "medium"
                     ? "px-8"
                     : "px-2"
-                }`}
+                  }`}
               >
                 <DataTable
                   table={
@@ -626,7 +609,7 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                 </div>
               </div>
 
-             
+
               <div className="flex flex-row items-start  w-full gap-2">
                 {/* IPD No. */}
                 <div className="flex flex-col gap-1 w-1/2">
@@ -653,7 +636,7 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                         : filtersValues.category?.value || ""}
                     </span>
                     <Image
-                      src="/assets/icons/CaretDownFilled.svg"
+                      src="assets/icons/CaretDownFilled.svg"
                       width={16}
                       height={16}
                       alt="Caret"
@@ -703,7 +686,7 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                           : filtersValues.company?.value || ""}
                       </span>
                       <Image
-                        src="/assets/icons/CaretDownFilled.svg"
+                        src="assets/icons/CaretDownFilled.svg"
                         width={16}
                         height={16}
                         alt="Caret"
@@ -739,9 +722,9 @@ const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
                   <span className="text-[#1C2024] text-sm">
                     {patient?.patientRegistrationDate
                       ? format(
-                          new Date(patient.patientRegistrationDate),
-                          "dd/MM/yyyy hh:mm a"
-                        )
+                        new Date(patient.patientRegistrationDate),
+                        "dd/MM/yyyy hh:mm a"
+                      )
                       : "—"}
                   </span>
                 </div>

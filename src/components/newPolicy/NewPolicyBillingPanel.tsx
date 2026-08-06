@@ -104,7 +104,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
         <SelectTrigger className="w-full h-9.5">
           <SelectValue placeholder={placeholder}>{displayValue}</SelectValue>
           <Image
-            src="/assets/icons/CaretDownDark.svg"
+            src="assets/icons/CaretDownDark.svg"
             height={16}
             width={16}
             alt="dropdown"
@@ -208,12 +208,12 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
   const [validFrom, setValidFrom] = useState<Date>(new Date());
   const [validTill, setValidTill] = useState<Date>(new Date());
   const [dependentLists, setDependentLists] = useState<any[]>([]);
-  
-  
+
+
   // Process dependent lists data to ensure proper format
   const processedDependentLists = useMemo(() => {
     if (!dependentLists || dependentLists.length === 0) return [];
-    
+
     return dependentLists.map((item: any) => {
       // If the item doesn't have dependentRelationId, try to find it from dependentRelations
       if (!item.dependentRelationId && item.dependentRelation) {
@@ -265,7 +265,7 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
   /* 🔹 Load dropdown/filter data */
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadData = async () => {
       if (isMounted) {
         dispatch(fetchPrefix({ version: API_VERSION }));
@@ -273,9 +273,9 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
         dispatch(fetchDependentRelations({ version: API_VERSION, tenant: "" }));
       }
     };
-    
+
     loadData();
-    
+
     return () => {
       isMounted = false;
     };
@@ -283,7 +283,7 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     if (employeeCategory && isMounted) {
       dispatch(
         fetchEmployeePolicySubCategories({
@@ -292,7 +292,7 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
         })
       );
     }
-    
+
     return () => {
       isMounted = false;
     };
@@ -328,7 +328,7 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
     const opdValue = countList?.opd || 0;
     const ipdValue = countList?.ipd || 0;
     const totalValue = countList?.total || 0;
-    
+
     if (opdValue <= 0 && ipdValue <= 0 && totalValue <= 0) {
       newErrors.limits = t("success.employeePolicyAtLeastOneLimit");
       isValid = false;
@@ -337,11 +337,11 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
     setFormFieldErrors(newErrors);
     return isValid;
   };
-  
+
   const onSubmit = async () => {
     // Clear previous errors
     setFormFieldErrors({});
-    
+
     // Validate form
     if (!validateForm()) {
       return;
@@ -366,13 +366,13 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
         })),
       },
     } as any;
-    
+
 
     try {
       if (policyData) {
         requestBody.model.employeePolicyId = policyData.id;
         requestBody.model.subCategory = subCategory;
-        
+
         // For update API, use updateEligibilityList with eligibilityId
         requestBody.model.updateEligibilityList = processedDependentLists.map((e: any) => ({
           eligibilityId: e.id || null, // Include eligibilityId for updates
@@ -388,7 +388,7 @@ const ReceiptDetailPanel = ({ policyData }: { policyData?: any }) => {
             body: requestBody,
           })
         ).unwrap();
-        
+
         // Redirect to listing page with success message
         router.push('/employee_policies?success=updated');
       } else {

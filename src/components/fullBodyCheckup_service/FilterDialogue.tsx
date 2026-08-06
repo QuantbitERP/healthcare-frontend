@@ -63,7 +63,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
   }
 }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { changeType, modifiedBy, sourcePackage, targetPackage} =
+  const { changeType, modifiedBy, sourcePackage, targetPackage } =
     useSelector((state: RootState) => state.packageBillConversionLog);
   const [localFilters, setLocalFilters] = useState({});
   const [tempFilters, setTempFilters] = useState<Partial<PackageBillConversionLogFiltersState>>({});
@@ -100,8 +100,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
 
 
   useEffect(() => {
-    const version = "1"; 
-    const tenant = ""; 
+    const version = "1";
+    const tenant = "";
 
     dispatch(fetchPackageBillConversionLogChangeType({ version, tenant }));
     dispatch(fetchPackageBillConversionLogModifiedBy({ version, tenant }));
@@ -118,7 +118,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
           <div className="flex items-center gap-2 justify-between border-b border-[#D9D9E0] px-6 py-4">
             <div className="flex items-center gap-2">
               <Image
-                src={"/assets/icons/FilterIcon.svg"}
+                src={"assets/icons/FilterIcon.svg"}
                 height={24}
                 width={24}
                 alt="filter icon"
@@ -130,7 +130,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
             <DialogClose asChild>
               <Image
                 className="border border-[#D9D9E0] cursor-pointer rounded-md p-1"
-                src={"/assets/icons/x.svg"}
+                src={"assets/icons/x.svg"}
                 height={24}
                 width={24}
                 alt="filter icon"
@@ -153,22 +153,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                       : [...prev.filter((status) => status !== value)]
                   )
                 }
-                value={`${
-                  sourcePackages.length !== 0
+                value={`${sourcePackages.length !== 0
                     ? `${sourcePackages.length} Selected`
                     : "Created By"
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`${"Created By"}`}>
-                    {`${
-                      sourcePackages.length !== 0
+                    {`${sourcePackages.length !== 0
                         ? `${sourcePackages.length} Selected`
                         : "All"
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -193,10 +191,10 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                   value
                                     ? [...prev, status.key ?? ""]
                                     : [
-                                        ...prev.filter(
-                                          (pers) => pers !== status.key
-                                        ),
-                                      ]
+                                      ...prev.filter(
+                                        (pers) => pers !== status.key
+                                      ),
+                                    ]
                                 );
                               }}
                               id={status.key}
@@ -223,22 +221,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
               </label>
               <Select
                 onValueChange={(e) => console.log(e)}
-                value={`${
-                  targetPackages.length !== 0
+                value={`${targetPackages.length !== 0
                     ? `${targetPackages.length} Selected`
                     : "Created By"
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`${"Created By"}`}>
-                    {`${
-                      targetPackages.length !== 0
+                    {`${targetPackages.length !== 0
                         ? `${targetPackages.length} Selected`
                         : "All"
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -263,8 +259,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                   checked
                                     ? [...prev, person.key ?? ""]
                                     : prev.filter(
-                                        (pers) => pers !== person.key
-                                      )
+                                      (pers) => pers !== person.key
+                                    )
                                 )
                               }
                               id={person.key}
@@ -292,22 +288,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
               </label>
               <Select
                 onValueChange={(e) => console.log(e)}
-                value={`${
-                  changeTypes.length !== 0
+                value={`${changeTypes.length !== 0
                     ? `${changeTypes.length} Selected`
                     : "Patient Company"
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`Patient Company`}>
-                    {`${
-                      changeTypes.length !== 0
+                    {`${changeTypes.length !== 0
                         ? `${changeTypes.length} Selected`
                         : "All"
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -334,7 +328,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                         >
                           <Checkbox
                             checked={changeTypes.length === changeType?.data?.items?.length}
-                            onCheckedChange={() => {}}
+                            onCheckedChange={() => { }}
                             id="All"
                           />
                           <label
@@ -357,8 +351,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                   checked
                                     ? [...prev, Number(patient.key)]
                                     : prev.filter(
-                                        (pers) => pers !== Number(patient.key)
-                                      )
+                                      (pers) => pers !== Number(patient.key)
+                                    )
                                 )
                               }
                               id={patient.key}
@@ -384,22 +378,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
               </label>
               <Select
                 onValueChange={(e) => console.log(e)}
-                value={`${
-                  modifiedByPerson.length !== 0
+                value={`${modifiedByPerson.length !== 0
                     ? `${modifiedByPerson.length} Selected`
                     : "Patient Company"
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`Patient Company`}>
-                    {`${
-                      modifiedByPerson.length !== 0
+                    {`${modifiedByPerson.length !== 0
                         ? `${modifiedByPerson.length} Selected`
                         : "All"
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -424,8 +416,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                   checked
                                     ? [...prev, patient.key ?? ""]
                                     : prev.filter(
-                                        (pers) => pers !== patient.key 
-                                      )
+                                      (pers) => pers !== patient.key
+                                    )
                                 )
                               }
                               id={patient.key}

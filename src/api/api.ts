@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext"; // Adjust the import path as needed
 
 import { FRAPPE_CONFIG } from "@/config/frappe";
@@ -42,7 +42,7 @@ const saveToCache = (key: string, data: any[]): void => {
   }
 };
 
-const clearAllCache = (): void => {
+export const clearAllCache = (): void => {
   if (typeof window === "undefined") return;
   try {
     Object.values(CACHE_KEYS).forEach((key) => {
@@ -146,6 +146,8 @@ export const useFrappeApi = () => {
   const [localBranches, setLocalBranches] = useState<any[]>([]);
   const [subDepartments, setSubDepartments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
+  const hasInitialized = useRef(false);
+
 
   // Fetch warehouses
   const fetchWarehouses = useCallback(async () => {
@@ -443,7 +445,7 @@ export const useFrappeApi = () => {
       return localBranches;
     }
 
-    const BRANCH_API_URL = buildFrappeApiUrl("Branch", ["name"]);
+    const BRANCH_API_URL = buildFrappeApiUrl("Branch", ["name", "custom_hospital_id"]);
 
     try {
       const data = await makeFrappeApiCall(BRANCH_API_URL, "Branch", apiKey!, apiSecret!, csrfToken);
@@ -451,6 +453,7 @@ export const useFrappeApi = () => {
         name: branch.name,
         label: branch.name,
         value: branch.name,
+        custom_hospital_id: branch.custom_hospital_id,
       }));
       console.log("Branches loaded successfully:", branchData);
       setLocalBranches(branchData);
@@ -714,19 +717,37 @@ export const useFrappeApi = () => {
   }, [isAuthenticated, apiKey, apiSecret]);
 
   // Automatically fetch data on mount if authenticated
+  // useEffect(() => {
+  //   if (isAuthenticated) {
+  //     fetchWarehouses();
+  //     fetchBranches();
+  //     fetchKits();
+  //     fetchClassifications();
+  //     fetchCustomer();
+  //     fetchBranch();
+  //     fetchCompany();
+  //     fetchDepartment();
+  //     fetchSubDepatment();
+  //   }
+  // }, [isAuthenticated, fetchWarehouses, fetchBranches, fetchKits, fetchClassifications, fetchCustomer, fetchCompany, fetchBranch, fetchDepartment, fetchSubDepatment]);
+
+
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchWarehouses();
-      fetchBranches();
-      fetchKits();
-      fetchClassifications();
-      fetchCustomer();
-      fetchBranch();
-      fetchCompany();
-      fetchDepartment();
-      fetchSubDepatment();
-    }
-  }, [isAuthenticated, fetchWarehouses, fetchBranches, fetchKits, fetchClassifications, fetchCustomer, fetchCompany, fetchBranch, fetchDepartment, fetchSubDepatment]);
+    if (!isAuthenticated) return;
+    if (hasInitialized.current) return;
+
+    hasInitialized.current = true;
+
+    fetchWarehouses();
+    fetchBranches();
+    fetchKits();
+    fetchClassifications();
+    fetchCustomer();
+    fetchBranch();
+    fetchCompany();
+    fetchDepartment();
+    fetchSubDepatment();
+  }, [isAuthenticated]);
 
   return {
     fetchWarehouses,

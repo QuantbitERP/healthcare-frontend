@@ -478,7 +478,7 @@ function RecordPayments({ setOpen }: RecordPaymentsProps) {
     <div className="w-full h-full rounded-lg flex flex-col gap-6 bg-[#FFF] border border-[#D9D9E0] shadow-[0px_20px_25px_0px_rgba(0,0,0,0.10),0px_10px_10px_0px_rgba(0,0,0,0.04)]">
       <div className="w-full px-6 py-4 border-b border-b-[#D9D9E0] gap-2 flex flex-row">
         <Image
-          src={"/assets/icons/CurrencyIcon.svg"}
+          src={"assets/icons/CurrencyIcon.svg"}
           width={24}
           height={24}
           alt="Rupee"
@@ -492,7 +492,7 @@ function RecordPayments({ setOpen }: RecordPaymentsProps) {
         {showNotification && (
           <div className="w-full h-12 rounded-lg mx-auto px-2 py-3 bg-[#F9F9FB] flex flex-row border border-[#B9BBC6]">
             <Image
-              src={"/assets/icons/CashRegister.svg"}
+              src={"assets/icons/CashRegister.svg"}
               width={24}
               height={24}
               alt="Cash"
@@ -507,7 +507,7 @@ function RecordPayments({ setOpen }: RecordPaymentsProps) {
               <div className="px-2">Record Payment</div>
             </div>
             <Image
-              src={"/assets/icons/Cross.svg"}
+              src={"assets/icons/Cross.svg"}
               width={16}
               height={16}
               alt="Close"
@@ -537,7 +537,7 @@ function RecordPayments({ setOpen }: RecordPaymentsProps) {
                 <SelectTrigger className="border w-full border-[#D9D9E0] rounded-md px-3 py-2 text-sm">
                   <SelectValue placeholder="Select payer" />
                   <Image
-                    src={"/assets/icons/CaretDownFilled.svg"}
+                    src={"assets/icons/CaretDownFilled.svg"}
                     width={16}
                     height={16}
                     alt="Close"

@@ -34,6 +34,8 @@ interface PosInfoCardDetailsProps {
   updateStock?: boolean;
   isReturn?: boolean;
   company?: string;
+  customer?: string;
+  customerName?: string;
   registrationDate?: string;
   address?: string;
   lastVisitDate?: string;
@@ -74,6 +76,9 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
   isPos = true,
   updateStock = true,
   isReturn = false,
+  company,
+  customer,
+  customerName,
   registrationDate,
   address,
   lastVisitDate,
@@ -86,7 +91,7 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
   approvedDate,
   approvedBy,
   size = "large",
-  
+
 }) => {
   const [activeToggle, setActiveToggle] = useState<string>("General Information");
   const [selfPaying, setSelfPaying] = useState<boolean>(isSelfPaying);
@@ -180,8 +185,18 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
                   <div className="text-[#1C2024] text-sm font-medium">{fullName || name}</div>
                 </div>
                 <div className="flex flex-col gap-2 w-full">
-                  <div className="text-[#60646C] text-sm font-normal">UHID/ABHA ID</div>
-                  <div className="text-[#1C2024] text-sm font-medium">{uhid || ABHAID}</div>
+                  <div className="text-[#60646C] text-sm font-normal">Customer Name</div>
+                  <div className="text-[#1C2024] text-sm font-medium">{customerName || name || "N/A"}</div>
+                </div>
+              </div>
+              <div className="flex flex-row gap-6">
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="text-[#60646C] text-sm font-normal">Customer</div>
+                  <div className="text-[#1C2024] text-sm font-medium">{customer || "N/A"}</div>
+                </div>
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="text-[#60646C] text-sm font-normal">Company</div>
+                  <div className="text-[#1C2024] text-sm font-medium">{company || "N/A"}</div>
                 </div>
               </div>
               <div className="flex flex-row gap-6">
@@ -206,10 +221,10 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
                 </div>
               </div>
               <div className="flex flex-row gap-6">
-                <div className="flex flex-col gap-2 w-full">
+                {/* <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">ABHA ID</div>
                   <div className="text-[#1C2024] text-sm font-medium">{ABHAID}</div>
-                </div>
+                </div> */}
                 <div className="flex flex-col gap-2 w-full">
                   <div className="text-[#60646C] text-sm font-normal">Registration Date</div>
                   <div className="text-[#1C2024] text-sm font-medium">{registrationDate || "N/A"}</div>

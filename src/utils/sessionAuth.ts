@@ -8,6 +8,31 @@ import { FRAPPE_CONFIG } from '@/config/frappe';
 
 const FRAPPE_BASE_URL = FRAPPE_CONFIG.BASE_URL;
 
+export function setSessionAuthPreference(enabled: boolean) {
+    if (typeof window === "undefined") return;
+
+    try {
+        if (enabled) {
+            window.localStorage.setItem("useSessionAuth", "true");
+        } else {
+            window.localStorage.removeItem("useSessionAuth");
+        }
+    } catch (error) {
+        console.warn("Unable to persist useSessionAuth preference:", error);
+    }
+}
+
+export function getSessionAuthPreference(): boolean {
+    if (typeof window === "undefined") return false;
+
+    try {
+        return window.localStorage.getItem("useSessionAuth") === "true";
+    } catch (error) {
+        console.warn("Unable to read useSessionAuth preference:", error);
+        return false;
+    }
+}
+
 export interface SessionUser {
     user: string;
     api_key?: string;
@@ -87,7 +112,20 @@ export async function checkFrappeSession(): Promise<SessionUser | null> {
  */
 export async function getApiKeys(user: string): Promise<{ api_key: string; api_secret: string } | null> {
     try {
-        console.log("Attempting to fetch API keys for user:", user);
+        // Check if we already have valid, unmasked API keys in localStorage for this user
+        if (typeof window !== "undefined") {
+            const storedUser = window.localStorage.getItem("currentUser");
+            const storedKey = window.localStorage.getItem("apiKey");
+            const storedSecret = window.localStorage.getItem("apiSecret");
+            const isMasked = (secret: string | null) => secret && secret.includes('***');
+            
+            if (storedUser === user && storedKey && storedSecret && !isMasked(storedSecret)) {
+                console.log("Using valid API keys already stored in localStorage");
+                return { api_key: storedKey, api_secret: storedSecret };
+            }
+        }
+
+        console.log("Attempting to fetch API keys for user from server:", user);
 
         // Try to fetch existing API keys
         const response = await fetch(
@@ -165,7 +203,7 @@ async function generateApiKeys(user: string): Promise<{ api_key: string; api_sec
             const errorText = await response.text();
             console.error("Error response:", errorText);
             // Fallback to session-based authentication
-            localStorage.setItem("useSessionAuth", "true");
+            setSessionAuthPreference(true);
             return null;
         }
 
@@ -378,7 +416,7 @@ export async function forceRegenerateApiKeys(user: string): Promise<{ api_key: s
 export function getAuthHeaders(): HeadersInit {
     const apiKey = localStorage.getItem("apiKey");
     const apiSecret = localStorage.getItem("apiSecret");
-    const useSessionAuth = localStorage.getItem("useSessionAuth");
+    const useSessionAuth = getSessionAuthPreference();
     
     const headers: HeadersInit = {
         "Accept": "application/json",
@@ -386,7 +424,7 @@ export function getAuthHeaders(): HeadersInit {
     };
     
     // If session auth is enabled, don't add Authorization header
-    if (useSessionAuth === "true") {
+    if (useSessionAuth) {
         return headers;
     }
     

@@ -30,10 +30,10 @@ import { GetDraftBillByIdResponseDTO } from "@/services/api-client/models/GetDra
 
 interface PatientCardProps {
   patient:
-    | GetBillDetailsDTO
-    | GetDraftBillByIdResponseDTO
-    | PatientSearchDto
-    | null;
+  | GetBillDetailsDTO
+  | GetDraftBillByIdResponseDTO
+  | PatientSearchDto
+  | null;
   onPatientSelect?: (patient: Patient | null) => void;
   handleAssignPatientClick?: () => void;
   focusOnClick?: boolean;
@@ -223,8 +223,8 @@ function PatientCard({
       ? "patientMobileno" in patient && patient.patientMobileno
         ? String(patient.patientMobileno)
         : "patientMobileNo" in patient && patient.patientMobileNo
-        ? String(patient.patientMobileNo)
-        : "-"
+          ? String(patient.patientMobileNo)
+          : "-"
       : "-";
 
   return (
@@ -267,7 +267,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Cake.svg"}
+                src={"assets/icons/Cake.svg"}
                 width={16}
                 height={16}
                 alt="Cake"
@@ -286,7 +286,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Phone.svg"}
+                src={"assets/icons/Phone.svg"}
                 width={16}
                 height={16}
                 alt="Phone"
@@ -302,7 +302,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Id.svg"}
+                src={"assets/icons/Id.svg"}
                 width={16}
                 height={16}
                 alt="ID"
@@ -318,7 +318,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Cash.svg"}
+                src={"assets/icons/Cash.svg"}
                 width={16}
                 height={16}
                 alt="Cash"
@@ -371,7 +371,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1 w-[142px]">
               <Image
-                src={"/assets/icons/Building.svg"}
+                src={"assets/icons/Building.svg"}
                 width={16}
                 height={16}
                 alt="Cash"
@@ -410,7 +410,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1 w-[142px]">
               <Image
-                src={"/assets/icons/DoorEnter.svg"}
+                src={"assets/icons/DoorEnter.svg"}
                 width={16}
                 height={16}
                 alt="DoorEnter"
@@ -461,7 +461,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1 w-fit whitespace-nowrap items-center">
               <Image
-                src={"/assets/icons/FirstAidKit.svg"}
+                src={"assets/icons/FirstAidKit.svg"}
                 width={16}
                 height={16}
                 alt="FirstAidKit"
@@ -515,7 +515,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/DoorEnter.svg"}
+                src={"assets/icons/DoorEnter.svg"}
                 width={16}
                 height={16}
                 alt="Cash"
@@ -532,11 +532,11 @@ function PatientCard({
                 reasons={
                   billingClass?.data
                     ? [
-                        {
-                          key: billingClass.data.key ?? "",
-                          value: billingClass.data.value ?? "",
-                        },
-                      ]
+                      {
+                        key: billingClass.data.key ?? "",
+                        value: billingClass.data.value ?? "",
+                      },
+                    ]
                     : []
                 }
                 value={filtersValues.billingClasses?.value ?? ""}

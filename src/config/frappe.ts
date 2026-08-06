@@ -3,7 +3,7 @@
  */
 
 export const FRAPPE_CONFIG = {
-    BASE_URL: "https://demohims.quantcloud.in",
+    BASE_URL: "https://gmcerp.quantcloud.in",
     POS_NEW_BILL_PATH: "/pos/new_bill",
     LOGIN_PATH: "/login",
     API_PREFIX: "/api",

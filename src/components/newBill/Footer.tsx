@@ -76,11 +76,11 @@ const Footer: React.FC<FooterProps> = ({
   const [showDilogue, setShowDilogue] = useState<boolean>(false);
   const { patientBillConcession, patientRecordPayment, patientServicesTable, setPatientServicesTable } =
     useGlobalTables();
-  const { filtersValues, setFiltersValues,billRemark,gstID } = useGlobalTables();
+  const { filtersValues, setFiltersValues, billRemark, gstID } = useGlobalTables();
 
   useEffect(() => {
     setPatientServicesTable(data);
-  },[data, setPatientServicesTable]);
+  }, [data, setPatientServicesTable]);
 
   const handleReset = () => {
     // Reset all states
@@ -110,8 +110,8 @@ const Footer: React.FC<FooterProps> = ({
         hospitalid: selectedPatient?.hospitalid ?? "",
         refferaldoctorid: filtersValues.referralDoctor.id?.trim() ?? null,
         billcompanyid: filtersValues.company.id ?? null,
-      
-         services: patientServicesTable.map((x) => ({
+
+        services: patientServicesTable.map((x) => ({
           ...x,
           hospitaldoctorid: !x.hospitaldoctorid || x.hospitaldoctorid.trim() === "" ? null : x.hospitaldoctorid
         })) ?? [],
@@ -157,13 +157,13 @@ const Footer: React.FC<FooterProps> = ({
   const handleSaveAsDraft = async () => {
     if (!filtersValues?.company?.id || patientServicesTable.length === 0) {
       let message = "";
-    
+
       if (!filtersValues?.company?.id) {
         message = "Please select a company.";
       } else if (patientServicesTable.length === 0) {
         message = "At least 1 service should be selected.";
       }
-    
+
       showCustomAlert({
         heading: "Error!",
         content: message,
@@ -174,14 +174,14 @@ const Footer: React.FC<FooterProps> = ({
     }
     try {
       setIsSavingDraft(true);
-  
+
       const model = {
         visittype: filtersValues?.visitType?.id ? Number(filtersValues.visitType.id) : 0,
         patientid: selectedPatient?.patientId ?? "",
         hospitalid: selectedPatient?.hospitalid ?? "",
         refferaldoctorid: filtersValues?.referralDoctor?.id ?? null,
         billcompanyid: filtersValues?.company?.id ?? null,
-  
+
         services: (patientServicesTable ?? []).map((item) => ({
           hospitalServiceId: item.serviceid,
           hospitaldoctorid: !item.hospitaldoctorid || item.hospitaldoctorid.trim() === "" ? null : item.hospitaldoctorid,
@@ -196,7 +196,7 @@ const Footer: React.FC<FooterProps> = ({
           isEmergency: !!item.isEmergency,
           isBillLevelGSTApplicable: !!item.isBillLevelGSTApplicable,
         })),
-  
+
         billConcession: (patientBillConcession ?? []).map((item) => ({
           concessioncategoryid: item.concessioncategoryid,
           applicationuserid: item.applicationuserid,
@@ -204,7 +204,7 @@ const Footer: React.FC<FooterProps> = ({
           concessionPercent: Number(item.concessionPercent),
           concessionremark: item.concessionremark,
         })),
-  
+
         receiptPayments: (patientRecordPayment ?? []).map((item) => ({
           amount: Number(item.amount),
           receiptDate: item.receiptDate,
@@ -215,18 +215,18 @@ const Footer: React.FC<FooterProps> = ({
           Chequedate: item.chequedate,
           Branchname: item.branchname,
         })),
-  
+
         billDiscountPercent: 0,
         billDiscountAmount: 0,
         billGstId: gstID?.key?.trim() === "" ? null : gstID?.key?.trim(),
         billGstAmount: 0,
       };
-      console.log("Command printing",model);
+      console.log("Command printing", model);
       const command: CreateBillCommand = { model };
       const res = await OpdBillService.postApiVOpdBillOpdbillsDraft("1", "", command);
 
       console.log(res);
-  
+
       if (res?.errorMessage) {
         setIsSavingDraft(false);
         showCustomAlert({
@@ -238,10 +238,10 @@ const Footer: React.FC<FooterProps> = ({
         // router.push("/opd_bills?status=error");
         return;
       }
-  
+
       setSaveSuccess(true);
       router.push("/opd_bills?status=success");
-  
+
     } catch (error: any) {
       // router.push("/opd_bills?status=error");
       showCustomAlert({
@@ -254,7 +254,7 @@ const Footer: React.FC<FooterProps> = ({
       setIsSavingDraft(false);
     }
   };
-  
+
 
   const handleCasePapers = () => {
     dispatch(
@@ -304,7 +304,7 @@ const Footer: React.FC<FooterProps> = ({
           <Popover>
             <PopoverTrigger asChild>
               <Image
-                src="/assets/icons/DotsVertical.svg"
+                src="assets/icons/DotsVertical.svg"
                 alt="Dots"
                 width={50}
                 height={50}
@@ -332,8 +332,8 @@ const Footer: React.FC<FooterProps> = ({
               </div>
             </PopoverContent>
           </Popover>
-          
-           {/* <Buttons
+
+          {/* <Buttons
             size="button-medium"
             type="danger-button"
             variant="button"
@@ -341,7 +341,7 @@ const Footer: React.FC<FooterProps> = ({
           >
             Cancel Bill
           </Buttons>  */}
-         
+
           <Buttons
             size="button-medium"
             type="secondary-button"
@@ -361,25 +361,25 @@ const Footer: React.FC<FooterProps> = ({
             Reset
           </Buttons>
           <Buttons
-              size="button-medium"
-              type="primary-outlined-button"
-              variant="button"
-              disabled={isSavingDraft}
-              className={
-                isSavingDraft
-                  ? "cursor-not-allowed opacity-50 pointer-events-none"
-                  : ""
-              }
-              onClick={handleSaveAsDraft}
-            >
-           {isSavingDraft ? (
-                <div className="flex items-center gap-2 justify-center">
-                  <div className="h-5 w-5 border-2 border-[#0588F0] border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </div>
-              ) : (
-                "Save as Draft"
-              )}
+            size="button-medium"
+            type="primary-outlined-button"
+            variant="button"
+            disabled={isSavingDraft}
+            className={
+              isSavingDraft
+                ? "cursor-not-allowed opacity-50 pointer-events-none"
+                : ""
+            }
+            onClick={handleSaveAsDraft}
+          >
+            {isSavingDraft ? (
+              <div className="flex items-center gap-2 justify-center">
+                <div className="h-5 w-5 border-2 border-[#0588F0] border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </div>
+            ) : (
+              "Save as Draft"
+            )}
           </Buttons>
 
           <Buttons
@@ -395,13 +395,13 @@ const Footer: React.FC<FooterProps> = ({
             onClick={handleFinalizeAndPrint}
           >
             {isSaving ? (
-                <div className="flex items-center gap-2 justify-center">
-                  <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </div>
-              ) : (
-                "Finalize and Print"
-              )}
+              <div className="flex items-center gap-2 justify-center">
+                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </div>
+            ) : (
+              "Finalize and Print"
+            )}
           </Buttons>
         </div>
       </div>

@@ -71,7 +71,7 @@ const UtilDropDownButton: React.FC<UtilDropDownButtonProps> = ({
       <span>{label}</span>
       <CaretDownFilled />
       {/* <Image
-        src={"/assets/icons/CaretDownFilled.svg"}
+        src={"assets/icons/CaretDownFilled.svg"}
         className={`${isDatePicker && isActive ? "svg-primary" : ""}`}
         alt="caret down icon"
         width={16}

@@ -14,7 +14,7 @@ interface DropdownProps {
 }
 
 const Dropdown: React.FC<DropdownProps> = ({
-  reasons ,
+  reasons,
   showButton = false,
   showSearch = false,
   buttonText = "New Doctor",
@@ -74,13 +74,12 @@ const Dropdown: React.FC<DropdownProps> = ({
           {selectedReason || placeholder}
         </span>
         <Image
-          src={'/assets/icons/CaretDownFilled.svg'}
+          src={'assets/icons/CaretDownFilled.svg'}
           width={16}
           height={16}
           alt="Caret Down Icon"
-          className={`w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
         />
       </div>
 
@@ -91,7 +90,7 @@ const Dropdown: React.FC<DropdownProps> = ({
           {showSearch && (
             <div className="w-full h-fit p-2 border-b border-[#D9D9E0] flex flex-row items-center justify-between">
               <div className="flex flex-row items-center">
-                <Image src={'/assets/icons/Search.svg'} width={16} height={16} alt="Search Icon" />
+                <Image src={'assets/icons/Search.svg'} width={16} height={16} alt="Search Icon" />
                 <input
                   type="text"
                   placeholder="Search"
@@ -102,7 +101,7 @@ const Dropdown: React.FC<DropdownProps> = ({
               </div>
               {searchInput.length > 0 && (
                 <Image
-                  src={'/assets/icons/x.svg'}
+                  src={'assets/icons/x.svg'}
                   width={16}
                   height={16}
                   alt="Close"
@@ -121,9 +120,8 @@ const Dropdown: React.FC<DropdownProps> = ({
             .map((reason) => (
               <div
                 key={reason.key}
-                className={`w-full  h-fit p-2 flex items-center bg-white hover:bg-[#E6F4FE] hover:cursor-pointer ${
-                  reason.value === selectedReason ? "bg-[#D6E9FC]" : ""
-                }`}
+                className={`w-full  h-fit p-2 flex items-center bg-white hover:bg-[#E6F4FE] hover:cursor-pointer ${reason.value === selectedReason ? "bg-[#D6E9FC]" : ""
+                  }`}
                 onClick={() => handleSelect(reason)}
               >
                 {reason.value}
@@ -133,7 +131,7 @@ const Dropdown: React.FC<DropdownProps> = ({
           {/* Optional Button */}
           {showButton && (
             <div className="w-full h-fit py-2 flex items-center justify-start bg-white hover:bg-[#E6F4FE] hover:cursor-pointer rounded-[4px]">
-              <Image src={'/assets/icons/PlusBlue.svg'} width={20} height={20} alt="Plus" className="pl-1" />
+              <Image src={'assets/icons/PlusBlue.svg'} width={20} height={20} alt="Plus" className="pl-1" />
               <span className="text-[#0D74CE] text-sm font-semibold pl-2 pr-4">
                 {buttonText}
               </span>

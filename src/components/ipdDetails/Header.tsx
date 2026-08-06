@@ -6,7 +6,7 @@ import Down from "@/assets/icons/Down.svg";
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
 
-function Header({ recordRefundClicked, selectedPatient,  billId }) {
+function Header({ recordRefundClicked, selectedPatient, billId }) {
   const router = useRouter();
   return (
     <div
@@ -39,7 +39,7 @@ function Header({ recordRefundClicked, selectedPatient,  billId }) {
           <Image src={Up.src} alt="Up" width={24} height={24} />
         </button>
         <button className="w-fit h-fit rounded-lg px-2 py-2 flex justify-center border border-[#D9D9E0] bg-white shadow-[0px_1px_2px_0px_rgba(18,18,23,0.05)]">
-                      <Image src={Down.src} alt="Up" width={24} height={24} />
+          <Image src={Down.src} alt="Up" width={24} height={24} />
         </button>
       </div>
     </div>

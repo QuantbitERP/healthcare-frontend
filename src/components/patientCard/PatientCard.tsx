@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import Tags from "@/components/statusTags/Tags";
+// import Tags from "@/components/statusTags/Tags";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Patient } from "@/store/slices/patientSlice";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -324,7 +324,7 @@ function PatientCard({
               </span>
             </div>
           </div>
-          <div className="flex flex-row gap-2">
+          {/* <div className="flex flex-row gap-2">
             <Tags
               variant="tag"
               tagText="Medical Legal Case"
@@ -332,7 +332,7 @@ function PatientCard({
               border
             />
             <Tags variant="tag" tagText="No Coverage" type="warning" border />
-          </div>
+          </div> */}
         </div>
 
         {/* Rest of the patient information */}
@@ -340,7 +340,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Cake.svg"}
+                src={"assets/icons/Cake.svg"}
                 width={16}
                 height={16}
                 alt="Cake"
@@ -359,7 +359,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Phone.svg"}
+                src={"assets/icons/Phone.svg"}
                 width={16}
                 height={16}
                 alt="Phone"
@@ -372,10 +372,10 @@ function PatientCard({
               {patientMobile}
             </span>
           </div>
-          <div className="flex flex-row h-8 items-center justify-between">
+          {/* <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Id.svg"}
+                src={"assets/icons/Id.svg"}
                 width={16}
                 height={16}
                 alt="ID"
@@ -387,11 +387,11 @@ function PatientCard({
             <span className="text-[#1C2024] text-xs font-semibold">
               {patient && "abhaId" in patient ? patient.abhaId : "-"}
             </span>
-          </div>
+          </div> */}
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/Cash.svg"}
+                src={"assets/icons/Cash.svg"}
                 width={16}
                 height={16}
                 alt="Cash"
@@ -429,7 +429,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1 w-[142px]">
               <Image
-                src={"/assets/icons/Building.svg"}
+                src={"assets/icons/Building.svg"}
                 width={16}
                 height={16}
                 alt="Cash"
@@ -468,7 +468,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1 w-[142px]">
               <Image
-                src={"/assets/icons/DoorEnter.svg"}
+                src={"assets/icons/DoorEnter.svg"}
                 width={16}
                 height={16}
                 alt="DoorEnter"
@@ -519,7 +519,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1 w-fit whitespace-nowrap items-center">
               <Image
-                src={"/assets/icons/FirstAidKit.svg"}
+                src={"assets/icons/FirstAidKit.svg"}
                 width={16}
                 height={16}
                 alt="FirstAidKit"
@@ -573,7 +573,7 @@ function PatientCard({
           <div className="flex flex-row h-8 items-center justify-between">
             <div className="flex flex-row gap-1">
               <Image
-                src={"/assets/icons/DoorEnter.svg"}
+                src={"assets/icons/DoorEnter.svg"}
                 width={16}
                 height={16}
                 alt="Cash"

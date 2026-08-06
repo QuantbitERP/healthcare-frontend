@@ -32,7 +32,7 @@ function POSInfo({ posProfile, warehouse, className = "" }: POSInfoProps) {
             authHeaders;
         
         const response = await fetch(
-          `https://demohims.quantcloud.in/api/resource/Warehouse/${warehouse}`,
+          `https://gmcerp.quantcloud.in/api/resource/Warehouse/${warehouse}`,
           {
             method: "GET",
             headers,

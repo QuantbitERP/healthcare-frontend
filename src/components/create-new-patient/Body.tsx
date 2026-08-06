@@ -272,7 +272,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
   }, [filteredPatients, handlePatientClick, selectedIndex]);
 
   const table = useReactTable({
-    columns:  [],
+    columns: [],
     data,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -467,9 +467,9 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
 
     // Check for duplicate service
     const existingService = data.find(
-       (item) =>
-        item.id === serviceObj.key 
-        
+      (item) =>
+        item.id === serviceObj.key
+
     );
     if (existingService) {
       showCustomAlert({
@@ -606,7 +606,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         {insuranceCompany}
                       </SelectValue>
                       <Image
-                        src="/assets/icons/CaretDownDark.svg"
+                        src="assets/icons/CaretDownDark.svg"
                         height={16}
                         width={16}
                         alt="dropdown"
@@ -665,7 +665,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         {insuranceCompany}
                       </SelectValue>
                       <Image
-                        src="/assets/icons/CaretDownDark.svg"
+                        src="assets/icons/CaretDownDark.svg"
                         height={16}
                         width={16}
                         alt="dropdown"
@@ -706,7 +706,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         {insuranceCompany}
                       </SelectValue>
                       <Image
-                        src="/assets/icons/CaretDownDark.svg"
+                        src="assets/icons/CaretDownDark.svg"
                         height={16}
                         width={16}
                         alt="dropdown"
@@ -747,7 +747,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         {insuranceCompany}
                       </SelectValue>
                       <Image
-                        src="/assets/icons/CaretDownDark.svg"
+                        src="assets/icons/CaretDownDark.svg"
                         height={16}
                         width={16}
                         alt="dropdown"
@@ -788,7 +788,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         {insuranceCompany}
                       </SelectValue>
                       <Image
-                        src="/assets/icons/CaretDownDark.svg"
+                        src="assets/icons/CaretDownDark.svg"
                         height={16}
                         width={16}
                         alt="dropdown"
@@ -829,7 +829,7 @@ function Body({ isAllSelected, setIsAllSelected, billData }: BodyProps) {
                         {insuranceCompany}
                       </SelectValue>
                       <Image
-                        src="/assets/icons/CaretDownDark.svg"
+                        src="assets/icons/CaretDownDark.svg"
                         height={16}
                         width={16}
                         alt="dropdown"

@@ -61,7 +61,7 @@ const ChecklistLarge: React.FC<ChecklistLargeProps> = ({
           {showSearch && (
             <div className="w-full rounded-t-lg px-4 py-3 border border-[#D9D9E0] border-b-0 flex flex-row justify-between">
               <div className="flex flex-row">
-                <Image src={'/assets/icons/SearchIcon.svg'} width={16} height={16} alt="Search" />
+                <Image src={'assets/icons/SearchIcon.svg'} width={16} height={16} alt="Search" />
                 <input
                   type="text"
                   placeholder="Search"
@@ -69,7 +69,7 @@ const ChecklistLarge: React.FC<ChecklistLargeProps> = ({
                 />
               </div>
               <Image
-                src={'/assets/icons/CloseIcon.svg'}
+                src={'assets/icons/CloseIcon.svg'}
                 width={16}
                 height={16}
                 alt="Close"
@@ -79,9 +79,8 @@ const ChecklistLarge: React.FC<ChecklistLargeProps> = ({
           )}
 
           <div
-            className={`border border-[#D9D9E0] p-2 ${
-              showSearch ? "rounded-b-lg" : "rounded-lg"
-            }`}
+            className={`border border-[#D9D9E0] p-2 ${showSearch ? "rounded-b-lg" : "rounded-lg"
+              }`}
           >
             <div className="cursor-pointer w-full h-fit p-2 flex flex-row rounded text-[#1C2024] hover:text-[#0D74CE] hover:bg-[#E6F4FE] font-normal text-sm">
               <input

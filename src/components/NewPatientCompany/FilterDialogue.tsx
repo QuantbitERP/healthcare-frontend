@@ -38,7 +38,7 @@ interface LabelValue {
   value: string;
 }
 
-const Hospitals:LabelValue[] = [
+const Hospitals: LabelValue[] = [
   { label: "Sunrise Medical Center", value: "Sunrise Medical Center" },
   { label: "Holy Spirit Hospital", value: "Holy Spirit Hospital" },
   { label: "Grand Oak Medical Center", value: "Grand Oak Medical Center" },
@@ -47,7 +47,7 @@ const Hospitals:LabelValue[] = [
   { label: "Lifeline Specialty Clinic", value: "Lifeline Specialty Clinic" },
 ];
 
-const Patients:LabelValue[] = [
+const Patients: LabelValue[] = [
   { label: "Ananya Iyer", value: "Ananya Iyer" },
   { label: "Aditya Patil", value: "Aditya Patil" },
   { label: "Rohan Jadhav", value: "Rohan Jadhav" },
@@ -94,33 +94,33 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
     setLocalFilters(
       Object.fromEntries(
         Object.entries(count).filter(
-          ([,value]) => value !== null && value !== undefined
+          ([, value]) => value !== null && value !== undefined
         )
       )
     );
-  }, [hospital,patient]);
+  }, [hospital, patient]);
   return (
     <Dialog>
       <DialogTrigger>{trigger}</DialogTrigger>
       <DialogContent className="max-w-[640px] p-0 [&>button]:!hidden gap-6">
         <DialogHeader>
-         <div className="flex items-center gap-2 justify-between border-b border-[#D9D9E0] px-6 py-4">
-                     <div className="flex items-center gap-2">
-                       <Image src={"/assets/icons/FilterIcon.svg"} height={24} width={24} alt="filter icon" />
-                     <DialogTitle className="text-base font-semibold text-[#1C2024]">
-                       Filter
-                     </DialogTitle>
-                     </div>
-                      <DialogClose asChild>
-                     <Image className="border border-[#D9D9E0] cursor-pointer rounded-md p-1" src={"/assets/icons/x.svg"} height={24} width={24} alt="filter icon" />
-                   </DialogClose>
-                   </div>
+          <div className="flex items-center gap-2 justify-between border-b border-[#D9D9E0] px-6 py-4">
+            <div className="flex items-center gap-2">
+              <Image src={"assets/icons/FilterIcon.svg"} height={24} width={24} alt="filter icon" />
+              <DialogTitle className="text-base font-semibold text-[#1C2024]">
+                Filter
+              </DialogTitle>
+            </div>
+            <DialogClose asChild>
+              <Image className="border border-[#D9D9E0] cursor-pointer rounded-md p-1" src={"assets/icons/x.svg"} height={24} width={24} alt="filter icon" />
+            </DialogClose>
+          </div>
         </DialogHeader>
         <div className="px-6 py-2 flex flex-col space-y-lg items-center w-full">
           <div className="flex items-center gap-2 space-x-lg w-full">
             <div className="w-full flex flex-col space-y-2">
               <label className="font-normal text-sm" htmlFor="created-by">
-               Hospital
+                Hospital
               </label>
 
               <Select
@@ -131,22 +131,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                       : [...prev.filter((status) => status !== value)]
                   )
                 }
-                value={`${
-                  hospital.length !== 0
+                value={`${hospital.length !== 0
                     ? `${hospital.length} Selected`
                     : "Hospital"
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`${"Created By"}`}>
-                    {`${
-                      hospital.length !== 0
+                    {`${hospital.length !== 0
                         ? `${hospital.length} Selected`
                         : "All"
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -158,7 +156,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                     <CommandList className="[&>div]:!px-0 [&>div]:!mx-0 [&>div]:!pb-2 ">
                       <CommandEmpty>Not found.</CommandEmpty>
                       <CommandGroup className=" px-0 py-0">
-                      <CommandItem
+                        <CommandItem
                           key="All"
                           className="h-9 cursor-pointer w-full px-4 py-2 flex flex-row text-[#1C2024] font-normal text-sm rounded-none hover:bg-[#E6F4FE] hover:text-[#0D74CE] data-[selected=true]:bg-[#E6F4FE] data-[selected=true]:text-[#0D74CE]"
                           onClick={() => {
@@ -173,7 +171,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                         >
                           <Checkbox
                             checked={hospital.length === Hospitals.length}
-                            onCheckedChange={() => {}}
+                            onCheckedChange={() => { }}
                             id="All"
                           />
                           <label
@@ -196,10 +194,10 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                   value
                                     ? [...prev, mode.label]
                                     : [
-                                        ...prev.filter(
-                                          (pers) => pers !== mode.label
-                                        ),
-                                      ]
+                                      ...prev.filter(
+                                        (pers) => pers !== mode.label
+                                      ),
+                                    ]
                                 );
                               }}
                               id={mode.label}
@@ -225,22 +223,20 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
               </label>
               <Select
                 onValueChange={(e) => console.log(e)}
-                value={`${
-                  patient.length !== 0
+                value={`${patient.length !== 0
                     ? `${patient.length} Selected`
                     : "Patient Company"
-                }`}
+                  }`}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={`Patient Company`}>
-                    {`${
-                      patient.length !== 0
+                    {`${patient.length !== 0
                         ? `${patient.length} Selected`
                         : "All"
-                    }`}
+                      }`}
                   </SelectValue>
                   <Image
-                    src={"/assets/icons/CaretDownDark.svg"}
+                    src={"assets/icons/CaretDownDark.svg"}
                     height={16}
                     width={16}
                     alt="no data found"
@@ -267,7 +263,7 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                         >
                           <Checkbox
                             checked={patient.length === Patients.length}
-                            onCheckedChange={() => {}}
+                            onCheckedChange={() => { }}
                             id="All"
                           />
                           <label
@@ -290,8 +286,8 @@ const FilterDialogue: React.FC<FilterDialogueProps> = ({
                                   checked
                                     ? [...prev, mode.label]
                                     : prev.filter(
-                                        (pers) => pers !== mode.label
-                                      )
+                                      (pers) => pers !== mode.label
+                                    )
                                 )
                               }
                               id={mode.label}

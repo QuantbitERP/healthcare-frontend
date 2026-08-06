@@ -17,7 +17,7 @@ interface SelectActionsProps<T> {
   totalRowCount: number;
   deselectRows: () => void;
   setAlertType?: (type: string) => void;
-  setSelectedForSubmit: (rows: T[]) => void;  
+  setSelectedForSubmit: (rows: T[]) => void;
   setOpenCancelBill: (open: boolean) => void;
   setOpenSubmitBill: (open: boolean) => void;
   onDelete?: (rows: T[]) => void; // New prop for delete functionality
@@ -52,10 +52,10 @@ function SelectActions<T>({
 
     try {
       setPrintLoading(true);
-      
+
       // Extract invIds from selected rows
       const invIds = rows.map((row: any) => row.invId).filter(Boolean);
-      
+
       if (invIds.length === 0) {
         onValidationError?.('No valid invoice IDs found in selected records.');
         return;
@@ -63,12 +63,12 @@ function SelectActions<T>({
 
       // Call the print API
       const blobs = await InvoicingApiService.printInvoicingRecords(invIds);
-      
+
       // Open each PDF in a new window for printing
       blobs.forEach((blob, _index) => {
         const url = window.URL.createObjectURL(blob);
         const printWindow = window.open(url, '_blank');
-        
+
         if (printWindow) {
           printWindow.onload = () => {
             printWindow.print();
@@ -83,7 +83,7 @@ function SelectActions<T>({
       // Show success message
       setAlertType?.('printSuccess');
       setOpen(false);
-      
+
     } catch (error: any) {
       onValidationError?.(`Print failed: ${error.message || 'Unknown error'}`);
     } finally {
@@ -99,10 +99,10 @@ function SelectActions<T>({
 
     try {
       setExportLoading(true);
-      
+
       // Extract invIds from selected rows
       const invIds = rows.map((row: any) => row.invId).filter(Boolean);
-      
+
       if (invIds.length === 0) {
         onValidationError?.('No valid invoice IDs found in selected records.');
         return;
@@ -110,7 +110,7 @@ function SelectActions<T>({
 
       // Call the export API
       const blob = await InvoicingApiService.exportToExcel(invIds);
-      
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -124,7 +124,7 @@ function SelectActions<T>({
       // Show success message
       setAlertType?.('exportSuccess');
       setOpen(false);
-      
+
     } catch (error: any) {
       onValidationError?.(`Export failed: ${error.message || 'Unknown error'}`);
     } finally {
@@ -134,9 +134,8 @@ function SelectActions<T>({
 
   return (
     <div
-      className={`fixed z-30 bg-black text-white mx-auto w-[800px] rounded-lg px-md py-sm left-1/2 -translate-x-1/2 bottom-16 flex justify-between items-center ${
-        open ? "" : "hidden"
-      } `}
+      className={`fixed z-30 bg-black text-white mx-auto w-[800px] rounded-lg px-md py-sm left-1/2 -translate-x-1/2 bottom-16 flex justify-between items-center ${open ? "" : "hidden"
+        } `}
     >
       <div>
         <button
@@ -145,7 +144,7 @@ function SelectActions<T>({
         >
           <span>{`${rows.length} Selected`}</span>
           <Image
-            src={"/assets/icons/x-white.svg"}
+            src={"assets/icons/x-white.svg"}
             height={16}
             width={16}
             alt="close-icon"
@@ -156,24 +155,24 @@ function SelectActions<T>({
       <div className="flex space-x-6 text-xs">
         {source === "invoicingPage" && (
           <>
-            <div 
+            <div
               className="flex items-center space-x-2 cursor-pointer"
               onClick={handlePrint}
             >
               <Image
-                src={"/assets/icons/printer.svg"}
+                src={"assets/icons/printer.svg"}
                 height={18}
                 width={18}
                 alt="print-icon"
               />
               <span>{printLoading ? t("actionLabels.printing") : t("actionLabels.print")}</span>
             </div>
-            <div 
+            <div
               className="flex items-center space-x-2 cursor-pointer"
               onClick={handleExportToExcel}
             >
               <Image
-                src={"/assets/icons/Export.svg"}
+                src={"assets/icons/Export.svg"}
                 height={16}
                 width={16}
                 alt="export-icon"
@@ -192,19 +191,19 @@ function SelectActions<T>({
                   // Validate that all selected bills have the same company
                   const firstBill = rows[0] as any;
                   const allSameCompany = rows.every((row: any) => row.company === firstBill.company);
-                  
+
                   if (!allSameCompany) {
                     onValidationError?.('All selected bills must be from the same company to submit together.');
                     return;
                   }
-                  
+
                   setSelectedForSubmit(rows);
                   setOpenSubmitBill(true);
                   setOpen(false);
                 }}
               >
                 <Image
-                  src={"/assets/icons/Submit.svg"}
+                  src={"assets/icons/Submit.svg"}
                   height={18}
                   width={18}
                   alt="submit-icon"
@@ -226,7 +225,7 @@ function SelectActions<T>({
               }}
             >
               <Image
-                src={"/assets/icons/trash.svg"}
+                src={"assets/icons/trash.svg"}
                 height={16}
                 width={16}
                 alt="delete-icon"
@@ -245,7 +244,7 @@ function SelectActions<T>({
             }}
           >
             <Image
-              src={"/assets/icons/Trash.svg"}
+              src={"assets/icons/Trash.svg"}
               height={16}
               width={16}
               alt="delete-icon"

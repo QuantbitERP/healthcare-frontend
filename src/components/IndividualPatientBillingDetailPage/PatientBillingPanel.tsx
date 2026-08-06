@@ -458,7 +458,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
   }, [serviceSearchTerm, showServiceResults]);
 
   useEffect(() => {
-    if(showErrorAlert) {
+    if (showErrorAlert) {
       showCustomAlert({
         heading: "Something went wrong!",
         content: `Please try again later.`,
@@ -466,9 +466,9 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
         disappear: true,
       });
     }
-  },[showErrorAlert]);
+  }, [showErrorAlert]);
   useEffect(() => {
-    if(showNoBillAlert) {
+    if (showNoBillAlert) {
       showCustomAlert({
         heading: "No biils found!",
         content: `Please try again later.`,
@@ -476,7 +476,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
         disappear: true,
       });
     }
-  },[showNoBillAlert]);
+  }, [showNoBillAlert]);
 
   return (
     <div className="w-[1200px] h-fit flex items-center justify-center gap-4 flex-col">
@@ -549,7 +549,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
           open
           showButton
           variant="success"
-          onClick={() => {}}
+          onClick={() => { }}
         />
       )}
       {billData?.outstandingAmount !== null &&
@@ -590,8 +590,8 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
                   ? "#RF10011006"
                   : billData?.billDocumentNumber
                 : billId
-                ? `${billId}`
-                : ""}
+                  ? `${billId}`
+                  : ""}
             </span>
             {!cancelClicked && !recordRefundClicked && (
               <div className="flex flex-row gap-1 items-center">
@@ -623,28 +623,26 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
           <div className="flex flex-row gap-1">
             <span className="text-[#60646C] text-xs font-normal">
               {billStatus === "Draft" &&
-              selectedPatientBill &&
-              "createddate" in selectedPatientBill
-                ? `Created on ${
-                    selectedPatientBill.createddate
-                      ? format(
-                          new Date(selectedPatientBill.createddate),
-                          "dd/MM/yyyy hh:mm a"
-                        )
-                      : "—"
-                  }`
+                selectedPatientBill &&
+                "createddate" in selectedPatientBill
+                ? `Created on ${selectedPatientBill.createddate
+                  ? format(
+                    new Date(selectedPatientBill.createddate),
+                    "dd/MM/yyyy hh:mm a"
+                  )
+                  : "—"
+                }`
                 : billStatus !== "Draft" &&
                   selectedPatientBill &&
                   "documentDate" in selectedPatientBill
-                ? `Created on ${
-                    selectedPatientBill.documentDate
-                      ? format(
-                          new Date(selectedPatientBill.documentDate),
-                          "dd/MM/yyyy hh:mm a"
-                        )
-                      : "—"
+                  ? `Created on ${selectedPatientBill.documentDate
+                    ? format(
+                      new Date(selectedPatientBill.documentDate),
+                      "dd/MM/yyyy hh:mm a"
+                    )
+                    : "—"
                   }`
-                : "Created on —"}
+                  : "Created on —"}
             </span>
             <span className="text-[#0D74CE] text-xs font-normal">
               {billStatus === "Draft"
@@ -659,7 +657,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
             ref={serviceSearchRef}
           >
             <Image
-              src={"/assets/icons/Search.svg"}
+              src={"assets/icons/Search.svg"}
               alt="Search"
               width={24}
               height={24}
@@ -689,7 +687,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
                       /* Show "No Service Found" if term >= 3 and no results */
                       <CommandEmpty className="w-full h-[144px] px-4 py-2 flex flex-col gap-2 items-center justify-center">
                         <Image
-                          src={"/assets/icons/Emoji.svg"}
+                          src={"assets/icons/Emoji.svg"}
                           alt="Sad"
                           width={32}
                           height={32}
@@ -794,8 +792,8 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
         style={{
           height:
             cancelClicked ||
-            recordRefundClicked ||
-            (billData?.outstandingAmount ?? 0) >= 0
+              recordRefundClicked ||
+              (billData?.outstandingAmount ?? 0) >= 0
               ? "calc(100vh - 294px)"
               : "calc(100vh - 220px)",
         }}
@@ -869,7 +867,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
               <DropdownMenu onOpenChange={setOpenShowCols} open={openShowCols}>
                 <DropdownMenuTrigger asChild>
                   <UtilDropDownButton
-                    leadingIcon={"/assets/icons/columns.svg"}
+                    leadingIcon={"assets/icons/columns.svg"}
                     label={"Show Columns"}
                   />
                 </DropdownMenuTrigger>
@@ -1023,11 +1021,11 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
                   heading: string;
                   content: string;
                   variant?:
-                    | "success"
-                    | "warning"
-                    | "danger"
-                    | "primary"
-                    | "secondary";
+                  | "success"
+                  | "warning"
+                  | "danger"
+                  | "primary"
+                  | "secondary";
                   buttonText?: string;
                   showButton?: boolean;
                   onClick?: () => void;
@@ -1041,7 +1039,7 @@ const PatientBillingPanel: React.FC<BodyProps> = ({
           {!data?.length && (
             <div className="w-full h-fit rounded-lg flex flex-col gap-1 p-4 items-center">
               <Image
-                src={"/assets/icons/Frame.svg"}
+                src={"assets/icons/Frame.svg"}
                 width={48}
                 height={48}
                 alt="Icon"
