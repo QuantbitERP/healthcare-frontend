@@ -189,35 +189,20 @@ export default function POS() {
           posProfile={posProfile || undefined}
           rightButtons={
             <div className="flex flex-row space-x-2">
-              <Button
-                type="primary-button"
-                size="button-medium"
-                onClick={() => handleClick("/opd-sale-bill")}
-              > + New OPD Sale Bill
+              <Button type="primary-button" size="button-medium" onClick={() => handleClick("/opd-sale-bill")}>
+                + New OPD Sale Bill
               </Button>
-              <Button
-                type="primary-button"
-                size="button-medium"
-                onClick={() => handleClick("/sale_bill")}
-              > + New IPD Bill
+              <Button type="primary-button" size="button-medium" onClick={() => handleClick("/sale_bill")}>
+                + New IPD Bill
               </Button>
 
-              <Button
-                type="secondary-button"
-                size="button-medium"
-                onClick={() => setShowPosProfileSelector(true)}
-              >
+              <Button type="secondary-button" size="button-medium" onClick={() => setShowPosProfileSelector(true)}>
                 Change POS Profile
               </Button>
 
-              <Button
-                type="secondary-button"
-                size="button-medium"
-                onClick={logout}
-              >
+              <Button type="secondary-button" size="button-medium" onClick={logout}>
                 Logout
               </Button>
-
             </div>
 
           }

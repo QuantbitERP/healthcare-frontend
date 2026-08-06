@@ -436,7 +436,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       }
 
       const queryParams = new URLSearchParams({
-        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice', 'visit_type']),
+        fields: JSON.stringify(['name', 'customer', 'custom_patient_name', 'custom_doctor_name', 'posting_date', 'posting_time', 'grand_total', 'status', 'custom_ipd_effect', 'custom_is_ipd_invoice', 'visit_type', 'visit_no', 'custom_visit_code', 'is_cash_bill', 'is_credit_bill']),
         filters: JSON.stringify(apiFilters),
         order_by: 'posting_date desc, posting_time desc',
         limit_page_length: '100'
@@ -461,9 +461,83 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         credentials: 'include',
       });
       const data = await response.json();
-      // console.log('API Response:', data);
-      // console.log('Invoices data:', data.data);
-      setInvoices(data.data || []);
+      const rawInvoices = data.data || [];
+      if (rawInvoices.length === 0) {
+        setInvoices([]);
+      } else {
+        // Filter out invoices where all items have been returned
+        try {
+          const candidateNames = rawInvoices.map((inv: any) => inv.name);
+          const returnRes = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill?filters=[["return_against","in",${JSON.stringify(candidateNames)}],["docstatus","=",1]]&fields=["name","return_against"]&limit_page_length=500`, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          });
+          const returnData = await returnRes.json();
+          const returnDocs = returnData.data || [];
+
+          if (returnDocs.length === 0) {
+            setInvoices(rawInvoices);
+          } else {
+            // Group return doc names by return_against invoice name
+            const returnsByInvoice: { [key: string]: string[] } = {};
+            returnDocs.forEach((rd: any) => {
+              if (rd.return_against) {
+                if (!returnsByInvoice[rd.return_against]) returnsByInvoice[rd.return_against] = [];
+                returnsByInvoice[rd.return_against].push(rd.name);
+              }
+            });
+
+            // Process each candidate invoice to check if fully returned
+            const filtered = await Promise.all(rawInvoices.map(async (inv: any) => {
+              const linkedReturns = returnsByInvoice[inv.name];
+              if (!linkedReturns || linkedReturns.length === 0) {
+                return inv; // No returns exist for this invoice, keep it
+              }
+
+              // Fetch main invoice details to get its items
+              const invRes = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${inv.name}`, {
+                method: 'GET',
+                headers,
+                credentials: 'include',
+              });
+              const invData = await invRes.json();
+              const items = invData.data?.items || [];
+              if (items.length === 0) return inv;
+
+              // Calculate already returned qty for each item
+              const itemReturnQtyMap: { [itemCode: string]: number } = {};
+              for (const retName of linkedReturns) {
+                const retRes = await fetch(`https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${retName}`, {
+                  method: 'GET',
+                  headers,
+                  credentials: 'include',
+                });
+                const retData = await retRes.json();
+                const retItems = retData.data?.items || [];
+                retItems.forEach((ri: any) => {
+                  if (ri.item_code) {
+                    itemReturnQtyMap[ri.item_code] = (itemReturnQtyMap[ri.item_code] || 0) + Math.abs(ri.qty || 0);
+                  }
+                });
+              }
+
+              // Check if ALL items in this invoice have already_returned_qty >= sale_qty
+              const isFullyReturned = items.every((it: any) => {
+                const returnedQty = itemReturnQtyMap[it.item_code] || 0;
+                return returnedQty >= Math.abs(it.qty || 0);
+              });
+
+              return isFullyReturned ? null : inv;
+            }));
+
+            setInvoices(filtered.filter((inv: any) => inv !== null));
+          }
+        } catch (filterError) {
+          console.error('Error filtering fully returned invoices:', filterError);
+          setInvoices(rawInvoices);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch invoices', error);
     }

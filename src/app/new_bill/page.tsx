@@ -155,6 +155,7 @@ type SelectedPatient = {
   visitType?: string;
   company?: string;
   visitID?: string;
+  visitNo?: string;
   bed?: string;
 };
 
@@ -3125,6 +3126,7 @@ export default function NewBill() {
         department: patientData.dept || "",
         visit_type: patientData.visitType || "",
         visit_id: patientData.visitID || "",
+        visit_no: patientData.visitNo || patientData.visitID || "",
         bed_no: patientData.bed || "",
         company: selectedCompany || patientData.company || "",
       },
@@ -3151,8 +3153,8 @@ export default function NewBill() {
       custom_bed_no: patientData?.bed || "",
       custom_department: selectedDepartment || patientData?.dept || "",
       custom_hospital: selectedHospital || "",
-      visit_type: "OPD",
-      visit_no: patientData?.visitID || "",
+      visit_type: patientData?.visitType || "OPD",
+      visit_no: patientData?.visitNo || patientData?.visitID || "",
       is_cash_bill: transactionType === 'cash' ? 1 : 0,
       is_credit_bill: transactionType === 'credit' ? 1 : 0,
     };
@@ -3589,9 +3591,10 @@ export default function NewBill() {
       mrn: fullRequisitionData.patient_id || "N/A",
       displayNo: fullRequisitionData.patient_id || "N/A",
       dept: fullRequisitionData.department || "N/A",
-      visitType: fullRequisitionData.visit_type || "N/A",
+      visitType: fullRequisitionData.patientVisitType || fullRequisitionData.visitType || fullRequisitionData.visit_type || fullRequisitionData.custom_visit_type || "OPD",
       company: fullRequisitionData.patient_company || "N/A",
-      visitID: fullRequisitionData.visit_id || "N/A",
+      visitID: fullRequisitionData.visit_id || fullRequisitionData.custom_visit_code || "N/A",
+      visitNo: fullRequisitionData.visitNumber || fullRequisitionData.visitNo || fullRequisitionData.custom_visit_no || fullRequisitionData.patient_visit_no || fullRequisitionData.visit_id || "N/A",
     };
     setPatientData(newPatientData);
 
@@ -3864,9 +3867,10 @@ export default function NewBill() {
       mrn: fullPrescriptionData.patient_id || "N/A",
       displayNo: fullPrescriptionData.patient_id || "N/A",
       dept: fullPrescriptionData.department || "N/A",
-      visitType: fullPrescriptionData.visit_type || "N/A",
+      visitType: fullPrescriptionData.patientVisitType || fullPrescriptionData.visitType || fullPrescriptionData.visit_type || fullPrescriptionData.custom_visit_type || "OPD",
       company: fullPrescriptionData.patient_company || "N/A",
-      visitID: fullPrescriptionData.visit_id || "N/A",
+      visitID: fullPrescriptionData.visit_id || fullPrescriptionData.custom_visit_code || "N/A",
+      visitNo: fullPrescriptionData.visitNumber || fullPrescriptionData.visitNo || fullPrescriptionData.custom_visit_no || fullPrescriptionData.patient_visit_no || fullPrescriptionData.visit_id || "N/A",
     };
     setPatientData(newPatientData);
 
@@ -4562,9 +4566,10 @@ export default function NewBill() {
         mrn: fullInvoice.custom_uhid || "N/A",
         displayNo: fullInvoice.custom_uhid || "N/A",
         dept: fullInvoice.custom_department || "N/A",
-        visitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || "N/A",
+        visitType: fullInvoice.patientVisitType || fullInvoice.visitType || fullInvoice.visit_type || fullInvoice.custom_visit_type || "OPD",
         company: fullInvoice.company || "N/A",
-        visitID: fullInvoice.custom_visit_code || "N/A",
+        visitID: fullInvoice.custom_visit_code || fullInvoice.visit_id || "N/A",
+        visitNo: fullInvoice.visitNumber || fullInvoice.visitNo || fullInvoice.visit_no || fullInvoice.custom_visit_code || "N/A",
         bed: fullInvoice.custom_bed_no || "N/A",
       };
       setPatientData(newPatientData);
@@ -4901,8 +4906,8 @@ export default function NewBill() {
           custom_phone: patientData?.phone || '',
           custom_doctor_name: patientData?.doctor || '',
           custom_age: patientData?.age || '',
-          visit_type: "OPD",
-          visit_no: patientData?.visitID || '',
+          visit_type: patientData?.visitType || "OPD",
+          visit_no: patientData?.visitNo || patientData?.visitID || '',
           transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
           is_cash_bill: transactionType === 'cash' ? 1 : 0,
           is_credit_bill: transactionType === 'credit' ? 1 : 0,
@@ -5169,6 +5174,7 @@ export default function NewBill() {
           department: patientData.dept || "",
           visit_type: patientData.visitType || "",
           visit_id: patientData.visitID || "",
+          visit_no: patientData.visitNo || patientData.visitID || "",
           bed_no: patientData.bed || "",
           company: selectedCompany || patientData.company || "",
         },
@@ -5194,8 +5200,8 @@ export default function NewBill() {
         custom_bed_no: patientData?.bed || "",
         custom_department: selectedDepartment || patientData?.dept || "",
         custom_hospital: selectedHospital || "",
-        visit_type: "OPD",
-        visit_no: patientData?.visitID || "",
+        visit_type: patientData?.visitType || "OPD",
+        visit_no: patientData?.visitNo || patientData?.visitID || "",
         transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
         is_cash_bill: transactionType === 'cash' ? 1 : 0,
         is_credit_bill: transactionType === 'credit' ? 1 : 0,
@@ -6201,9 +6207,10 @@ export default function NewBill() {
                     mrn: invoice.custom_mrn || '',
                     displayNo: invoice.custom_display_no || '',
                     dept: invoice.custom_department || '',
-                    visitType: invoice.visit_type || invoice.custom_visit_type || '',
+                    visitType: invoice.patientVisitType || invoice.visitType || invoice.visit_type || invoice.custom_visit_type || '',
                     company: invoice.custom_company || '',
-                    visitID: invoice.custom_visit_code || '',
+                    visitID: invoice.custom_visit_code || invoice.visit_id || '',
+                    visitNo: invoice.visitNumber || invoice.visitNo || invoice.visit_no || invoice.custom_visit_code || '',
                     bed: invoice.custom_bed || '',
                   });
                 }

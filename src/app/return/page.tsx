@@ -140,6 +140,7 @@ type SelectedPatient = {
   dept?: string;
   visitType?: string;
   company?: string;
+  visitNo?: string;
   visitID?: string;
   bed?: string;
 };
@@ -1284,6 +1285,8 @@ export default function Return() {
   const [barcode, setBarcode] = useState('');
   const [reqId, setReqId] = useState('');
   const [isReqIdReadonly, setIsReqIdReadonly] = useState(false);
+  const [isCoPayReadonly, setIsCoPayReadonly] = useState(false);
+  const [isTransactionTypeReadonly, setIsTransactionTypeReadonly] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
   // Handle barcode scanning
@@ -2102,6 +2105,8 @@ export default function Return() {
     setBarcode('');
     setReqId('');
     setIsReqIdReadonly(false);
+    setIsCoPayReadonly(false);
+    setIsTransactionTypeReadonly(false);
     setSelectedKit('');
     setSelectedSaleType('');
     setIsRoutine(false);
@@ -2136,6 +2141,14 @@ export default function Return() {
     setLoadedInvoiceDocstatus(0);
     setIsLoadingFromPosInvoice(false);
     setGlobalDiscountPercent(0);
+    setGlobalCoPayPercent(0);
+    setPayerName('');
+    setSubInsurance('');
+    setNetwork('');
+    setInsuranceNo('');
+    setOtherNo('');
+    setTotalPayerAmount(0);
+    setTotalPatientAmount(0);
     setTransactionType('cash');
     setIsOpdEffect(false);
     setTaxTemplate('');
@@ -3005,7 +3018,8 @@ export default function Return() {
         doctor: patientData.doctor || "",
         department: patientData.dept || "",
         visit_type: patientData.visitType || "",
-        visit_id: patientData.visitID || "",
+        visit_no: patientData.visitNo || patientData.visitID || "",
+        visit_id: patientData.visitNo || patientData.visitID || "",
         bed_no: patientData.bed || "",
         company: selectedCompany || patientData.company || "",
       },
@@ -3027,7 +3041,8 @@ export default function Return() {
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
       custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
-      custom_visit_code: patientData?.visitID || "",
+      custom_visit_code: patientData?.visitNo || patientData?.visitID || "",
+      visit_no: patientData?.visitNo || patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
       custom_bed_no: patientData?.bed || "",
@@ -3352,13 +3367,7 @@ export default function Return() {
     console.log("patientData updated:", patientData);
   }, [patientData]);
 
-  useEffect(() => {
-    if (transactionType === 'credit') {
-      setIsOpdEffect(true);
-    } else {
-      setIsOpdEffect(false);
-    }
-  }, [transactionType]);
+
 
   const handleSelectRequisition = async (requisition: any) => {
     console.log("Selected requisition:", requisition);
@@ -4583,7 +4592,7 @@ export default function Return() {
       // Load attachments for this invoice
       await loadInvoiceAttachments(fullInvoice.name);
 
-      // Set patient data from invoice
+      const visitNum = fullInvoice.visit_no || fullInvoice.visitNo || fullInvoice.visitNumber || fullInvoice.visit_id || fullInvoice.custom_visit_code || "N/A";
       const newPatientData = {
         name: fullInvoice.custom_patient_name || fullInvoice.customer || "N/A",
         age: fullInvoice.custom_age || "N/A",
@@ -4597,7 +4606,8 @@ export default function Return() {
         dept: fullInvoice.custom_department || "N/A",
         visitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || "N/A",
         company: fullInvoice.company || "N/A",
-        visitID: fullInvoice.custom_visit_code || "N/A",
+        visitNo: visitNum,
+        visitID: visitNum,
         bed: fullInvoice.custom_bed_no || "N/A",
       };
       setPatientData(newPatientData);
@@ -4614,9 +4624,28 @@ export default function Return() {
         setRequisitionDate(new Date(fullInvoice.posting_date));
       }
       setSelectedSaleType(fullInvoice.custom_sale_type || '');
+      setGlobalCoPayPercent(Number(fullInvoice.co_pay) || Number(fullInvoice.custom_co_pay) || 0);
+      setIsCoPayReadonly(true);
+      setIsTransactionTypeReadonly(true);
+      setPayerName(fullInvoice.custom_payer_name || '');
+      setSubInsurance(fullInvoice.custom_sub_insurance || '');
+      setNetwork(fullInvoice.custom_network || '');
+      setInsuranceNo(fullInvoice.custom_insurance_no || '');
+      setOtherNo(fullInvoice.custom_other_no || '');
+      setTotalPayerAmount(Number(fullInvoice.payer_amount) || 0);
+      setTotalPatientAmount(Number(fullInvoice.patient_amount) || 0);
+      if (fullInvoice.is_cash_bill === 1 || fullInvoice.is_cash_bill === true) {
+        setTransactionType('cash');
+      } else if (fullInvoice.is_credit_bill === 1 || fullInvoice.is_credit_bill === true) {
+        setTransactionType('credit');
+      } else if (fullInvoice.transaction_type || fullInvoice.transactionType) {
+        const tType = (fullInvoice.transaction_type || fullInvoice.transactionType || '').toString().toLowerCase();
+        setTransactionType(tType === 'credit' ? 'credit' : 'cash');
+      }
       setIsReturn(fullInvoice.is_return === 1);
-      setIsOpdEffect(fullInvoice.included_in_print_rate === 1); // Set isOpdEffect from invoice
-      setIsOpdEffect(fullInvoice.custom_ipd_effect === 1);
+      const isTrueVal = (val: any) => val === 1 || val === '1' || val === true || val === 'true';
+      const hasIpdEffect = isTrueVal(fullInvoice.custom_ipd_effect);
+      setIsOpdEffect(hasIpdEffect);
       // Extract tax rates from invoice taxes array
       const taxRatesFromInvoice: { [key: string]: { cgst: number, sgst: number, igst: number } } = {};
       if (fullInvoice.taxes && Array.isArray(fullInvoice.taxes)) {
@@ -4988,7 +5017,8 @@ export default function Return() {
                 custom_uhid: patientData?.ABHAID || '',
                 custom_bed_no: patientData?.bed || '',
                 custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
-                custom_visit_code: patientData?.visitID || '',
+                custom_visit_code: patientData?.visitNo || patientData?.visitID || '',
+                visit_no: patientData?.visitNo || patientData?.visitID || '',
                 custom_phone: patientData?.phone || '',
                 custom_doctor_name: patientData?.doctor || '',
                 custom_age: patientData?.age || '',
@@ -4996,6 +5026,10 @@ export default function Return() {
                 // IPD effect flags - use manual checkbox state for direct return
                 custom_ipd_effect: _isOpdEffect ? 1 : 0,
                 custom_is_ipd_invoice: _isOpdEffect ? 1 : 0,
+                co_pay: globalCoPayPercent || 0,
+                transaction_type: transactionType === 'credit' ? 'Credit' : 'Cash',
+                is_cash_bill: transactionType === 'cash' ? 1 : 0,
+                is_credit_bill: transactionType === 'credit' ? 1 : 0,
               };
 
               console.log('Direct Return API Payload:', payload);
@@ -5135,14 +5169,19 @@ export default function Return() {
               custom_uhid: patientData?.ABHAID || '',
               custom_bed_no: patientData?.bed || '',
               custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
-              custom_visit_code: patientData?.visitID || '',
+              custom_visit_code: patientData?.visitNo || patientData?.visitID || '',
+              visit_no: patientData?.visitNo || patientData?.visitID || '',
               custom_phone: patientData?.phone || '',
               custom_doctor_name: patientData?.doctor || '',
               custom_age: patientData?.age || '',
               return_remarks: remarks || `Return invoice against ${originalInvoice}`,
-              // IPD effect flags from selected invoices
-              custom_ipd_effect: selectedInvoicesData.some(inv => inv.custom_ipd_effect === 1) ? 1 : 0,
-              custom_is_ipd_invoice: selectedInvoicesData.some(inv => inv.custom_is_ipd_invoice === 1) ? 1 : 0,
+              // IPD effect flags from state
+              custom_ipd_effect: _isOpdEffect ? 1 : 0,
+              custom_is_ipd_invoice: _isOpdEffect ? 1 : 0,
+              co_pay: globalCoPayPercent || 0,
+              transaction_type: transactionType === 'credit' ? 'Credit' : 'Cash',
+              is_cash_bill: transactionType === 'cash' ? 1 : 0,
+              is_credit_bill: transactionType === 'credit' ? 1 : 0,
             };
 
             console.log(`Return API Payload for ${originalInvoice}:`, payload);
@@ -5409,7 +5448,8 @@ export default function Return() {
           doctor: patientData.doctor || "",
           department: patientData.dept || "",
           visit_type: patientData.visitType || "",
-          visit_id: patientData.visitID || "",
+          visit_no: patientData.visitNo || patientData.visitID || "",
+          visit_id: patientData.visitNo || patientData.visitID || "",
           bed_no: patientData.bed || "",
           company: selectedCompany || patientData.company || "",
         },
@@ -5429,7 +5469,8 @@ export default function Return() {
         custom_abha_id: patientData?.ABHAID || "",
         custom_age: patientData?.age || "",
         custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
-        custom_visit_code: patientData?.visitID || "",
+        custom_visit_code: patientData?.visitNo || patientData?.visitID || "",
+        visit_no: patientData?.visitNo || patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
         custom_bed_no: patientData?.bed || "",
@@ -5934,6 +5975,44 @@ export default function Return() {
 
                   {/* Second Row */}
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center mt-1">
+                    {/* Global Co-Pay % Input */}
+                    <div className="flex flex-row items-center gap-2">
+                      <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Co-Pay %:</Label>
+                      <Input
+                        type="number"
+                        value={globalCoPayPercent}
+                        onChange={(e) => setGlobalCoPayPercent(parseFloat(e.target.value) || 0)}
+                        placeholder="%"
+                        className="w-20 h-9 text-sm"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        disabled={isCoPayReadonly}
+                        readOnly={isCoPayReadonly}
+                      />
+                      <Button
+                        type="primary-button"
+                        size="button-medium"
+                        disabled={isCoPayReadonly}
+                        onClick={() => {
+                          if (isCoPayReadonly) return;
+                          const updatedItems = items.map(item => {
+                            const updatedItem = {
+                              ...item,
+                              coPayPercentage: !item.covered ? 0 : globalCoPayPercent,
+                              covered: true,
+                              preAuthStatus: 'Approved'
+                            };
+                            return calculateItemTaxAndTotals(updatedItem, true);
+                          });
+                          setItems(updatedItems);
+                          showAlert("success", "Success", `Co-Pay % applied to all items.`);
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+
                     {/* Global Discount Input */}
                     <div className="flex flex-row items-center gap-2">
                       <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Discount %:</Label>
@@ -5964,8 +6043,10 @@ export default function Return() {
                       <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
                       <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
                         <button
-                          onClick={() => setTransactionType('cash')}
-                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
+                          type="button"
+                          disabled={isTransactionTypeReadonly}
+                          onClick={() => !isTransactionTypeReadonly && setTransactionType('cash')}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${isTransactionTypeReadonly ? 'opacity-60 cursor-not-allowed' : ''} ${transactionType === 'cash'
                             ? 'bg-blue-500 text-white shadow-sm'
                             : 'bg-transparent text-gray-700 hover:bg-gray-50'
                             }`}
@@ -5973,8 +6054,10 @@ export default function Return() {
                           Cash
                         </button>
                         <button
-                          onClick={() => setTransactionType('credit')}
-                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
+                          type="button"
+                          disabled={isTransactionTypeReadonly}
+                          onClick={() => !isTransactionTypeReadonly && setTransactionType('credit')}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${isTransactionTypeReadonly ? 'opacity-60 cursor-not-allowed' : ''} ${transactionType === 'credit'
                             ? 'bg-blue-500 text-white shadow-sm'
                             : 'bg-transparent text-gray-700 hover:bg-gray-50'
                             }`}
@@ -6284,6 +6367,7 @@ export default function Return() {
               // Load customer and patient data
               setSelectedCustomer(firstInvoice.customer || '');
               if (firstInvoice.custom_patient_name) {
+                const visitNum = firstInvoice.visit_no || firstInvoice.visitNo || firstInvoice.visitNumber || firstInvoice.visit_id || firstInvoice.custom_visit_code || '';
                 setPatientData({
                   name: firstInvoice.custom_patient_name || '',
                   age: firstInvoice.custom_age || '',
@@ -6292,22 +6376,44 @@ export default function Return() {
                   ABHAID: firstInvoice.custom_abha_id || '',
                   category: firstInvoice.custom_category || '',
                   doctor: firstInvoice.custom_doctor_name || '',
-                  mrn: firstInvoice.custom_mrn || '',
+                  mrn: firstInvoice.custom_mrn || firstInvoice.custom_uhid || '',
                   displayNo: firstInvoice.custom_display_no || '',
                   dept: firstInvoice.custom_department || '',
                   visitType: firstInvoice.visit_type || firstInvoice.custom_visit_type || '',
-                  company: firstInvoice.custom_company || '',
-                  visitID: firstInvoice.custom_visit_code || '',
-                  bed: firstInvoice.custom_bed || '',
+                  company: firstInvoice.custom_company || firstInvoice.company || '',
+                  visitNo: visitNum,
+                  visitID: visitNum,
+                  bed: firstInvoice.custom_bed || firstInvoice.custom_bed_no || '',
                 });
               }
 
               // Load company, warehouse, and other settings
               setSelectedCompany(firstInvoice.company || '');
               setSelectedWarehouse(firstInvoice.set_warehouse || '');
+              setGlobalCoPayPercent(Number(firstInvoice.co_pay) || Number(firstInvoice.custom_co_pay) || 0);
+              setIsCoPayReadonly(true);
+              setIsTransactionTypeReadonly(true);
+              setPayerName(firstInvoice.custom_payer_name || '');
+              setSubInsurance(firstInvoice.custom_sub_insurance || '');
+              setNetwork(firstInvoice.custom_network || '');
+              setInsuranceNo(firstInvoice.custom_insurance_no || '');
+              setOtherNo(firstInvoice.custom_other_no || '');
+              setTotalPayerAmount(Number(firstInvoice.payer_amount) || 0);
+              setTotalPatientAmount(Number(firstInvoice.patient_amount) || 0);
 
-              // Set IPD effect based on selected invoices
-              const hasAnyIPDEffect = invoices.some(inv => inv.custom_ipd_effect === 1);
+              // Set transaction type (Cash/Credit) from selected Sale Bill
+              if (firstInvoice.is_cash_bill === 1 || firstInvoice.is_cash_bill === true) {
+                setTransactionType('cash');
+              } else if (firstInvoice.is_credit_bill === 1 || firstInvoice.is_credit_bill === true) {
+                setTransactionType('credit');
+              } else if (firstInvoice.transaction_type || firstInvoice.transactionType) {
+                const tType = (firstInvoice.transaction_type || firstInvoice.transactionType || '').toString().toLowerCase();
+                setTransactionType(tType === 'credit' ? 'credit' : 'cash');
+              }
+
+              // Set IPD effect based on selected invoices (only check if custom_ipd_effect is checked on sale bill)
+              const isTrueVal = (val: any) => val === 1 || val === '1' || val === true || val === 'true';
+              const hasAnyIPDEffect = invoices.some(inv => isTrueVal(inv.custom_ipd_effect));
               setIsOpdEffect(hasAnyIPDEffect);
 
               // Process all invoices and merge their items
@@ -6330,36 +6436,57 @@ export default function Return() {
                           Object.fromEntries(authHeaders) :
                           authHeaders;
 
-                      const returnResponse = await fetch(
-                        `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                      let returnResponse = await fetch(
+                        `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
                         {
                           method: 'GET',
                           headers,
                           credentials: 'include',
                         }
                       );
-                      const returnData = await returnResponse.json();
+                      let returnData = await returnResponse.json();
+                      if (!returnData.data || returnData.data.length === 0) {
+                        returnResponse = await fetch(
+                          `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                          {
+                            method: 'GET',
+                            headers,
+                            credentials: 'include',
+                          }
+                        );
+                        returnData = await returnResponse.json();
+                      }
 
                       if (returnData.data && returnData.data.length > 0) {
                         for (const returnInv of returnData.data) {
-                          // Use the same authentication logic as other functions
-                          const authHeaders = getAuthHeaders();
-                          // Convert HeadersInit to plain object for fetch compatibility
-                          const headers = typeof authHeaders === 'string' ?
-                            JSON.parse(authHeaders) :
-                            Array.isArray(authHeaders) ?
-                              Object.fromEntries(authHeaders) :
-                              authHeaders;
+                          const returnInvAuthHeaders = getAuthHeaders();
+                          const returnHeaders = typeof returnInvAuthHeaders === 'string' ?
+                            JSON.parse(returnInvAuthHeaders) :
+                            Array.isArray(returnInvAuthHeaders) ?
+                              Object.fromEntries(returnInvAuthHeaders) :
+                              returnInvAuthHeaders;
 
-                          const returnInvResponse = await fetch(
-                            `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
+                          // Try fetching Sale Bill first, then POS Invoice if not found
+                          let returnInvResponse = await fetch(
+                            `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${returnInv.name}`,
                             {
                               method: 'GET',
-                              headers,
+                              headers: returnHeaders,
                               credentials: 'include',
                             }
                           );
-                          const returnInvData = await returnInvResponse.json();
+                          let returnInvData = await returnInvResponse.json();
+                          if (!returnInvData.data?.items) {
+                            returnInvResponse = await fetch(
+                              `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
+                              {
+                                method: 'GET',
+                                headers: returnHeaders,
+                                credentials: 'include',
+                              }
+                            );
+                            returnInvData = await returnInvResponse.json();
+                          }
 
                           if (returnInvData.data?.items) {
                             const returnedItem = returnInvData.data.items.find(

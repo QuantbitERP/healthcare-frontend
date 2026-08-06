@@ -165,6 +165,7 @@ type SelectedPatient = {
   visitType?: string;
   company?: string;
   visitID?: string;
+  visitNo?: string;
   bed?: string;
   bedName?: string;
   wardName?: string;
@@ -3883,6 +3884,7 @@ export default function IPDBill() {
         department: patientData.dept || "",
         visit_type: patientData.visitType || "",
         visit_id: patientData.visitID || "",
+        visit_no: patientData.visitNo || patientData.visitID || "",
         bed_no: patientData.bed || "",
         company: selectedCompany || patientData.company || "",
       },
@@ -3927,8 +3929,8 @@ export default function IPDBill() {
       payer_amount: Number(totalPayerAmount) || 0,
       patient_amount: Number(totalPatientAmount) || 0,
       co_pay: Number(globalCoPayPercent) || 0,
-      visit_type: "IPD",
-      visit_no: patientData?.visitID || "",
+      visit_type: patientData?.visitType || "IPD",
+      visit_no: patientData?.visitNo || patientData?.visitID || "",
       is_cash_bill: transactionType === 'cash' ? 1 : 0,
       is_credit_bill: transactionType === 'credit' ? 1 : 0,
     };
@@ -5481,12 +5483,12 @@ export default function IPDBill() {
         patientCategory: fullInvoice.custom_patient_category || "",
         consultingDoctor: fullInvoice.custom_doctor_name || fullInvoice.custom_doctor || "",
         departmentName: fullInvoice.custom_department || "",
-        patientVisitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || (fullInvoice.custom_is_ipd_invoice === 1 || fullInvoice.custom_ipd_effect === 1 ? "IPD" : "OPD"),
+        patientVisitType: fullInvoice.patientVisitType || fullInvoice.visitType || fullInvoice.visit_type || fullInvoice.custom_visit_type || (fullInvoice.custom_is_ipd_invoice === 1 || fullInvoice.custom_ipd_effect === 1 ? "IPD" : "OPD"),
         patientCompany: fullInvoice.custom_patient_company || "",
         bedName: fullInvoice.custom_bed_no || fullInvoice.custom_bed || fullInvoice.bed_no || fullInvoice.bed_name || "",
         wardName: fullInvoice.custom_ward || fullInvoice.custom_ward_no || fullInvoice.custom_ward_name || fullInvoice.ward || "",
         visitID: fullInvoice.custom_visit_code || "",
-        visitNo: fullInvoice.custom_visit_code || "",
+        visitNo: fullInvoice.visitNumber || fullInvoice.visitNo || fullInvoice.visit_no || fullInvoice.custom_visit_code || "",
         payerType: fullInvoice.custom_payer_category || "",
         payerName: fullInvoice.custom_payer_name || "",
         network: fullInvoice.custom_network || "",
@@ -5558,6 +5560,20 @@ export default function IPDBill() {
       setSelectedSaleType(fullInvoice.custom_sale_type || '');
       setIsReturn(fullInvoice.is_return === 1);
       setIsIpdEffect(fullInvoice.custom_ipd_effect === 1); // Set isIpdEffect from invoice's custom_ipd_effect field
+
+      // Set transaction type (Cash or Credit) based on loaded invoice flags
+      if (fullInvoice.is_cash_bill === 1 || invoice?.is_cash_bill === 1) {
+        setTransactionType('cash');
+      } else if (fullInvoice.is_credit_bill === 1 || invoice?.is_credit_bill === 1) {
+        setTransactionType('credit');
+      } else if (fullInvoice.transaction_type || invoice?.transaction_type) {
+        const tt = String(fullInvoice.transaction_type || invoice?.transaction_type).toLowerCase();
+        if (tt.includes('cash')) {
+          setTransactionType('cash');
+        } else if (tt.includes('credit')) {
+          setTransactionType('credit');
+        }
+      }
 
       // Populate payer fields from invoice
       setPayerCategory(fullInvoice.custom_payer_category || '');
@@ -5948,8 +5964,8 @@ export default function IPDBill() {
           custom_phone: patientData?.phone || '',
           custom_doctor_name: patientData?.doctor || '',
           custom_age: patientData?.age || '',
-          visit_type: "IPD",
-          visit_no: patientData?.visitID || '',
+          visit_type: patientData?.visitType || "IPD",
+          visit_no: patientData?.visitNo || patientData?.visitID || '',
           transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
           is_cash_bill: transactionType === 'cash' ? 1 : 0,
           is_credit_bill: transactionType === 'credit' ? 1 : 0,
@@ -6255,6 +6271,7 @@ export default function IPDBill() {
           department: patientData.dept || "",
           visit_type: patientData.visitType || "",
           visit_id: patientData.visitID || "",
+          visit_no: patientData.visitNo || patientData.visitID || "",
           bed_no: patientData.bed || "",
           company: selectedCompany || patientData.company || "",
         },
@@ -6280,11 +6297,14 @@ export default function IPDBill() {
         custom_bed_no: patientData?.bed || "",
         custom_department: selectedDepartment || patientData?.dept || "",
         custom_hospital: selectedHospital || "",
-        visit_type: "IPD",
-        visit_no: patientData?.visitID || "",
+        visit_type: patientData?.visitType || "IPD",
+        visit_no: patientData?.visitNo || patientData?.visitID || "",
         transaction_type: transactionType === 'cash' ? "Cash" : "Credit",
         is_cash_bill: transactionType === 'cash' ? 1 : 0,
         is_credit_bill: transactionType === 'credit' ? 1 : 0,
+        custom_sale_bill: loadedInvoiceName || "",
+        custom_doctype_link: loadedInvoiceName || "",
+        custom_doctype: "Sale Bill",
       };
 
       // Construct the taxes array dynamically
@@ -7292,9 +7312,10 @@ export default function IPDBill() {
                     mrn: invoice.custom_mrn || '',
                     displayNo: invoice.custom_display_no || '',
                     dept: invoice.custom_department || '',
-                    visitType: invoice.visit_type || invoice.custom_visit_type || '',
+                    visitType: invoice.patientVisitType || invoice.visitType || invoice.visit_type || invoice.custom_visit_type || '',
                     company: invoice.custom_company || '',
-                    visitID: invoice.custom_visit_id || '',
+                    visitID: invoice.custom_visit_code || invoice.visit_id || '',
+                    visitNo: invoice.visitNumber || invoice.visitNo || invoice.visit_no || invoice.custom_visit_code || '',
                     bed: invoice.custom_bed || '',
                   });
                 }

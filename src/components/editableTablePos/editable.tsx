@@ -586,11 +586,20 @@ const EditableTable = ({
             const alreadyReturned = row.alreadyReturnedQty || 0;
             const maxReturnQty = row.saleQty - alreadyReturned;
 
+            if (maxReturnQty <= 0) {
+              if (showAlert) {
+                showAlert("danger", "Return Quantity Error", `This item has already been fully returned (Sale Qty: ${row.saleQty}, Already Given Qty: ${alreadyReturned}).`);
+              } else {
+                alert(`This item has already been fully returned (Sale Qty: ${row.saleQty}, Already Given Qty: ${alreadyReturned}).`);
+              }
+              return row;
+            }
+
             if (parsedValue > maxReturnQty) {
               if (showAlert) {
-                showAlert("danger", "Return Quantity Error", `You can add max ${maxReturnQty} qty as return qty. (Sale Qty: ${row.saleQty}, Already Returned: ${alreadyReturned})`);
+                showAlert("danger", "Return Quantity Error", `You can return max ${maxReturnQty} qty. (Sale Qty: ${row.saleQty}, Already Given Qty: ${alreadyReturned})`);
               } else {
-                alert(`You can add max ${maxReturnQty} qty as return qty. (Sale Qty: ${row.saleQty}, Already Returned: ${alreadyReturned})`);
+                alert(`You can return max ${maxReturnQty} qty. (Sale Qty: ${row.saleQty}, Already Given Qty: ${alreadyReturned})`);
               }
               return row; // Return original row without changes
             }
@@ -1352,16 +1361,30 @@ const EditableTable = ({
     ...(isReturnMode ? [{
       accessorKey: "returnQty",
       header: "Return Qty",
-      cell: ({ getValue, row, column, table }) => (
-        <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
-      ),
+      cell: ({ getValue, row, column, table }: any) => {
+        const item = row.original as Item;
+        const alreadyReturned = item.alreadyReturnedQty || 0;
+        const isFullyReturned = (item.saleQty !== undefined && item.saleQty !== null) ? alreadyReturned >= item.saleQty : false;
+
+        if (isFullyReturned) {
+          return (
+            <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-100 text-gray-400 font-medium cursor-not-allowed select-none rounded border border-gray-200" title="Full quantity already returned. Read-only.">
+              0
+            </div>
+          );
+        }
+
+        return (
+          <EditableCell value={getValue()} row={row} column={column} table={table} type="number" />
+        );
+      },
     }, {
       accessorKey: "alreadyGivenQty",
       header: "Already Given Qty",
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original as Item;
         return (
-          <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600">
+          <div className="px-2 py-1 min-h-[32px] flex items-center bg-gray-50 text-gray-600 font-medium">
             {item.alreadyReturnedQty || 0}
           </div>
         );
