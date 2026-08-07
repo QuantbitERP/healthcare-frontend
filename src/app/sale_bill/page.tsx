@@ -110,6 +110,7 @@ export interface Item {
   preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
   preAuthNo?: string; // Add pre-auth number field
   preAuthDateTime?: string; // Add pre-auth date and time field
+  isFromPrescription?: boolean; // Add flag to track if item is loaded from prescription
   // Critical category fields
   custom_is_hazardous?: number;
   custom_reserved_antibiotic?: number;
@@ -3853,6 +3854,7 @@ export default function IPDBill() {
           pre_auth_status: calculatedItem.preAuthStatus || "",
           pre_auth_no: calculatedItem.preAuthNo || "",
           pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+          custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
         };
       }),
       payments: recordedPayments.map(p => ({
@@ -3911,6 +3913,8 @@ export default function IPDBill() {
       custom_patient_category: patientData?.category || "",
       custom_patient_company: patientData?.company || "",
       custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
+      custom_prescription_no: reqId || sourceDocumentName || requisitionNo || "",
+      prescription_no: reqId || sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
@@ -4661,26 +4665,28 @@ export default function IPDBill() {
 
   const handleSelectPrescription = async (prescription: any) => {
     console.log("Selected prescription:", prescription);
-    // Set source document information
-    setSourceDocumentName(prescription.prescription_number);
+    const docId = prescription.name || prescription.prescription_id || prescription.prescription_number;
+    const displayNo = prescription.prescription_number || prescription.custom_prescription_no || prescription.prescriptionNo || prescription.name;
+
+    // Set source document information (docId is hidden prescription ID, displayNo is user-facing)
+    setSourceDocumentName(docId);
     setSourceDocumentType('prescription');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
 
-    // Set Req ID field with prescription number and make it readonly
-    setReqId(prescription.prescription_number);
+    // Set Req ID field with display number and make it readonly
+    setReqId(displayNo);
     setIsReqIdReadonly(true);
 
-    // Fetch the full prescription document to ensure child tables are available
+    // Fetch the full prescription document using primary key docId
     let fullPrescriptionData = prescription;
     try {
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
           Object.fromEntries(authHeaders) :
           authHeaders;
-      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${prescription.prescription_number}`, {
+      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(docId)}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -4866,6 +4872,14 @@ export default function IPDBill() {
             packageName: "",
             binLocation: "",
             hasStock: false, // Mark as no stock
+            covered: reqItem.covered === 1 || reqItem.covered === true,
+            preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
+            preAuthStatus: reqItem.pre_auth_status || "",
+            preAuthNo: reqItem.pre_auth_no || "",
+            preAuthDateTime: reqItem.pre_auth_date_time || "",
+            coPayPercentage: reqItem.co_pay || 0,
+            isFromPrescription: true,
+            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
           };
           await handleAddItemToDetails(itemWithoutStock);
           showAlert("warning", "Warning", `No stock available for item ${itemCode} from prescription. Item added to grid with no stock indicator.`);
@@ -4914,6 +4928,14 @@ export default function IPDBill() {
               kitName: "", // Add kitName
               packageName: "",
               binLocation: "",
+              covered: reqItem.covered === 1 || reqItem.covered === true,
+              preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
+              preAuthStatus: reqItem.pre_auth_status || "",
+              preAuthNo: reqItem.pre_auth_no || "",
+              preAuthDateTime: reqItem.pre_auth_date_time || "",
+              coPayPercentage: reqItem.co_pay || 0,
+              isFromPrescription: true,
+              custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
             };
             await handleAddItemToDetails(itemToAdd);
             remainingQtyToAllocate -= qtyToTake;
@@ -4953,6 +4975,14 @@ export default function IPDBill() {
             kitName: "",
             packageName: "",
             binLocation: "",
+            covered: reqItem.covered === 1 || reqItem.covered === true,
+            preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
+            preAuthStatus: reqItem.pre_auth_status || "",
+            preAuthNo: reqItem.pre_auth_no || "",
+            preAuthDateTime: reqItem.pre_auth_date_time || "",
+            coPayPercentage: reqItem.co_pay || 0,
+            isFromPrescription: true,
+            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
           };
           await handleNoBatchesFound(originalItemForAltPartial);
         }
@@ -5745,6 +5775,7 @@ export default function IPDBill() {
             preAuthStatus: invItem.pre_auth_status || "",
             preAuthNo: invItem.pre_auth_no || "",
             preAuthDateTime: invItem.pre_auth_date_time || "",
+            isFromPrescription: !!(fullInvoice.source_prescription || fullInvoice.custom_prescription_no || invItem.custom_is_prescribed === 1 || invItem.is_from_prescription === 1),
           };
 
           // Recalculate discount amount based on discount percentage to ensure consistency
@@ -5960,6 +5991,8 @@ export default function IPDBill() {
           custom_uhid: patientData?.ABHAID || '',
           custom_bed_no: patientData?.bed || '',
           custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
+          custom_prescription_no: reqId || sourceDocumentName || requisitionNo || '',
+          prescription_no: reqId || sourceDocumentName || requisitionNo || '',
           custom_visit_code: patientData?.visitID || '',
           custom_phone: patientData?.phone || '',
           custom_doctor_name: patientData?.doctor || '',
@@ -6241,6 +6274,7 @@ export default function IPDBill() {
             pre_auth_status: calculatedItem.preAuthStatus || "",
             pre_auth_no: calculatedItem.preAuthNo || "",
             pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+            custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
           };
         }),
         payments: recordedPayments.map(p => ({
@@ -6291,6 +6325,8 @@ export default function IPDBill() {
         custom_abha_id: patientData?.ABHAID || "",
         custom_age: patientData?.age || "",
         custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
+        custom_prescription_no: reqId || sourceDocumentName || requisitionNo || "",
+        prescription_no: reqId || sourceDocumentName || requisitionNo || "",
         custom_visit_code: patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
@@ -7094,6 +7130,7 @@ export default function IPDBill() {
                   hideTaxFields={true}
                   showInsuranceFields={true}
                   showPreAuthFields={true}
+                  isFromPrescription={sourceDocumentType === 'prescription'}
                 />
               </CardContent>
             </Card>

@@ -59,6 +59,7 @@ interface Item {
   preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
   preAuthNo?: string; // Add pre-auth number field
   preAuthDateTime?: string; // Add pre-auth date and time field
+  isFromPrescription?: boolean; // Add flag to track if item is loaded from prescription
   marginType?: string; // Add marginType as optional property
   includedInPrintRate?: boolean; // Add includedInPrintRate as optional property
   mrp?: number; // Add MRP field for batch custom_mrp
@@ -94,19 +95,43 @@ const EditableCell = ({
   row,
   column,
   table,
-  type = 'text'
+  type = 'text',
+  disabled = false,
 }: {
   value: any;
   row: any;
   column: any;
   table: any;
-  type?: 'text' | 'number' | 'date';
+  type?: 'text' | 'number' | 'date' | 'datetime-local';
+  disabled?: boolean;
 }) => {
   const [value, setValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
 
+  const formatForDateTimeInput = (val: string) => {
+    if (!val) return '';
+    const cleaned = String(val).trim().replace(' ', 'T');
+    if (cleaned.length >= 16) {
+      return cleaned.substring(0, 16);
+    }
+    return cleaned;
+  };
+
+  const formatFromDateTimeInput = (val: string) => {
+    if (!val) return '';
+    const formatted = String(val).replace('T', ' ');
+    if (formatted.length === 16) {
+      return `${formatted}:00`;
+    }
+    return formatted;
+  };
+
   const onBlur = () => {
-    (table.options.meta)?.updateCell(row.index, column.id, value);
+    let finalValue = value;
+    if (type === 'datetime-local') {
+      finalValue = formatFromDateTimeInput(value);
+    }
+    (table.options.meta)?.updateCell(row.index, column.id, finalValue);
     setIsEditing(false);
   };
 
@@ -124,15 +149,16 @@ const EditableCell = ({
     setValue(initialValue);
   }, [initialValue]);
 
-  if (isEditing) {
+  if (isEditing && !disabled) {
+    const inputValue = type === 'datetime-local' ? formatForDateTimeInput(value) : (value || '');
     return (
       <input
-        value={value || ''}
+        value={inputValue}
         onChange={e => setValue(e.target.value)}
         onBlur={onBlur}
         onKeyDown={onKeyDown}
         type={type}
-        className="w-full px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         autoFocus
       />
     );
@@ -140,14 +166,20 @@ const EditableCell = ({
 
   return (
     <div
-      onClick={() => setIsEditing(true)}
-      className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[32px] flex items-center"
+      onClick={() => {
+        if (!disabled) setIsEditing(true);
+      }}
+      className={`px-2 py-1 rounded min-h-[32px] flex items-center ${
+        disabled
+          ? 'cursor-not-allowed bg-gray-50 text-gray-500'
+          : 'cursor-pointer hover:bg-gray-100'
+      }`}
     >
       {type === 'number' && typeof value === 'number'
         ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
           ? `﷼${truncateToTwoDecimals(value).toFixed(2)}`
           : value.toString()
-        : value || '-'
+        : (type === 'datetime-local' && value ? formatFromDateTimeInput(value) : value) || '-'
       }
     </div>
   );
@@ -457,6 +489,7 @@ interface EditableTableProps {
   showInsuranceFields?: boolean; // Add prop to show insurance related fields (for sales bill)
   showPreAuthFields?: boolean; // Add prop to show pre-auth fields (for sale_bill page)
   isLoadingFromPosInvoice?: boolean; // Add prop to prevent recalculation when loading invoice data
+  isFromPrescription?: boolean; // Add prop to track if prescription is loaded
 }
 
 const EditableTable = ({
@@ -493,6 +526,7 @@ const EditableTable = ({
   showInsuranceFields = false, // Default to false (hide insurance fields)
   showPreAuthFields = false, // Default to false (hide pre-auth fields)
   isLoadingFromPosInvoice = false, // Default to false (allow recalculation)
+  isFromPrescription = false, // Default to false (not loaded from prescription)
 }: EditableTableProps) => {
   // const { apiKey: authApiKey, apiSecret: authApiSecret } = useAuth();
   // const effectiveApiKey = apiKey || authApiKey;
@@ -1753,24 +1787,36 @@ const EditableTable = ({
     ...(showPreAuthFields ? [{
       accessorKey: "preAuthNo",
       header: "Pre-auth No.",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ getValue, row, column, table }: { getValue: any; row: any; column: any; table: any }) => {
         const item = row.original as Item;
+        const isDisabled = !!(item.isFromPrescription || isFromPrescription);
         return (
-          <div className="px-2 py-1 min-h-[32px] flex items-center">
-            {item.preAuthNo || '-'}
-          </div>
+          <EditableCell
+            value={getValue()}
+            row={row}
+            column={column}
+            table={table}
+            type="text"
+            disabled={isDisabled}
+          />
         );
       },
     }] : []),
     ...(showPreAuthFields ? [{
       accessorKey: "preAuthDateTime",
       header: "Pre-auth Date & Time",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ getValue, row, column, table }: { getValue: any; row: any; column: any; table: any }) => {
         const item = row.original as Item;
+        const isDisabled = !!(item.isFromPrescription || isFromPrescription);
         return (
-          <div className="px-2 py-1 min-h-[32px] flex items-center">
-            {item.preAuthDateTime || '-'}
-          </div>
+          <EditableCell
+            value={getValue()}
+            row={row}
+            column={column}
+            table={table}
+            type="datetime-local"
+            disabled={isDisabled}
+          />
         );
       },
     }] : []),

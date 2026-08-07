@@ -155,6 +155,9 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       const params: any = {
         fields: JSON.stringify([
           "name",
+          "prescription_number",
+          "custom_prescription_no",
+          "prescription_no",
           "creation",
           "full_name",
           "patient_id",
@@ -215,7 +218,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       // Store all prescriptions for summary
       const allTransformedData = data.map((item: any, index: number) => ({
         id: index + 1,
-        prescription_number: item.name || "",
+        name: item.name || "",
+        prescription_number: item.custom_prescription_no || item.prescription_no || item.prescription_number || item.name || "",
         prescription_date: item.creation || "",
         patient_name: item.full_name || "",
         patient_id: item.patient_id || "",
@@ -238,7 +242,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
 
       const transformedData = filteredData.map((item: any, index: number) => ({
         id: index + 1,
-        prescription_number: item.name || "",
+        name: item.name || "",
+        prescription_number: item.custom_prescription_no || item.prescription_no || item.prescription_number || item.name || "",
         prescription_date: item.creation || "",
         patient_name: item.full_name || "",
         patient_id: item.patient_id || "",
@@ -324,10 +329,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
 
   // Define columns for DataTableComponent
   const columns = [
-    // {
-    //   accessorKey: "prescription_number",
-    //   header: "Prescription Number",
-    // },
+    {
+      accessorKey: "prescription_number",
+      header: "Prescription No",
+    },
     {
       accessorKey: "prescription_date",
       header: "Prescription Date",

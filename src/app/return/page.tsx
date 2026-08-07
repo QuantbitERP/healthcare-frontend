@@ -109,6 +109,8 @@ export interface Item {
   coPayPercentage?: number;
   patientAmount?: number;
   payerAmount?: number;
+  isFromPrescription?: boolean; // Add flag to track if item is loaded from prescription
+  custom_his_item_id?: string; // Add custom_his_item_id for prescription item id matching
 }
 
 interface ItemSearchProps {
@@ -2997,6 +2999,15 @@ export default function Return() {
           item_tax_template: calculatedItem.taxTemplate || "",
           included_in_print_rate: 1,
           use_serial_batch_fields: 1,
+          co_pay: Number(calculatedItem.coPayPercentage) || 0,
+          patient_amount: Number(calculatedItem.patientAmount) || 0,
+          payer_amount: Number(calculatedItem.payerAmount) || 0,
+          covered: calculatedItem.covered ? 1 : 0,
+          pre_auth_req: calculatedItem.preAuthRequired ? "Yes" : "No",
+          pre_auth_status: calculatedItem.preAuthStatus || "",
+          pre_auth_no: calculatedItem.preAuthNo || "",
+          pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+          custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
         };
       }),
       payments: recordedPayments.map(p => ({
@@ -3041,6 +3052,8 @@ export default function Return() {
       custom_abha_id: patientData?.ABHAID || "",
       custom_age: patientData?.age || "",
       custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
+      custom_prescription_no: reqId || sourceDocumentName || requisitionNo || "",
+      prescription_no: reqId || sourceDocumentName || requisitionNo || "",
       custom_visit_code: patientData?.visitNo || patientData?.visitID || "",
       visit_no: patientData?.visitNo || patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
@@ -3831,27 +3844,28 @@ export default function Return() {
 
   const handleSelectPrescription = async (prescription: any) => {
     console.log("Selected prescription:", prescription);
-    // Set source document information
-    setSourceDocumentName(prescription.prescription_number);
+    const docId = prescription.name || prescription.prescription_id || prescription.prescription_number;
+    const displayNo = prescription.prescription_number || prescription.custom_prescription_no || prescription.prescriptionNo || prescription.name;
+
+    // Set source document information (docId is hidden prescription ID, displayNo is user-facing)
+    setSourceDocumentName(docId);
     setSourceDocumentType('prescription');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
 
-    // Set Req ID field with prescription number and make it readonly
-    setReqId(prescription.prescription_number);
+    // Set Req ID field with display number and make it readonly
+    setReqId(displayNo);
     setIsReqIdReadonly(true);
 
-    // Fetch the full prescription document to ensure child tables are available
+    // Fetch the full prescription document using primary key docId
     let fullPrescriptionData = prescription;
     try {
-      // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
           Object.fromEntries(authHeaders) :
           authHeaders;
-      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${prescription.prescription_number}`, {
+      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(docId)}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -3985,6 +3999,14 @@ export default function Return() {
             packageName: "",
             binLocation: "",
             hasStock: false, // Mark as no stock
+            covered: reqItem.covered === 1 || reqItem.covered === true,
+            preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
+            preAuthStatus: reqItem.pre_auth_status || "",
+            preAuthNo: reqItem.pre_auth_no || "",
+            preAuthDateTime: reqItem.pre_auth_date_time || "",
+            coPayPercentage: reqItem.co_pay || 0,
+            isFromPrescription: true,
+            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
           };
           await handleAddItemToDetails(itemWithoutStock);
           showAlert("warning", "Warning", `No stock available for item ${itemCode} from prescription. Item added to grid with no stock indicator.`);
@@ -4033,6 +4055,14 @@ export default function Return() {
               kitName: "", // Add kitName
               packageName: "",
               binLocation: "",
+              covered: reqItem.covered === 1 || reqItem.covered === true,
+              preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
+              preAuthStatus: reqItem.pre_auth_status || "",
+              preAuthNo: reqItem.pre_auth_no || "",
+              preAuthDateTime: reqItem.pre_auth_date_time || "",
+              coPayPercentage: reqItem.co_pay || 0,
+              isFromPrescription: true,
+              custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
             };
             await handleAddItemToDetails(itemToAdd);
             remainingQtyToAllocate -= qtyToTake;
@@ -4072,6 +4102,14 @@ export default function Return() {
             kitName: "",
             packageName: "",
             binLocation: "",
+            covered: reqItem.covered === 1 || reqItem.covered === true,
+            preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
+            preAuthStatus: reqItem.pre_auth_status || "",
+            preAuthNo: reqItem.pre_auth_no || "",
+            preAuthDateTime: reqItem.pre_auth_date_time || "",
+            coPayPercentage: reqItem.co_pay || 0,
+            isFromPrescription: true,
+            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
           };
           await handleNoBatchesFound(originalItemForAltPartial);
         }
@@ -4792,6 +4830,15 @@ export default function Return() {
             binLocation: invItem.custom_bin_location || "", // Load bin_location from invoice
             includedInPrintRate: invItem.included_in_print_rate === 1, // Set includedInPrintRate for loaded item
             req_qty: reqQty, // Add req_qty from requisition/prescription
+            coPayPercentage: invItem.co_pay || 0,
+            patientAmount: invItem.patient_amount || 0,
+            payerAmount: invItem.payer_amount || 0,
+            covered: invItem.covered === 1,
+            preAuthRequired: invItem.pre_auth_req === "Yes" || invItem.pre_auth_req === 1,
+            preAuthStatus: invItem.pre_auth_status || "",
+            preAuthNo: invItem.pre_auth_no || "",
+            preAuthDateTime: invItem.pre_auth_date_time || "",
+            isFromPrescription: !!(fullInvoice.source_prescription || fullInvoice.custom_prescription_no || invItem.custom_is_prescribed === 1 || invItem.is_from_prescription === 1),
           };
 
           // Recalculate discount amount based on discount percentage to ensure consistency
@@ -5428,6 +5475,15 @@ export default function Return() {
             item_tax_template: item.taxTemplate || "",
             included_in_print_rate: 1,
             use_serial_batch_fields: 1,
+            co_pay: Number(calculatedItem.coPayPercentage) || 0,
+            patient_amount: Number(calculatedItem.patientAmount) || 0,
+            payer_amount: Number(calculatedItem.payerAmount) || 0,
+            covered: calculatedItem.covered ? 1 : 0,
+            pre_auth_req: calculatedItem.preAuthRequired ? "Yes" : "No",
+            pre_auth_status: calculatedItem.preAuthStatus || "",
+            pre_auth_no: calculatedItem.preAuthNo || "",
+            pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+            custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
           };
         }),
         payments: recordedPayments.map(p => ({
@@ -5469,6 +5525,8 @@ export default function Return() {
         custom_abha_id: patientData?.ABHAID || "",
         custom_age: patientData?.age || "",
         custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
+        custom_prescription_no: reqId || sourceDocumentName || requisitionNo || "",
+        prescription_no: reqId || sourceDocumentName || requisitionNo || "",
         custom_visit_code: patientData?.visitNo || patientData?.visitID || "",
         visit_no: patientData?.visitNo || patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
@@ -6100,6 +6158,8 @@ export default function Return() {
               <HorizontallyScrollableTable
                 hideTaxFields={true}
                 showInsuranceFields={true}
+                showPreAuthFields={true}
+                isFromPrescription={sourceDocumentType === 'prescription'}
                 items={items}
                 setItems={setItems}
                 fetchItemBatches={fetchItemBatches}
