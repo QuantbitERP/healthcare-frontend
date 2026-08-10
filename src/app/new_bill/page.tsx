@@ -5338,7 +5338,7 @@ export default function NewBill() {
         }
 
         // Now submit the created draft invoice
-        const submitResponse = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoiceName}`, {
+        const submitResponse = await fetch(`${API_BASE_URL}/Sale%20Bill/${invoiceName}`, {
           method: 'PUT',
           headers,
           credentials: 'include',

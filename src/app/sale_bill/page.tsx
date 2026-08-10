@@ -33,7 +33,7 @@ import Image from "next/image";
 import BillBreakdown from "@/components/billbreakdown/billbreakdown";
 import { networkPrinter } from "@/utils/networkPrinter";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
-import { Search, X, Plus, UploadCloud } from 'lucide-react';
+import { Search, X, Plus, UploadCloud, AlertTriangle } from 'lucide-react';
 import OpdCard, { OpdCardRef } from "@/components/OpdInfo/Opdinfo";
 import HorizontallyScrollableTable from "@/components/editableTablePos/editable";
 import PatientRequisitionList from "@/components/patientRequisitionList/PatientRequisitionList";
@@ -178,6 +178,7 @@ type SelectedPatient = {
   otherNo?: string;
   validityFrom?: string;
   expiryValidityTo?: string;
+  isDischarged?: boolean;
   hospitalId?: string;
   coPay?: number;
 };
@@ -1795,6 +1796,52 @@ export default function IPDBill() {
 
   const [isIpdEffect, setIsIpdEffect] = useState(true);
 
+  const isDischargedFlag = Boolean(
+    patientData?.isDischarged ||
+    rawPatientData?.isDischarged === true ||
+    rawPatientData?.isDischarged === "true" ||
+    rawPatientData?.isDischarged === 1 ||
+    rawPatientData?.is_discharged === true ||
+    rawPatientData?.is_discharged === "true" ||
+    rawPatientData?.is_discharged === 1 ||
+    rawPatientData?.discharged === true ||
+    rawPatientData?.discharged === "true" ||
+    rawPatientData?.discharged === 1
+  );
+
+  const isFinalBillDoneFlag = Boolean(
+    rawPatientData?.isFinalBillDone === true ||
+    rawPatientData?.isFinalBillDone === "true" ||
+    rawPatientData?.isFinalBillDone === 1 ||
+    rawPatientData?.is_final_bill_done === true ||
+    rawPatientData?.is_final_bill_done === "true" ||
+    rawPatientData?.is_final_bill_done === 1 ||
+    rawPatientData?.final_bill_done === true ||
+    rawPatientData?.final_bill_done === "true" ||
+    rawPatientData?.final_bill_done === 1
+  );
+
+  const isDischargedPatient = isDischargedFlag || isFinalBillDoneFlag;
+
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalMessage, setStatusModalMessage] = useState("");
+
+  useEffect(() => {
+    if (isDischargedFlag && isFinalBillDoneFlag) {
+      setIsIpdEffect(false);
+      setStatusModalMessage('This patient is already discharged and final bill is done.');
+      setStatusModalOpen(true);
+    } else if (isDischargedFlag) {
+      setIsIpdEffect(false);
+      setStatusModalMessage('This patient is already discharged.');
+      setStatusModalOpen(true);
+    } else if (isFinalBillDoneFlag) {
+      setIsIpdEffect(false);
+      setStatusModalMessage('Final bill is done for this patient.');
+      setStatusModalOpen(true);
+    }
+  }, [isDischargedFlag, isFinalBillDoneFlag]);
+
   // New state variables for tax details
   const [taxTemplate, setTaxTemplate] = useState<string>('');
   const [cgstAccounts, setCgstAccounts] = useState<any[]>([]);
@@ -1880,6 +1927,21 @@ export default function IPDBill() {
       checkRolePermission();
     }
   }, [isAuthenticated, isInitialized, checkUserRole]);
+
+  // Auto-load POS invoice if passed via URL or sessionStorage
+  useEffect(() => {
+    if (!isInitialized || !apiKey || !apiSecret) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const invFromUrl = urlParams.get('invoice');
+    const invFromSession = sessionStorage.getItem('load_pos_invoice_name');
+    const targetInvoiceName = invFromUrl || invFromSession;
+
+    if (targetInvoiceName) {
+      sessionStorage.removeItem('load_pos_invoice_name');
+      handleLoadInvoice({ name: targetInvoiceName });
+    }
+  }, [isInitialized, apiKey, apiSecret]);
 
   // Handle direct return checkbox changes
   useEffect(() => {
@@ -6614,44 +6676,8 @@ export default function IPDBill() {
     }
   };
 
-  const handleCreateClosingEntry = async (openingEntryName: string) => {
-    if (!posProfile) {
-      showAlert("danger", "Error", "Please select a POS profile first.");
-      return;
-    }
-
-    try {
-      // Use the same authentication logic as other functions
-      const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ?
-        JSON.parse(authHeaders) :
-        Array.isArray(authHeaders) ?
-          Object.fromEntries(authHeaders) :
-          authHeaders;
-
-      const response = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.create_pos_closing_entry`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ opening_entry_name: openingEntryName }),
-      });
-
-      const result = await response.json();
-      console.log("Closing entry response:", result);
-
-      if (response.ok && result.success) {
-        showAlert("success", "Success", `POS Closing Entry ${result.closing_entry} created and submitted successfully!`);
-        setShowClosingEntryModal(false);
-        // Optionally, refresh data or navigate
-      } else {
-        console.error("Failed to create POS Closing Entry:", result.error);
-        showAlert("danger", "Error", `Failed to create POS Closing Entry: ${result.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error("Error creating POS Closing Entry:", error);
-      showAlert("danger", "Error", "Error creating POS Closing Entry. Please try again.");
-    }
+  const handleCreateClosingEntry = (openingEntryName: string) => {
+    setShowClosingEntryModal(false);
   };
 
 
@@ -7051,6 +7077,7 @@ export default function IPDBill() {
                       <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Transaction Type:</Label>
                       <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1 gap-1">
                         <button
+                          type="button"
                           onClick={() => setTransactionType('cash')}
                           className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'cash'
                             ? 'bg-blue-500 text-white shadow-sm'
@@ -7060,6 +7087,7 @@ export default function IPDBill() {
                           Cash
                         </button>
                         <button
+                          type="button"
                           onClick={() => setTransactionType('credit')}
                           className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${transactionType === 'credit'
                             ? 'bg-blue-500 text-white shadow-sm'
@@ -7075,14 +7103,21 @@ export default function IPDBill() {
                     <div className="flex items-center gap-2 pl-4 border-l border-gray-300">
                       <Checkbox
                         id="ipd-effect"
-                        checked={isIpdEffect}
-                        disabled={transactionType === 'cash'}
-                        onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
-                        className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
+                        checked={isIpdEffect && !isDischargedPatient}
+                        disabled={transactionType === 'cash' || isDischargedPatient}
+                        onCheckedChange={(checked) => {
+                          if (isDischargedPatient) {
+                            showAlert('warning', 'Blocked', 'IPD Effect is blocked for discharged patients.');
+                            return;
+                          }
+                          setIsIpdEffect(checked === true);
+                        }}
+                        className={transactionType === 'cash' || isDischargedPatient ? 'opacity-50 cursor-not-allowed' : ''}
                       />
                       <Label
                         htmlFor="ipd-effect"
-                        className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                        className={`text-sm font-medium ${transactionType === 'cash' || isDischargedPatient ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                        title={isDischargedPatient ? "IPD Effect is blocked for discharged patients" : ""}
                       >
                         IPD Effect
                       </Label>
@@ -7465,6 +7500,30 @@ export default function IPDBill() {
             }}
           />
         )}
+
+        {/* Patient Status Warning Modal */}
+        <Dialog open={statusModalOpen} onOpenChange={setStatusModalOpen}>
+          <DialogContent className="sm:max-w-md bg-white p-6 rounded-lg shadow-xl border border-gray-200">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-amber-500" />
+                Patient Status Warning
+              </DialogTitle>
+              <DialogDescription className="pt-3 text-sm text-gray-700 font-medium leading-relaxed">
+                {statusModalMessage}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-6 flex justify-end">
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={() => setStatusModalOpen(false)}
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* High-Alert Confirmation Dialog */}
         <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>

@@ -36,10 +36,30 @@ interface OpeningEntry {
   balance_details: BalanceDetail[];
 }
 
-const POSOpeningEntry: React.FC = () => {
+interface POSOpeningEntryProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSuccess?: (entryName: string) => void;
+}
+
+const POSOpeningEntry: React.FC<POSOpeningEntryProps> = ({
+  isOpen: externalIsOpen,
+  onClose,
+  onSuccess,
+}) => {
   const { posProfile, currentUser, isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(true);
+  const [internalIsOpen, setInternalIsOpen] = useState(true);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
+    }
+  };
+
   const [formData, setFormData] = useState<OpeningEntry>({
     company: "",
     pos_profile: posProfile || "",
@@ -55,6 +75,19 @@ const POSOpeningEntry: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Sync form defaults whenever modal opens or auth context changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData((prev) => ({
+        ...prev,
+        pos_profile: posProfile || prev.pos_profile,
+        user: currentUser || prev.user,
+        period_start_date: new Date().toISOString().slice(0, 16),
+        posting_date: new Date().toISOString().slice(0, 10),
+      }));
+    }
+  }, [isOpen, posProfile, currentUser]);
+
   // Check for open POS Opening Entry and redirect if necessary
   useEffect(() => {
     // Wait for initialization before checking authentication
@@ -63,23 +96,19 @@ const POSOpeningEntry: React.FC = () => {
     console.log(isAuthenticated);
     console.log(posProfile);
     console.log(currentUser);
-    if (!isAuthenticated || !posProfile || !currentUser) {
+    if (!isAuthenticated) {
       router.push("/login");
       return;
     }
-
-    // Since conflict checking now happens in POSProfileSelector on /pos page,
-    // we can proceed directly with the opening entry form
   }, [isAuthenticated, posProfile, currentUser, router, isInitialized]);
 
   // Fetch Companies, POS Profiles, and Modes of Payment
   useEffect(() => {
+    if (!isOpen) return;
+
     const fetchData = async () => {
       try {
-        // Fetch Companies
-        // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
         const headers = typeof authHeaders === 'string' ? 
           JSON.parse(authHeaders) : 
           Array.isArray(authHeaders) ? 
@@ -95,7 +124,11 @@ const POSOpeningEntry: React.FC = () => {
         );
         if (companyRes.ok) {
           const companyData = await companyRes.json();
-          setCompanies(companyData.data.map((c: any) => c.name));
+          const compNames = companyData.data.map((c: any) => c.name);
+          setCompanies(compNames);
+          if (compNames.length > 0) {
+            setFormData((prev) => ({ ...prev, company: prev.company || compNames[0] }));
+          }
         } else {
           console.error("Failed to fetch companies:", companyRes.status);
           setError("Failed to load companies.");
@@ -111,7 +144,11 @@ const POSOpeningEntry: React.FC = () => {
         );
         if (posRes.ok) {
           const posData = await posRes.json();
-          setPosProfiles(posData.data.map((p: any) => p.name));
+          const pProfiles = posData.data.map((p: any) => p.name);
+          setPosProfiles(pProfiles);
+          if (pProfiles.length > 0) {
+            setFormData((prev) => ({ ...prev, pos_profile: prev.pos_profile || posProfile || pProfiles[0] }));
+          }
         } else {
           console.error("Failed to fetch POS profiles:", posRes.status);
           setError("Failed to load POS profiles.");
@@ -127,7 +164,8 @@ const POSOpeningEntry: React.FC = () => {
         );
         if (mopRes.ok) {
           const mopData = await mopRes.json();
-          setModesOfPayment(mopData.data.map((m: any) => m.name));
+          const mops = mopData.data.map((m: any) => m.name);
+          setModesOfPayment(mops);
         } else {
           console.error("Failed to fetch modes of payment:", mopRes.status);
           setError("Failed to load modes of payment.");
@@ -139,7 +177,7 @@ const POSOpeningEntry: React.FC = () => {
     };
 
     fetchData();
-  }, [isAuthenticated]);
+  }, [isOpen, isAuthenticated, posProfile]);
 
   const handleInputChange = (field: keyof OpeningEntry, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -202,9 +240,7 @@ const POSOpeningEntry: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ? 
         JSON.parse(authHeaders) : 
         Array.isArray(authHeaders) ? 
@@ -237,8 +273,15 @@ const POSOpeningEntry: React.FC = () => {
 
       if (response.ok && data.data) {
         console.log("Opening Entry created:", data.data.name);
-        setIsOpen(false);
-        router.push("/pos"); // Redirect to POS page
+        if (onSuccess) {
+          onSuccess(data.data.name);
+        }
+        if (onClose) {
+          onClose();
+        } else {
+          setInternalIsOpen(false);
+          router.push("/pos"); // Redirect to POS page
+        }
       } else {
         console.error("Failed to create Opening Entry:", data);
         setError(data.message || "Failed to create Opening Entry.");
@@ -254,7 +297,7 @@ const POSOpeningEntry: React.FC = () => {
   return (
     <>
       {/* Main Form Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Create Opening Entry</DialogTitle>
@@ -390,7 +433,7 @@ const POSOpeningEntry: React.FC = () => {
           </div>
           <DialogFooter>
             <Button
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               variant="secondary"
               disabled={loading}
             >

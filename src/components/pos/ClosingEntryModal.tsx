@@ -195,7 +195,7 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
   };
 
   const handleSubmitClosingEntry = async () => {
-    if (!closingEntryData) return;
+    if (!closingEntryData || submitting) return;
 
     setSubmitting(true);
     try {
