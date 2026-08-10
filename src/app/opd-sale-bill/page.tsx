@@ -1368,11 +1368,6 @@ export default function IPDBill() {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for item batch data');
-        } else {
-          console.error('Failed to fetch batches:', response.status, response.statusText);
-        }
         return [];
       }
 
@@ -1422,11 +1417,6 @@ export default function IPDBill() {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for item batch data');
-        } else {
-          console.error('Failed to fetch batches:', response.status, response.statusText);
-        }
         return [];
       }
 
@@ -2159,7 +2149,6 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
 
       let totalInvoicedQty = 0;
 
@@ -2179,17 +2168,11 @@ export default function IPDBill() {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
 
-            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
-
             if (fullInvoice?.items) {
-              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
-
-              // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
                 .filter((item: any) => item.item_code === itemCode)
                 .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
 
-              console.log(`Item ${itemCode} quantity in invoice ${invoice.name}: ${itemInvoiceQty}`);
               totalInvoicedQty += itemInvoiceQty;
             }
           } else {
@@ -2200,7 +2183,6 @@ export default function IPDBill() {
         }
       }
 
-      console.log(`Item ${itemCode} in requisition ${reqNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting item invoiced quantity:", error);
@@ -2267,7 +2249,6 @@ export default function IPDBill() {
         }
       }
 
-      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting prescription item invoiced quantity:", error);
@@ -2296,22 +2277,15 @@ export default function IPDBill() {
 
       if (forceComplete) {
         status = "Completed";
-        console.log("Force completing requisition:", reqNo);
       } else {
-        // Check current status based on quantities
         const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
-        console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
 
         if (total_qty > 0 && invoiced_qty >= total_qty) {
           status = "Completed";
-          console.log("Requisition marked as Completed");
         } else {
           status = "Pending";
-          console.log("Requisition marked as Pending");
         }
       }
-
-      console.log("Updating requisition", reqNo, "status to:", status);
 
       // Update the requisition status
       const response = await fetch(
@@ -2331,9 +2305,7 @@ export default function IPDBill() {
         console.error("Failed to update requisition status:", errorData);
       } else {
         const result = await response.json();
-        console.log(`Requisition ${reqNo} status updated to: ${status}`, result);
 
-        // Verify the update by fetching the requisition again
         try {
           const verifyResponse = await fetch(
             `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","custom_requisition_status"]`,
@@ -2343,11 +2315,6 @@ export default function IPDBill() {
               credentials: 'include',
             }
           );
-
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            console.log("Verification - Current status in database:", verifyData.data?.custom_requisition_status);
-          }
         } catch (verifyError) {
           console.error("Failed to verify status update:", verifyError);
         }
@@ -2398,7 +2365,6 @@ export default function IPDBill() {
       }
 
       const result = await response.json();
-      console.log("File upload result:", result);
 
       if (result.message && result.message.file_url) {
         const fileUrl = result.message.file_url;
@@ -2429,15 +2395,11 @@ export default function IPDBill() {
               }),
             });
 
-            if (fileDocResponse.ok) {
-              console.log("File document created and linked to invoice:", invoiceName);
-            } else {
+            if (!fileDocResponse.ok) {
               console.error("Failed to create File document:", await fileDocResponse.json());
-              // Still return the URL even if linking failed
             }
           } catch (error) {
             console.error("Error creating File document:", error);
-            // Still return the URL even if linking failed
           }
         }
 
@@ -2470,9 +2432,7 @@ export default function IPDBill() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      console.log('Selected visit_id:', visitIdToCheck);
       const url = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${encodeURIComponent(visitIdToCheck)}`;
-      console.log('Backend API endpoint being called:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -2480,22 +2440,17 @@ export default function IPDBill() {
         credentials: 'include',
       });
 
-      console.log('HTTP response status:', response.status);
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const responseData = await response.json();
-      console.log('Complete backend response:', responseData);
 
       const statuses = responseData?.message?.data || responseData?.data || [];
-      console.log('Number of status records received:', statuses.length);
 
       if (statuses.length > 0) {
         setItems((prevItems: any) => {
           const newItems = prevItems.map((item: any) => {
-            console.log(`Checking match for item: itemId=${item.custom_his_item_id}, qbItemId=${item.itemCode}`);
             const matchedStatus = statuses.find((s: any) => {
               const hasValidItemId = s.itemId && s.itemId !== "00000000-0000-0000-0000-000000000000";
               const matchesItemId = hasValidItemId && s.itemId === item.custom_his_item_id;
@@ -2504,7 +2459,6 @@ export default function IPDBill() {
             });
 
             if (matchedStatus && matchedStatus.statusName) {
-              console.log(`Match found for item ${item.itemCode}. Updating PreAuth Status to: ${matchedStatus.statusName}`);
               return {
                 ...item,
                 preAuthStatus: matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase(),
@@ -2514,7 +2468,6 @@ export default function IPDBill() {
             }
             return item;
           });
-          console.log('Final table state after update:', newItems);
           return newItems;
         });
         showAlert("success", "Success", "Pre-auth statuses updated successfully.");
@@ -2756,7 +2709,6 @@ export default function IPDBill() {
         const defaultCompany = await fetchUserDefaultCompany();
         if (defaultCompany) {
           setSelectedCompany(defaultCompany);
-          console.log("Default company set:", defaultCompany);
         }
       }
     };
@@ -2809,14 +2761,10 @@ export default function IPDBill() {
 
         if (taxAccountsResponse.ok) {
           const taxAccountsData = await taxAccountsResponse.json();
-          console.log('Tax accounts response:', taxAccountsData);
           if (taxAccountsData.message) {
             setCgstAccounts(taxAccountsData.message.cgst_accounts || []);
             setSgstAccounts(taxAccountsData.message.sgst_accounts || []);
             setIgstAccounts(taxAccountsData.message.igst_accounts || []);
-            console.log('CGST Accounts:', taxAccountsData.message.cgst_accounts);
-            console.log('SGST Accounts:', taxAccountsData.message.sgst_accounts);
-            console.log('IGST Accounts:', taxAccountsData.message.igst_accounts);
           }
         } else {
           console.error('Failed to fetch tax accounts:', taxAccountsResponse.status, taxAccountsResponse.statusText);
@@ -2851,13 +2799,11 @@ export default function IPDBill() {
           credentials: 'include',
           body: JSON.stringify({ company: selectedCustomer }),
         });
-        console.log("Fetching GST Category for company:", selectedCompany);
 
         if (response.ok) {
           const data = await response.json();
           if (data.gst_category) {
             setGstCategory(data.gst_category);
-            console.log("Fetched GST Category:", data.gst_category);
           }
         } else {
           console.error('Failed to fetch GST category:', response.status, response.statusText);
@@ -2944,41 +2890,15 @@ export default function IPDBill() {
   // Populate payer fields from patient search response
   useEffect(() => {
     if (patientData) {
-      console.log('Patient data changed:', patientData);
-      console.log('Payer details in patient data:', {
-        payerType: patientData.payerType,
-        payerName: patientData.payerName,
-        network: patientData.network,
-        insuranceNo: patientData.insuranceNo,
-        subInsurance: patientData.subInsurance,
-        otherNo: patientData.otherNo,
-        validityFrom: patientData.validityFrom,
-        expiryValidityTo: patientData.expiryValidityTo
-      });
-
-      // Auto-set IPD Effect to OFF when patient is selected
-      // User can manually turn it ON for credit transactions if needed
       setIsIpdEffect(false);
-      console.log('Auto-set IPD Effect to OFF when patient selected');
 
       // Auto-set global Co-Pay % from patient data
       if (patientData.coPay !== undefined && patientData.coPay !== null) {
         setGlobalCoPayPercent(patientData.coPay);
-        console.log('Auto-set global Co-Pay % to:', patientData.coPay);
       }
 
       // Only populate if payer details exist in patient data (from search response)
       if (patientData.payerType || patientData.payerName || patientData.network || patientData.insuranceNo) {
-        console.log('Populating payer fields from patient data');
-        console.log('Setting payerCategory to:', patientData.payerType);
-        console.log('Setting payerName to:', patientData.payerName);
-        console.log('Setting subInsurance to:', patientData.subInsurance);
-        console.log('Setting network to:', patientData.network);
-        console.log('Setting insuranceNo to:', patientData.insuranceNo);
-        console.log('Setting otherNo to:', patientData.otherNo);
-        console.log('Setting validityFrom to:', patientData.validityFrom);
-        console.log('Setting expiryValidityTo to:', patientData.expiryValidityTo);
-
         setPayerCategory(patientData.payerType || '');
         setPayerName(patientData.payerName || '');
         setSubInsurance(patientData.subInsurance || '');
@@ -3023,16 +2943,8 @@ export default function IPDBill() {
           });
         }
 
-        // Set a flag to indicate payer details came from patient search
-        // This prevents visit details from overwriting them
         setPayerDetailsFromSearch(true);
-
-        // If hospitalId is present in patient data, it will be used for sub insurance fetch
-        if (patientData.hospitalId) {
-          console.log('Hospital ID from patient data:', patientData.hospitalId);
-        }
       } else {
-        console.log('No payer details found in patient data');
         setPayerDetailsFromSearch(false);
       }
     }
@@ -3044,7 +2956,6 @@ export default function IPDBill() {
     if (payerCategory && payerCategoryOptions.length > 0) {
       const match = payerCategoryOptions.find(o => (o.value || '').toLowerCase().trim() === payerCategory.toLowerCase().trim());
       if (match && match.value !== payerCategory) {
-        console.log(`Case correcting payerCategory from ${payerCategory} to ${match.value}`);
         setPayerCategory(match.value);
       }
     }
@@ -3054,7 +2965,6 @@ export default function IPDBill() {
     if (network && networkOptions.length > 0) {
       const match = networkOptions.find(o => (o.value || '').toLowerCase().trim() === network.toLowerCase().trim());
       if (match && match.value !== network) {
-        console.log(`Case correcting network from ${network} to ${match.value}`);
         setNetwork(match.value);
       }
     }
@@ -3064,7 +2974,6 @@ export default function IPDBill() {
     if (payerName && payerNameOptions.length > 0) {
       const match = payerNameOptions.find(o => (o.value || '').toLowerCase().trim() === payerName.toLowerCase().trim());
       if (match && match.value !== payerName) {
-        console.log(`Case correcting payerName from ${payerName} to ${match.value}`);
         setPayerName(match.value);
       }
     }
@@ -3074,7 +2983,6 @@ export default function IPDBill() {
     if (subInsurance && subInsuranceOptions.length > 0) {
       const match = subInsuranceOptions.find(o => (o.value || '').toLowerCase().trim() === subInsurance.toLowerCase().trim());
       if (match && match.value !== subInsurance) {
-        console.log(`Case correcting subInsurance from ${subInsurance} to ${match.value}`);
         setSubInsurance(match.value);
       }
     }
@@ -3082,22 +2990,6 @@ export default function IPDBill() {
 
   // Log state changes to detect if values are being cleared
   useEffect(() => {
-    console.log('Payer state changed:', {
-      payerCategory,
-      payerName,
-      subInsurance,
-      network,
-      insuranceNo,
-      otherNo,
-      validityFrom,
-      expiryValidityTo
-    });
-    console.log('Dropdown options:', {
-      payerCategoryOptions,
-      payerNameOptions,
-      subInsuranceOptions,
-      networkOptions
-    });
   }, [payerCategory, payerName, subInsurance, network, insuranceNo, otherNo, validityFrom, expiryValidityTo, payerCategoryOptions, payerNameOptions, subInsuranceOptions, networkOptions]);
 
   // Fetch payer names based on selected payer category
@@ -3173,8 +3065,6 @@ export default function IPDBill() {
         // Get hospital_id from patient data or settings
         const hospitalId = patientData?.hospitalId || 'f1b0f4c7-9f66-48db-b94d-0f4ca190d477'; // Default hospital ID
 
-        console.log('Fetching sub insurance with schema_id:', selectedPayerCompanyId, 'and hospital_id:', hospitalId);
-
         // Fetch Sub Insurance options using Python method with schema_id and hospital_id
         const subInsuranceResponse = await fetch(`https://gmcerp.quantcloud.in/api/method/quantbit_qatar_customization.insurance.get_sub_insurance_list?schema_id=${encodeURIComponent(selectedPayerCompanyId)}&hospital_id=${encodeURIComponent(hospitalId)}`, {
           method: 'GET',
@@ -3214,22 +3104,7 @@ export default function IPDBill() {
   // useEffect to populate payer fields when patient data changes (from visit details)
   useEffect(() => {
     if (patientData && patientData.visitID && patientData.visitID !== "N/A" && patientData.visitID !== "undefined") {
-      console.log('Visit details useEffect triggered with visitID:', patientData.visitID);
-      console.log('payerDetailsFromSearch flag:', payerDetailsFromSearch);
-      console.log('Current payer state in visit useEffect:', {
-        payerCategory,
-        payerName,
-        subInsurance,
-        network,
-        insuranceNo,
-        otherNo,
-        validityFrom,
-        expiryValidityTo
-      });
-
-      // Skip fetching visit details if payer fields are already populated (from patient search or loaded invoice)
       if (payerDetailsFromSearch || (payerCategory && payerName)) {
-        console.log('Skipping visit details fetch for payer fields - they are already populated');
         return;
       }
 
@@ -3252,75 +3127,37 @@ export default function IPDBill() {
             const data = await response.json();
             const visitData = data.data;
 
-            console.log('Visit details fetched:', visitData);
-            console.log('Current payer state before visit details:', {
-              payerCategory,
-              payerName,
-              subInsurance,
-              network,
-              insuranceNo,
-              otherNo,
-              validityFrom,
-              expiryValidityTo
-            });
-
-            // Only populate payer fields from visit details if they don't already have values
-            // This prevents overwriting values from patient search
             if (visitData) {
-              console.log('Visit data has payer fields:', {
-                payer_category: visitData.payer_category,
-                custom_payer_category: visitData.custom_payer_category,
-                payer_name: visitData.payer_name,
-                custom_payer_name: visitData.custom_payer_name,
-              });
-
               if (!payerCategory) {
-                console.log('Setting payerCategory from visit details');
                 setPayerCategory(visitData.payer_category || visitData.custom_payer_category || '');
-              } else {
-                console.log('Skipping payerCategory - already has value:', payerCategory);
               }
+
               if (!payerName) {
-                console.log('Setting payerName from visit details');
                 setPayerName(visitData.payer_name || visitData.custom_payer_name || '');
-              } else {
-                console.log('Skipping payerName - already has value:', payerName);
               }
+              
               if (!subInsurance) {
-                console.log('Setting subInsurance from visit details');
                 setSubInsurance(visitData.sub_insurance || visitData.custom_sub_insurance || '');
-              } else {
-                console.log('Skipping subInsurance - already has value:', subInsurance);
               }
+              
               if (!network) {
-                console.log('Setting network from visit details');
                 setNetwork(visitData.network || visitData.custom_network || '');
-              } else {
-                console.log('Skipping network - already has value:', network);
               }
+              
               if (!insuranceNo) {
-                console.log('Setting insuranceNo from visit details');
                 setInsuranceNo(visitData.insurance_no || visitData.custom_insurance_no || '');
-              } else {
-                console.log('Skipping insuranceNo - already has value:', insuranceNo);
               }
+              
               if (!otherNo) {
-                console.log('Setting otherNo from visit details');
                 setOtherNo(visitData.other_no || visitData.custom_other_no || '');
-              } else {
-                console.log('Skipping otherNo - already has value:', otherNo);
               }
+              
               if (!validityFrom && (visitData.validity_from || visitData.custom_validity_from)) {
-                console.log('Setting validityFrom from visit details');
                 setValidityFrom(new Date(visitData.validity_from || visitData.custom_validity_from));
-              } else {
-                console.log('Skipping validityFrom - already has value:', validityFrom);
               }
+              
               if (!expiryValidityTo && (visitData.validity_to || visitData.custom_validity_to)) {
-                console.log('Setting expiryValidityTo from visit details');
                 setExpiryValidityTo(new Date(visitData.validity_to || visitData.custom_validity_to));
-              } else {
-                console.log('Skipping expiryValidityTo - already has value:', expiryValidityTo);
               }
             }
           }
@@ -3337,7 +3174,6 @@ export default function IPDBill() {
   useEffect(() => {
     const fetchCompanyAddress = async () => {
       if (!selectedCustomer) {
-        console.log('Missing required parameters:', { selectedCustomer });
         setCompanyAddress(null);
         return;
       }
@@ -3362,18 +3198,12 @@ export default function IPDBill() {
           }
         );
 
-        console.log('Fetching Company Billing Address for company:', selectedCustomer);
-        console.log('Response:', response);
-
         const data = await response.json();
-        console.log('Response JSON for Company Address:', data);
 
         if (response.ok && data.message) {
           if (data.message.company_address) {
             setCompanyAddress(data.message.company_address);
-            console.log('Fetched Company Address:', data.message.company_address);
           } else {
-            console.log('No company address found for:', selectedCustomer);
             setCompanyAddress(null);
           }
         } else {
@@ -3512,12 +3342,7 @@ export default function IPDBill() {
     const highAlertClassifications = ["Control drug", "NDPS", "Reserve Antibiotic", "LASA"];
     const classification = item.custom_classification || "";
     const isHighAlert = highAlertClassifications.includes(classification);
-    console.log('Checking high-alert classification:', {
-      itemCode: item.itemCode,
-      itemName: item.itemName,
-      classification,
-      isHighAlert
-    });
+    
     return isHighAlert;
   };
 
@@ -3550,32 +3375,16 @@ export default function IPDBill() {
 
     const isCritical = activeCategories.length > 0;
 
-    console.log('Checking critical categories:', {
-      itemCode: item.itemCode,
-      itemName: item.itemName,
-      isCritical,
-      categories: activeCategories
-    });
-
     return { isCritical, categories: activeCategories };
   };
 
   const handleAddItemToDetails = async (item: Item) => {
-    console.log("handleAddItemToDetails - received item: ", item); // Log here
     try {
-      // Check for duplicate item with same batch
-      console.log("Checking for duplicate:", {
-        newItem: { itemCode: item.itemCode, batchNo: item.batchNo, itemName: item.itemName },
-        existingItems: items.map(i => ({ itemCode: i.itemCode, batchNo: i.batchNo, itemName: i.itemName, id: i.id }))
-      });
-
       const existingItemIndex = items.findIndex(existingItem =>
         existingItem.itemCode === item.itemCode &&
         existingItem.batchNo === item.batchNo &&
-        existingItem.batchNo !== '' // Only check if batchNo is not empty
+        existingItem.batchNo !== ''
       );
-
-      console.log("Duplicate check result:", { existingItemIndex, itemCode: item.itemCode, batchNo: item.batchNo });
 
       if (existingItemIndex !== -1) {
         const rowNum = existingItemIndex + 1; // Convert 0-based index to 1-based row number
@@ -3607,30 +3416,19 @@ export default function IPDBill() {
         const itemsWithPricingRule = await applyPricingRules([{ ...item, rate: finalRate }], selectedCustomer);
         if (itemsWithPricingRule.length > 0 && itemsWithPricingRule[0].rate !== finalRate && itemsWithPricingRule[0].rate !== null) {
           finalRate = itemsWithPricingRule[0].rate;
-          console.log(`Applied pricing rule in handleAddItemToDetails. New rate: ${finalRate}`);
         }
       }
 
-      // Fetch bin_location from Item doctype
-      console.log(`[BinLocation] Fetching bin_location for item: ${item.itemCode}`);
       const binLocation = await fetchBinLocationFromItem(item.itemCode);
-      console.log(`[BinLocation] Fetched bin_location: ${binLocation}`);
 
       // Batch expiry warning check
-      console.log("Batch Expiry Warning Check - finalExpiryDate:", finalExpiryDate);
-      console.log("Batch Expiry Warning Check - Date.now():", Date.now());
       const daysUntilExpiry = Math.round((new Date(finalExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
-      console.log("Batch Expiry Warning Check - daysUntilExpiry:", daysUntilExpiry);
       const customAllowSaleDays = item.custom_allow_sale_days || 0; // Default to 0 if undefined
-      console.log("Batch Expiry Warning Check - customAllowSaleDays:", customAllowSaleDays);
+
       if (customAllowSaleDays > 0) {
         if (daysUntilExpiry > 0 && daysUntilExpiry <= customAllowSaleDays) {
-          console.log(`Batch ${finalBatchNo} of item ${item.itemName} expires in ${daysUntilExpiry} days. Please verify before proceeding.`);
-          console.log("Showing batch expiry warning alert...");
           showAlert("warning", "Batch Expiry Warning", `Batch ${finalBatchNo} of ${item.itemName} will expire in ${daysUntilExpiry} days (Expiry Date: ${finalExpiryDate}). This is within the allowed sale period of ${customAllowSaleDays} days.`);
         } else if (daysUntilExpiry <= 0) {
-          console.log(`Batch ${finalBatchNo} of item ${item.itemName} has already expired. Please verify before proceeding.`);
-          console.log("Showing batch expiry error alert...");
           showAlert("danger", "Batch Expired", `Batch ${finalBatchNo} of ${item.itemName} has already expired (Expiry Date: ${finalExpiryDate}). Cannot add to bill.`);
           return; // Don't add expired batch
         }
@@ -3660,7 +3458,7 @@ export default function IPDBill() {
           covered: preAuthDetails ? !!preAuthDetails.isIncluded : item.covered,
           preAuthRequired: preAuthDetails ? !!preAuthDetails.isPreAuthRequired : item.preAuthRequired,
         });
-        console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
+
         if (newItemWithCalculations) {
           const updatedItems = [...prevItems, newItemWithCalculations];
           // Recalculate totals for all items
@@ -3717,7 +3515,6 @@ export default function IPDBill() {
   const handleSaveAsDraft = async (skipHighAlertCheck: boolean = false) => {
     // Prevent multiple submissions
     if (isSaving) {
-      console.log('Save operation already in progress');
       return;
     }
 
@@ -3746,12 +3543,8 @@ export default function IPDBill() {
 
     // Check for high-alert items and show confirmation if any exist (unless skipped)
     if (!skipHighAlertCheck) {
-      console.log("Checking for high-alert items in save draft, items count:", items.length);
       const highAlertItems = items.filter(item => checkHighAlertClassification(item));
-      console.log("High-alert items found:", highAlertItems.length);
       if (highAlertItems.length > 0) {
-        console.log("Showing high-alert save dialog");
-        // const highAlertItemNames = highAlertItems.map(item => `${item.itemName} (${item.custom_classification})`).join(', ');
         setHighAlertItems(highAlertItems);
         setPendingSaveAction('draft');
         setShowHighAlertSaveDialog(true);
@@ -3779,9 +3572,7 @@ export default function IPDBill() {
 
     // Check if requisition is fully completed
     if (sourceDocumentName && sourceDocumentType === 'requisition') {
-      console.log("Checking requisition completion for:", sourceDocumentName);
       const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
-      console.log("Is requisition fully completed?", isFullyCompleted);
 
       if (isFullyCompleted) {
         showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
@@ -3805,21 +3596,6 @@ export default function IPDBill() {
 
     // Calculate total discount amount for invoice level
     const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
-    // const hasAnyDiscount = items.some(item => (Number(item.discountPercent) || 0) > 0);
-
-    // console.log('Save Draft - Discount calculation debug:', {
-    //   items: items.map(item => ({
-    //     itemCode: item.itemCode,
-    //     discountPercent: item.discountPercent,
-    //     discountAmt: item.discountAmt,
-    //     rate: item.rate
-    //   })),
-    //   totalDiscountAmount,
-    //   hasAnyDiscount
-    // });
-
-    console.log('DEBUG: isIpdEffect value when saving draft:', isIpdEffect);
-    console.log('DEBUG: isIpdEffect type:', typeof isIpdEffect);
 
     const payload = {
       doctype: "Sale Bill",
@@ -3883,22 +3659,6 @@ export default function IPDBill() {
         const totalIgstAmount = igstAmountPerUnit * saleQty;
         const totalAmount = finalAmountPerUnit * saleQty;
         const netAmount = taxableAmountPerUnit * saleQty;
-
-        console.log('Saving item with MRP Inclusive GST (Frappe format):', {
-          itemCode: calculatedItem.itemCode,
-          mrp,
-          saleQty,
-          discountPercent,
-          discountAmountOnMrp,
-          rateAfterDiscount,
-          taxableAmountPerUnit,
-          cgstAmountPerUnit,
-          sgstAmountPerUnit,
-          igstAmountPerUnit,
-          finalAmountPerUnit,
-          totalAmount,
-          netAmount
-        });
 
         return {
           item_code: calculatedItem.itemCode,
@@ -4018,8 +3778,6 @@ export default function IPDBill() {
       is_credit_bill: transactionType === 'credit' ? 1 : 0,
     };
 
-    console.log('DEBUG: Payload being sent:', JSON.stringify(payload, null, 2));
-
     // Construct the taxes array dynamically
     const taxesPayload: any[] = [];
     const taxBaseAmount = totalBillAmount - totalDiscountAmount;
@@ -4108,13 +3866,10 @@ export default function IPDBill() {
     let attachmentUrl: string | null = null;
     let selectedFile: File | null = null;
     if (selectedDocument) {
-      console.log("Preparing to upload document:", selectedDocument.name);
       selectedFile = selectedDocument;
       // Upload the file first to get the URL
       attachmentUrl = await uploadFile(selectedFile);
-      if (attachmentUrl) {
-        console.log("Document uploaded successfully:", attachmentUrl);
-      } else {
+      if (!attachmentUrl) {
         console.warn("File upload failed, saving invoice without attachment");
         showAlert("warning", "Upload Warning", "File upload failed. Invoice saved without attachment.");
         selectedFile = null; // Clear the file if upload failed
@@ -4123,19 +3878,9 @@ export default function IPDBill() {
     // --- END: Handle file upload ---
 
     try {
-      console.log("Final payload for saving draft:", finalPayload); // Log the final payload
-      console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
-      console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-
-      // Check if a draft invoice is already loaded
       if (loadedInvoiceName && loadedInvoiceDocstatus === 0) {
-        // Update existing draft invoice using PUT request
-        console.log("Updating existing draft invoice:", loadedInvoiceName);
-        // Add docstatus: 0 to ensure Frappe recalculates totals
-
-        // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
-        // Convert HeadersInit to plain object for fetch compatibility
+
         const headers = typeof authHeaders === 'string' ?
           JSON.parse(authHeaders) :
           Array.isArray(authHeaders) ?
@@ -4152,7 +3897,6 @@ export default function IPDBill() {
         if (response.ok) {
           const result = await response.json();
           showAlert("success", "Success", `Sale Bill ${loadedInvoiceName} updated successfully!`);
-          console.log("Draft updated:", result);
           // Keep the invoice loaded but don't reset
         } else {
           const errorData = await response.json().catch(() => ({}));
@@ -4176,7 +3920,6 @@ export default function IPDBill() {
           credentials: 'include',
           body: JSON.stringify(finalPayload),
         });
-        console.log(response);
 
         if (response.ok) {
           const result = await response.json();
@@ -4189,12 +3932,10 @@ export default function IPDBill() {
           else if (result.message?.status === "success") {
             // When draft saved successfully
             showAlert("success", "Success", result.message?.message || "Sale Bill saved as draft successfully!");
-            console.log("Draft saved:", result);
 
             // --- START: Link file to invoice if file was uploaded ---
             if (selectedFile && attachmentUrl && result.message?.data?.name) {
               const invoiceName = result.message.data.name;
-              console.log("Linking file to invoice:", invoiceName);
 
               try {
                 const authHeaders = getAuthHeaders();
@@ -4220,7 +3961,6 @@ export default function IPDBill() {
                 });
 
                 if (fileDocResponse.ok) {
-                  console.log("File document created and linked to invoice:", invoiceName);
                   showAlert("success", "File Attached", "Document successfully attached to the invoice.");
                 } else {
                   console.error("Failed to create File document:", await fileDocResponse.json());
@@ -4310,19 +4050,12 @@ export default function IPDBill() {
           // Set warehouse from POS Profile if available
           if (posProfileData.warehouse) {
             setSelectedWarehouse(posProfileData.warehouse);
-            console.log('Warehouse set automatically from POS Profile:', posProfileData.warehouse);
           }
-        } else if (response.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for POS Profile data');
         } else {
           console.error('Failed to fetch POS Profile:', response.status, response.statusText);
         }
       } catch (error: any) {
-        if (error.response?.status === 403) {
-          console.log('Access forbidden (403) - User lacks permission for POS Profile data');
-        } else {
           console.error('Error fetching POS Profile warehouse:', error);
-        }
       }
     };
 
@@ -4335,9 +4068,6 @@ export default function IPDBill() {
     }
 
     try {
-      console.log("Checking for opening entries for POS profile:", posProfile, "and user:", currentUser);
-
-      // Use the same authentication logic as other functions
       const authHeaders = getAuthHeaders();
       // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
@@ -4359,7 +4089,6 @@ export default function IPDBill() {
       );
 
       const result = await response.json();
-      console.log("Opening entries check result:", result);
 
       if (response.ok && result.message) {
         const conflictData = result.message;
@@ -4410,7 +4139,6 @@ export default function IPDBill() {
 
   // Debug: Log patientData and selectedValue changes
   useEffect(() => {
-    console.log("patientData updated:", patientData);
   }, [patientData]);
 
   useEffect(() => {
@@ -4422,8 +4150,6 @@ export default function IPDBill() {
   }, [transactionType]);
 
   const handleSelectRequisition = async (requisition: any) => {
-    console.log("Selected requisition:", requisition);
-    // Set source document information
     setSourceDocumentName(requisition.name);
     setSourceDocumentType('requisition');
     setIsItemsLoadedFromRequisitionOrPrescription(true);
@@ -4454,7 +4180,6 @@ export default function IPDBill() {
         const data = await response.json();
         fullRequisitionData = data.data;
       } else if (response.status === 403) {
-        console.log('Access forbidden (403) - User lacks permission for Patient Requisition details');
         showAlert("warning", "Access Restricted", "You don't have permission to view requisition details. The basic information will be used.");
         // Continue with the basic requisition data we already have
       } else {
@@ -4465,7 +4190,6 @@ export default function IPDBill() {
       }
     } catch (error: any) {
       if (error.response?.status === 403) {
-        console.log('Access forbidden (403) - User lacks permission for Patient Requisition details');
         showAlert("warning", "Access Restricted", "You don't have permission to view requisition details. The basic information will be used.");
         // Continue with the basic requisition data we already have
       } else {
@@ -4483,7 +4207,6 @@ export default function IPDBill() {
         fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
       }
 
-      console.log("Patient Search API request for requisition patient_id:", fullRequisitionData.patient_id);
       const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullRequisitionData.patient_id}&PageIndex=1&PageSize=10&IsExpired=false`, {
         method: 'GET',
         headers: fetchHeaders,
@@ -4504,42 +4227,27 @@ export default function IPDBill() {
       console.error("Failed to fetch patient details:", e);
     }
 
-    // Auto-set customer based on requisition's patient company or default to self-paid
-    console.log('Customer population - requisition data:', fullRequisitionData);
-    console.log('Customer population - patient_company:', fullRequisitionData.patient_company);
-    console.log('Customer population - available customers:', customers);
-
     if (customers && customers.length > 0) {
       // If requisition has a patient company, try to find matching customer
       if (fullRequisitionData.patient_company) {
-        console.log('Looking for customer matching:', fullRequisitionData.patient_company);
         const matchingCustomer = customers.find((customer: any) =>
           customer.label === fullRequisitionData.patient_company || customer.value === fullRequisitionData.patient_company
         );
-        console.log('Found matching customer:', matchingCustomer);
+
         if (matchingCustomer) {
           setSelectedCustomer(matchingCustomer.value);
-          console.log('Set customer to requisition patient company:', matchingCustomer.value);
         } else {
-          // If no matching customer found, default to self-paid
-          console.log('No matching customer found, looking for self-paid customer');
           const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
           if (defaultSelfPaidCustomer) {
             setSelectedCustomer(defaultSelfPaidCustomer.value);
-            console.log('No matching customer found for requisition, defaulted to self-paid:', defaultSelfPaidCustomer.value);
           }
         }
       } else {
-        // If requisition has no patient company, default to self-paid
-        console.log('Requisition has no patient company, looking for self-paid customer');
         const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
         if (defaultSelfPaidCustomer) {
           setSelectedCustomer(defaultSelfPaidCustomer.value);
-          console.log('Requisition has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
         }
       }
-    } else {
-      console.log('No customers available for population');
     }
 
     // Set requisition details
@@ -4583,24 +4291,18 @@ export default function IPDBill() {
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
 
-      console.log(`Processing requisition item: ${itemCode}, requestedQty: ${requestedQty}`);
-
       try {
         // Get the invoiced quantity for this specific item
         const invoicedQty = await getItemInvoicedQuantity(requisition.name, itemCode);
         let remainingQtyToAllocate = requestedQty - invoicedQty;
 
-        console.log(`Item ${itemCode}: Requested=${requestedQty}, Invoiced=${invoicedQty}, Remaining=${remainingQtyToAllocate}`);
-
         // Skip items that are already fully invoiced
         if (remainingQtyToAllocate <= 0) {
-          console.log(`Skipping item ${itemCode} - already fully invoiced`);
           continue;
         }
 
         // Skip items with zero remaining quantity
         if (remainingQtyToAllocate === 0) {
-          console.log(`Skipping item ${itemCode} - no remaining quantity to allocate`);
           continue;
         }
 
@@ -4655,7 +4357,6 @@ export default function IPDBill() {
           const qtyToTake = Math.min(remainingQtyToAllocate, batchAvailableQty);
 
           if (qtyToTake > 0) {
-            console.log(`Adding item: ${itemCode}, batch: ${batch.name}, qty: ${qtyToTake}`);
             const itemRate = await fetchItemPrice(itemCode, batch.name, 'Standard Selling');
             const batchStockQty = await getBatchQty(itemCode, batch.name, warehouse);
 
@@ -4743,7 +4444,6 @@ export default function IPDBill() {
   };
 
   const handleSelectPrescription = async (prescription: any) => {
-    console.log("Selected prescription:", prescription);
     const docId = prescription.name || prescription.prescription_id || prescription.prescription_number;
     const displayNo = prescription.prescription_number || prescription.custom_prescription_no || prescription.prescriptionNo || prescription.name;
 
@@ -5594,7 +5294,6 @@ export default function IPDBill() {
 
       // Fallback: Populate patient details directly from invoice document if search API didn't select patient
       if (!patientSelected && opdCardRef.current) {
-        console.log("Populating patient card directly from invoice fields:", invoicePatient);
         opdCardRef.current.handleSelectPatient(invoicePatient);
       }
 
@@ -5849,8 +5548,6 @@ export default function IPDBill() {
 
         // Log total paid amount for debugging
         const totalPaidAmount = loadedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
-        console.log('Payments loaded successfully. Total paid amount:', totalPaidAmount);
-        console.log('Individual payment amounts:', loadedPayments.map(p => ({ mode: p.paymentMode, amount: p.paidAmount })));
       } else {
         // No payments found, set empty payment record
         setRecordedPayments([{
@@ -5867,7 +5564,6 @@ export default function IPDBill() {
           custom_branch_name: '',
           custom_transaction_no: ''
         }]);
-        console.log('No payments found in loaded invoice, set to 0');
       }
 
       // Reset flag after all data is loaded
@@ -5884,7 +5580,6 @@ export default function IPDBill() {
   const handleFinalizeAndPrint = async (skipHighAlertCheck: boolean = false) => {
     // Prevent multiple submissions
     if (isSaving) {
-      console.log('Submit operation already in progress');
       return;
     }
 
@@ -6095,12 +5790,8 @@ export default function IPDBill() {
 
       // Check for high-alert items and show confirmation if any exist (unless skipped)
       if (!skipHighAlertCheck) {
-        console.log("Checking for high-alert items in finalize, items count:", items.length);
         const highAlertItems = items.filter(item => checkHighAlertClassification(item));
-        console.log("High-alert items found:", highAlertItems.length);
         if (highAlertItems.length > 0) {
-          console.log("Showing high-alert save dialog for finalize");
-          // const highAlertItemNames = highAlertItems.map(item => `${item.itemName} (${item.custom_classification})`).join(', ');
           setHighAlertItems(highAlertItems);
           setPendingSaveAction('finalize');
           setShowHighAlertSaveDialog(true);
@@ -6109,8 +5800,6 @@ export default function IPDBill() {
         }
       }
 
-      // Continue with finalize logic...
-      // Check for items with zero or negative stock
       const itemsWithZeroOrNegativeStock = items.filter(item => (item.stockQty || 0) <= 0);
       if (itemsWithZeroOrNegativeStock.length > 0) {
         const itemNames = itemsWithZeroOrNegativeStock.map(item => `${item.itemName} (Stock: ${item.stockQty})`).join(', ');
@@ -6128,9 +5817,7 @@ export default function IPDBill() {
 
       // Check if requisition is fully completed
       if (sourceDocumentName && sourceDocumentType === 'requisition') {
-        console.log("Checking requisition completion for:", sourceDocumentName);
         const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
-        console.log("Is requisition fully completed?", isFullyCompleted);
 
         if (isFullyCompleted) {
           showAlert("danger", "Error", "Cannot create sale for this requisition: All quantities have already been completed");
@@ -6139,11 +5826,7 @@ export default function IPDBill() {
         }
       }
 
-      // Calculate total discount amount for invoice level
       const totalDiscountAmount = items.reduce((sum, item) => sum + (Number(item.discountAmt) || 0), 0);
-
-      console.log('DEBUG: isIpdEffect value when finalizing:', isIpdEffect);
-      console.log('DEBUG: isIpdEffect type when finalizing:', typeof isIpdEffect);
 
       const payload = {
         doctype: "Sale Bill",
@@ -6175,12 +5858,6 @@ export default function IPDBill() {
         patient_amount: Number(totalPatientAmount) || 0,
         co_pay: Number(globalCoPayPercent) || 0,
 
-        // Add invoice-level discount fields
-        // apply_discount_on: hasAnyDiscount ? "Grand Total" : "",
-        // base_discount_amount: totalDiscountAmount,
-        // discount_amount: totalDiscountAmount,
-        // additional_discount_percentage: hasAnyDiscount ? (totalDiscountAmount / (items.reduce((sum, item) => sum + (Number(item.rate) || 0) * (Number(item.saleQty) || 0), 0))) * 100 : 0,
-
         posting_date: requisitionDate ? requisitionDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         items: items.map(item => {
           // Recalculate to get correct values with MRP Inclusive GST formula
@@ -6191,12 +5868,6 @@ export default function IPDBill() {
           const saleQty = Number(calculatedItem.saleQty) || 0;
           const discountPercent = Number(calculatedItem.discountPercent) || 0;
           const totalGstRate = (Number(calculatedItem.cgstPercent) + Number(calculatedItem.sgstPercent) + Number(calculatedItem.igstPercent)) / 100;
-
-          // When included_in_print_rate = 1, Frappe expects:
-          // rate = MRP - discount_amount (already discounted price, includes GST)
-          // Then Frappe removes GST: taxable_amount = rate / (1 + GST%)
-          // Then Frappe adds GST back: GST = taxable_amount * GST%
-          // Final amount = taxable_amount + GST
 
           // Calculate discount amount on MRP
           const discountAmountOnMrp = mrp * (discountPercent / 100);
@@ -6220,22 +5891,6 @@ export default function IPDBill() {
           const totalIgstAmount = igstAmountPerUnit * saleQty;
           const totalAmount = finalAmountPerUnit * saleQty;
           const netAmount = taxableAmountPerUnit * saleQty;
-
-          console.log('Finalize item with MRP Inclusive GST (Frappe format):', {
-            itemCode: calculatedItem.itemCode,
-            mrp,
-            saleQty,
-            discountPercent,
-            discountAmountOnMrp,
-            rateAfterDiscount,
-            taxableAmountPerUnit,
-            cgstAmountPerUnit,
-            sgstAmountPerUnit,
-            igstAmountPerUnit,
-            finalAmountPerUnit,
-            totalAmount,
-            netAmount
-          });
 
           return {
             item_code: item.itemCode,
@@ -6426,13 +6081,10 @@ export default function IPDBill() {
       let attachmentUrl: string | null = null;
       let selectedFile: File | null = null;
       if (selectedDocument) {
-        console.log("Preparing to upload document for finalize:", selectedDocument.name);
         selectedFile = selectedDocument;
         // Upload the file first to get the URL
         attachmentUrl = await uploadFile(selectedFile);
-        if (attachmentUrl) {
-          console.log("Document uploaded successfully:", attachmentUrl);
-        } else {
+        if (!attachmentUrl) {
           console.warn("File upload failed, saving invoice without attachment");
           showAlert("warning", "Upload Warning", "File upload failed. Invoice saved without attachment.");
           selectedFile = null; // Clear the file if upload failed
@@ -6441,11 +6093,6 @@ export default function IPDBill() {
       // --- END: Handle file upload ---
 
       try {
-        console.log("Final payload for creating submitted invoice:", finalPayload);
-        console.log("Items being sent:", JSON.stringify(finalPayload.items, null, 2)); // Log items with formatting
-        console.log("Sample item custom_bin_location:", finalPayload.items[0]?.custom_bin_location); // Log first item's bin_location
-
-        // Use the same authentication logic as other functions
         const authHeaders = getAuthHeaders();
         // Convert HeadersInit to plain object for fetch compatibility
         const headers = typeof authHeaders === 'string' ?
@@ -6511,13 +6158,6 @@ export default function IPDBill() {
               const patientError = await patientCreateResponse.text();
               console.warn("Patient creation API warning:", patientError);
               showAlert("warning", "Patient Creation", "Invoice submitted successfully, but patient master creation failed.");
-            } else {
-              const patientResult = await patientCreateResponse.json();
-              if (patientResult.status === 'created' || patientResult.message?.status === 'created') {
-                console.log("Patient created from HIMS data:", patientResult.message?.patient || patientResult.patient);
-              } else if (patientResult.status === 'exists' || patientResult.message?.status === 'exists') {
-                console.log("Patient already exists, no action needed:", patientResult.message?.patient || patientResult.patient);
-              }
             }
           } catch (patientError) {
             console.warn("Patient creation request failed:", patientError);
@@ -6526,12 +6166,9 @@ export default function IPDBill() {
         }
 
         showAlert("success", "Success", `Invoice ${invoiceName} created and submitted successfully!`);
-        console.log("Invoice created and submitted:", result);
 
         // --- START: Link file to invoice if file was uploaded ---
         if (selectedFile && attachmentUrl && invoiceName) {
-          console.log("Linking file to finalized invoice:", invoiceName);
-
           try {
             // Use the same authentication logic as other functions
             const authHeaders = getAuthHeaders();
@@ -6558,7 +6195,6 @@ export default function IPDBill() {
             });
 
             if (fileDocResponse.ok) {
-              console.log("File document created and linked to invoice:", invoiceName);
               showAlert("success", "File Attached", "Document successfully attached to the invoice.");
             } else {
               console.error("Failed to create File document:", await fileDocResponse.json());
@@ -6570,8 +6206,6 @@ export default function IPDBill() {
           }
         }
         // --- END: Link file to invoice ---
-
-        // Update state to reflect the loaded invoice
         setLoadedInvoiceName(invoiceName);
         setLoadedInvoiceDocstatus(1);
 
@@ -7219,7 +6853,6 @@ export default function IPDBill() {
           <PatientRequisitionList
             isOpen={showPatientRequisitionList}
             onClose={() => {
-              console.log('Closing PatientRequisitionList');
               setShowPatientRequisitionList(false)
             }}
             onSelectRequisition={handleSelectRequisition}

@@ -48,7 +48,6 @@ export const clearAllCache = (): void => {
     Object.values(CACHE_KEYS).forEach((key) => {
       localStorage.removeItem(key);
     });
-    console.log("All cache cleared from localStorage");
   } catch (error) {
     console.error("Error clearing cache:", error);
   }
@@ -72,8 +71,6 @@ const makeFrappeApiCall = async (
   csrfToken?: string | null
 ) => {
   try {
-    console.log(`Fetching ${resourceName}...`);
-
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -88,10 +85,7 @@ const makeFrappeApiCall = async (
     const isMasked = (secret: string) => secret && secret.includes('***');
 
     if (apiKey && apiSecret && !isMasked(apiSecret)) {
-      console.log(`Using API key authentication for ${resourceName}`);
       headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
-    } else {
-      console.log(`Using session-based authentication for ${resourceName}`);
     }
 
     const response = await fetch(url, {
@@ -101,8 +95,6 @@ const makeFrappeApiCall = async (
       mode: "cors",
       cache: "no-cache",
     });
-
-    console.log(`${resourceName} API Response Status:`, response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -115,7 +107,6 @@ const makeFrappeApiCall = async (
     }
 
     const data = await response.json();
-    console.log(`${resourceName} API Response Data:`, data);
 
     if (!data || !data.data || !Array.isArray(data.data)) {
       console.error("Invalid response format:", data);
@@ -153,14 +144,12 @@ export const useFrappeApi = () => {
   const fetchWarehouses = useCallback(async () => {
     // Check memory cache first
     if (warehouses.length > 0) {
-      console.log("Returning cached warehouses from memory:", warehouses);
       return warehouses;
     }
 
     // Check localStorage cache
     const cachedWarehouses = getFromCache(CACHE_KEYS.WAREHOUSES);
     if (cachedWarehouses && cachedWarehouses.length > 0) {
-      console.log("Returning warehouses from localStorage cache:", cachedWarehouses);
       setWarehouses(cachedWarehouses);
       return cachedWarehouses;
     }
@@ -180,7 +169,7 @@ export const useFrappeApi = () => {
         label: warehouse.warehouse_name || warehouse.name,
         value: warehouse.name,
       }));
-      console.log("Warehouses loaded successfully:", warehouseData);
+
       setWarehouses(warehouseData);
       saveToCache(CACHE_KEYS.WAREHOUSES, warehouseData);
       return warehouseData;
@@ -208,14 +197,12 @@ export const useFrappeApi = () => {
   const fetchBranches = useCallback(async () => {
     // Check memory cache first
     if (branches.length > 0) {
-      console.log("Returning cached branches from memory:", branches);
       return branches;
     }
 
     // Check localStorage cache
     const cachedBranches = getFromCache(CACHE_KEYS.BRANCHES);
     if (cachedBranches && cachedBranches.length > 0) {
-      console.log("Returning branches from localStorage cache:", cachedBranches);
       setBranches(cachedBranches);
       return cachedBranches;
     }
@@ -234,7 +221,7 @@ export const useFrappeApi = () => {
         label: branch.name,
         value: branch.name,
       }));
-      console.log("Branches loaded successfully:", branchData);
+
       setBranches(branchData);
       saveToCache(CACHE_KEYS.BRANCHES, branchData);
       return branchData;
@@ -266,7 +253,6 @@ export const useFrappeApi = () => {
     }
 
     if (kits.length > 0) {
-      console.log("Returning cached kits:", kits);
       return kits;
     }
 
@@ -280,7 +266,7 @@ export const useFrappeApi = () => {
         label: kit.name,
         value: kit.name,
       }));
-      console.log("Kits loaded successfully:", kitData);
+
       setKits(kitData);
       return kitData;
     } catch (error) {
@@ -311,7 +297,6 @@ export const useFrappeApi = () => {
     }
 
     if (classifications.length > 0) {
-      console.log("Returning cached classifications:", classifications);
       return classifications;
     }
 
@@ -324,7 +309,7 @@ export const useFrappeApi = () => {
         label: classification.name,
         value: classification.name,
       }));
-      console.log("Classifications loaded successfully:", classificationData);
+
       setClassifications(classificationData);
       return classificationData;
     } catch (error) {
@@ -355,7 +340,6 @@ export const useFrappeApi = () => {
     }
 
     if (customers.length > 0) {
-      console.log("Returning cached customers:", customers);
       return customers;
     }
 
@@ -369,7 +353,6 @@ export const useFrappeApi = () => {
         value: customer.name,
         isSelfPaid: Boolean(customer.custom_is_self_paid),
       }));
-      console.log("Customers loaded successfully:", customerData);
       setCustomers(customerData);
       return customerData;
     } catch (error) {
@@ -400,7 +383,6 @@ export const useFrappeApi = () => {
     }
 
     if (companies.length > 0) {
-      console.log("Returning cached companies:", companies);
       return companies;
     }
 
@@ -413,7 +395,6 @@ export const useFrappeApi = () => {
         label: company.name,
         value: company.name,
       }));
-      console.log("Companies loaded successfully:", companyData);
       setCompanies(companyData);
       return companyData;
     } catch (error) {
@@ -438,10 +419,7 @@ export const useFrappeApi = () => {
 
   // Fetch branches (local)
   const fetchBranch = useCallback(async () => {
-
-
     if (localBranches.length > 0) {
-      console.log("Returning cached branches:", localBranches);
       return localBranches;
     }
 
@@ -455,7 +433,7 @@ export const useFrappeApi = () => {
         value: branch.name,
         custom_hospital_id: branch.custom_hospital_id,
       }));
-      console.log("Branches loaded successfully:", branchData);
+
       setLocalBranches(branchData);
       return branchData;
     } catch (error) {
@@ -486,7 +464,6 @@ export const useFrappeApi = () => {
     }
 
     if (departments.length > 0) {
-      console.log("Returning cached departments:", departments);
       return departments;
     }
 
@@ -500,7 +477,7 @@ export const useFrappeApi = () => {
         label: department.name,
         value: department.name,
       }));
-      console.log("Departments loaded successfully:", departmentData);
+
       setDepartments(departmentData);
       return departmentData;
     } catch (error) {
@@ -531,7 +508,6 @@ export const useFrappeApi = () => {
     }
 
     if (subDepartments.length > 0) {
-      console.log("Returning cached sub-departments:", subDepartments);
       return subDepartments;
     }
 
@@ -544,7 +520,7 @@ export const useFrappeApi = () => {
         label: subDepartment.name,
         value: subDepartment.name,
       }));
-      console.log("Sub-departments loaded successfully:", subdepartmentData);
+
       setSubDepartments(subdepartmentData);
       return subdepartmentData;
     } catch (error) {
@@ -577,8 +553,6 @@ export const useFrappeApi = () => {
     const url = `${FRAPPE_BASE_URL}/api/method/quantbit_hims_integration.api.pos_api.get_user_default_company`;
 
     try {
-      console.log("Fetching user default company...");
-
       const headers: Record<string, string> = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -621,8 +595,6 @@ export const useFrappeApi = () => {
     const url = `${FRAPPE_BASE_URL}/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_warehouse_for_subdepartment`;
 
     try {
-      console.log(`Fetching warehouse for sub-department: ${subDepartment}...`);
-
       const headers: Record<string, string> = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -665,20 +637,15 @@ export const useFrappeApi = () => {
       return [];
     }
 
-    // Check if the branch parameter looks like a department name (contains "Department")
-    // If so, we need to handle it differently or extract hospital ID from patient data
     let actualBranch = branch;
     if (branch.includes("Department")) {
       console.warn("Department name passed instead of hospital ID. This may cause API errors.");
-      // For now, we'll try to use it as-is, but this might need to be fixed on backend
-      actualBranch = branch; // Keep the original value for now
+      actualBranch = branch;
     }
 
     const url = `${FRAPPE_BASE_URL}/api/method/quantbit_hims_integration.quantbit_hims_integration.doctor_api.get_doctor_list`;
 
     try {
-      console.log(`Fetching doctors for branch/hospital: ${actualBranch}...`);
-
       const headers: Record<string, string> = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -706,7 +673,7 @@ export const useFrappeApi = () => {
         label: doctor.value,
         value: doctor.value, // Use doctor.value for both label and value
       }));
-      console.log("Doctors loaded successfully:", doctorData);
+
       setDoctors(doctorData);
       return doctorData;
     } catch (error) {
