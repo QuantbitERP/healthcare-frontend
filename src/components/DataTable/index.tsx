@@ -181,6 +181,11 @@ export default function DataTableComponent({
   const table = useReactTable({
     data: memoizedData,
     columns: memoizedColumns,
+    initialState: {
+      pagination: {
+        pageSize: 20,
+      },
+    },
     manualSorting: !!onSortChange, // Enable manual sorting when external sorting is used
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting as any,
@@ -643,9 +648,9 @@ export default function DataTableComponent({
     return (
       <div>
         {!loading && table.getRowModel().rows.length > 0 && (
-          <div className="flex justify-between items-center px-6 py-4">
+          <div className="flex justify-between items-center px-6 py-4 flex-shrink-0">
             <div className="text-sm text-muted-foreground">
-              Page {currentPage + 1} of {totalPages}
+              Page {currentPage + 1} of {totalPages || totalPage}
             </div>
 
             <div className="flex items-center space-x-2">
@@ -704,7 +709,7 @@ export default function DataTableComponent({
                     }
                   }
                 }}
-                disabled={currentPage + 1 === totalPages}
+                disabled={paginationMeta ? currentPage + 1 === totalPages : !table.getCanNextPage()}
               >
                 Next
               </Button>
@@ -721,15 +726,14 @@ export default function DataTableComponent({
   }
 
   return (
-    <div>
+    <div className={cn("flex flex-col flex-1 min-h-0 h-full overflow-hidden", className)}>
       {!hideFilters && renderTableFilters()}
       <div
         className={
-          "rounded-md border border-[#D9D9E0] mx-lg flex flex-col overflow-hidden " +
-          className
+          "rounded-md border border-[#D9D9E0] mx-lg flex flex-col flex-1 min-h-0 overflow-hidden"
         }
       >
-        <div className=" overflow-y-auto relative flex-grow ">
+        <div className="overflow-auto relative flex-1 min-h-0">
           <Table
             className="border-collapse-separate border-spacing-0 !border-[#D9D9E0]"
             style={{ width: "100%" }}

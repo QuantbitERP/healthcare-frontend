@@ -127,6 +127,17 @@ export interface Item {
   custom_is_prescribed?: number;
 }
 
+const formatPreAuthDateTimeForApi = (val: any): string => {
+  if (!val) return "";
+  let str = String(val).trim();
+  if (!str) return "";
+  str = str.replace(' ', 'T');
+  if (str.length === 16) {
+    str = `${str}:00`;
+  }
+  return str;
+};
+
 interface ItemSearchProps {
   onSelectItem: (item: Item) => void;
   placeholder?: string;
@@ -3455,8 +3466,8 @@ export default function IPDBill() {
           // Add alternateBatches only if it's an alternative item
           alternateBatches: item.substituteItem ? "1" : "",
           includedInPrintRate: true, // Always consider included_in_print_rate as true
-          covered: preAuthDetails ? !!preAuthDetails.isIncluded : item.covered,
-          preAuthRequired: preAuthDetails ? !!preAuthDetails.isPreAuthRequired : item.preAuthRequired,
+          covered: (preAuthDetails && typeof preAuthDetails.isIncluded === 'boolean') ? preAuthDetails.isIncluded : item.covered,
+          preAuthRequired: (preAuthDetails && typeof preAuthDetails.isPreAuthRequired === 'boolean') ? preAuthDetails.isPreAuthRequired : item.preAuthRequired,
         });
 
         if (newItemWithCalculations) {
@@ -3692,7 +3703,7 @@ export default function IPDBill() {
           pre_auth_req: calculatedItem.preAuthRequired ? "Yes" : "No",
           pre_auth_status: calculatedItem.preAuthStatus || "",
           pre_auth_no: calculatedItem.preAuthNo || "",
-          pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+          pre_auth_date_time: formatPreAuthDateTimeForApi(calculatedItem.preAuthDateTime),
           custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
         };
       }),
@@ -4207,7 +4218,7 @@ export default function IPDBill() {
         fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
       }
 
-      const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullRequisitionData.patient_id}&PageIndex=1&PageSize=10&IsExpired=false`, {
+      const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullRequisitionData.patient_id}&patient_visit_type=OPD&PageIndex=1&PageSize=10&IsExpired=false`, {
         method: 'GET',
         headers: fetchHeaders,
         credentials: 'include',
@@ -4488,10 +4499,9 @@ export default function IPDBill() {
     }
 
     // Store prescription visit_id for Check Status API
-    if (fullPrescriptionData.visit_id) {
-      prescriptionVisitIdRef.current = fullPrescriptionData.visit_id;
-    } else if (prescription.visit_id) {
-      prescriptionVisitIdRef.current = prescription.visit_id;
+    const visitIdToCheck = fullPrescriptionData.visit_id || prescription.visit_id || "";
+    if (visitIdToCheck) {
+      prescriptionVisitIdRef.current = visitIdToCheck;
     } else {
       prescriptionVisitIdRef.current = "";
     }
@@ -4503,26 +4513,129 @@ export default function IPDBill() {
         fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
       }
 
-      const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${fullPrescriptionData.patient_id}&PageIndex=1&PageSize=10&IsExpired=false`, {
-        method: 'GET',
-        headers: fetchHeaders,
-        credentials: 'include',
-      });
+      const patientIdToSearch = fullPrescriptionData.patient_id || fullPrescriptionData.uhid || fullPrescriptionData.custom_uhid || fullPrescriptionData.mrn || fullPrescriptionData.patient || prescription.patient_id || prescription.uhid;
+      let patientSelected = false;
 
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        const patients = searchData.message || [];
-        if (patients.length > 0) {
-          const fetchedPatient = patients[0];
-          if (opdCardRef.current) {
-            opdCardRef.current.handleSelectPatient(fetchedPatient);
-          } else {
-            console.error("opdCardRef is null! Cannot populate patient data.");
+      if (patientIdToSearch) {
+        // Try searching with UHID and OPD filter first
+        const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${encodeURIComponent(patientIdToSearch)}&patient_visit_type=OPD&PageIndex=1&PageSize=10&IsExpired=false`, {
+          method: 'GET',
+          headers: fetchHeaders,
+          credentials: 'include',
+        });
+
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const patients = searchData.message || [];
+          if (patients.length > 0) {
+            const fetchedPatient = patients[0];
+            if (opdCardRef.current) {
+              opdCardRef.current.handleSelectPatient(fetchedPatient);
+              patientSelected = true;
+            }
           }
+        }
+
+        // If search with OPD filter returned no results, try searching without patient_visit_type filter
+        if (!patientSelected) {
+          const searchResAll = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${encodeURIComponent(patientIdToSearch)}&PageIndex=1&PageSize=10&IsExpired=false`, {
+            method: 'GET',
+            headers: fetchHeaders,
+            credentials: 'include',
+          });
+
+          if (searchResAll.ok) {
+            const searchDataAll = await searchResAll.json();
+            const patientsAll = searchDataAll.message || [];
+            if (patientsAll.length > 0) {
+              const fetchedPatient = patientsAll[0];
+              if (opdCardRef.current) {
+                opdCardRef.current.handleSelectPatient(fetchedPatient);
+                patientSelected = true;
+              }
+            }
+          }
+        }
+      }
+
+      // Try searching with Full Name if UHID search yielded no patient
+      if (!patientSelected) {
+        const patientName = fullPrescriptionData.patient_name || fullPrescriptionData.custom_patient_name || prescription.patient_name || prescription.custom_patient_name;
+        if (patientName) {
+          const searchResName = await fetch(`${PATIENT_API_BASE_URL}?search_type=Full+Name&search_value=${encodeURIComponent(patientName)}&PageIndex=1&PageSize=10&IsExpired=false`, {
+            method: 'GET',
+            headers: fetchHeaders,
+            credentials: 'include',
+          });
+
+          if (searchResName.ok) {
+            const searchDataName = await searchResName.json();
+            const patientsName = searchDataName.message || [];
+            if (patientsName.length > 0) {
+              const fetchedPatient = patientsName[0];
+              if (opdCardRef.current) {
+                opdCardRef.current.handleSelectPatient(fetchedPatient);
+                patientSelected = true;
+              }
+            }
+          }
+        }
+      }
+
+      // Fallback: If API returned no results, build patient data directly from fullPrescriptionData / prescription
+      if (!patientSelected) {
+        console.warn("Could not find patient via search_patient API, constructing patient data from prescription document");
+        const fallbackPatient = {
+          patientFullName: fullPrescriptionData.patient_name || fullPrescriptionData.custom_patient_name || prescription.patient_name || prescription.custom_patient_name || "N/A",
+          mrn: patientIdToSearch || fullPrescriptionData.mrn || fullPrescriptionData.custom_uhid || prescription.mrn || "N/A",
+          custom_uhid: patientIdToSearch || fullPrescriptionData.mrn || fullPrescriptionData.custom_uhid || prescription.mrn || "N/A",
+          displayNo: patientIdToSearch || fullPrescriptionData.mrn || prescription.mrn || "N/A",
+          mobileNo: fullPrescriptionData.mobile_no || fullPrescriptionData.phone_no || fullPrescriptionData.custom_phone || prescription.mobile_no || "",
+          age: fullPrescriptionData.age || fullPrescriptionData.custom_age || prescription.age || "",
+          gender: fullPrescriptionData.gender || fullPrescriptionData.sex || prescription.gender || "",
+          patientVisitType: fullPrescriptionData.visit_type || fullPrescriptionData.custom_visit_type || "OPD",
+          visitType: fullPrescriptionData.visit_type || fullPrescriptionData.custom_visit_type || "OPD",
+          patientCompany: fullPrescriptionData.patient_company || fullPrescriptionData.company || prescription.patient_company || "",
+          consultingDoctor: fullPrescriptionData.consulting_doctor || fullPrescriptionData.doctor_name || prescription.consulting_doctor || "",
+          departmentName: fullPrescriptionData.department_name || fullPrescriptionData.department || prescription.department_name || "",
+          visitID: visitIdToCheck || "",
+          visitNumber: visitIdToCheck || "",
+        };
+
+        if (opdCardRef.current) {
+          opdCardRef.current.handleSelectPatient(fallbackPatient);
         }
       }
     } catch (e) {
       console.error("Failed to fetch patient details:", e);
+    }
+
+    // Fetch pre-auth / service statuses for visit to check item coverage and pre-auth status
+    let preAuthStatuses: any[] = [];
+    if (visitIdToCheck) {
+      try {
+        const authHeaders = getAuthHeaders();
+        const headers = typeof authHeaders === 'string' ?
+          JSON.parse(authHeaders) :
+          Array.isArray(authHeaders) ?
+            Object.fromEntries(authHeaders) :
+            authHeaders;
+
+        const preAuthUrl = `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.preauth_api.get_service_status_by_visit_id?visit_id=${encodeURIComponent(visitIdToCheck)}`;
+
+        const preAuthRes = await fetch(preAuthUrl, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+
+        if (preAuthRes.ok) {
+          const preAuthData = await preAuthRes.json();
+          preAuthStatuses = preAuthData?.message?.data || preAuthData?.data || [];
+        }
+      } catch (err) {
+        console.error("Error fetching pre-auth status when loading prescription:", err);
+      }
     }
 
 
@@ -4591,6 +4704,66 @@ export default function IPDBill() {
     for (const reqItem of fullPrescriptionData.patient_requisition_item_details) {
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
+      const hisItemId = reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "";
+
+      // Match item in preAuthStatuses
+      const matchedStatus = preAuthStatuses.find((s: any) => {
+        const hasValidItemId = s.itemId && s.itemId !== "00000000-0000-0000-0000-000000000000";
+        const matchesItemId = hasValidItemId && (s.itemId === hisItemId || s.itemId === reqItem.custom_his_item_id || s.itemId === reqItem.name);
+        const matchesQbItemId = s.qbItemId && (s.qbItemId === itemCode || s.qbItemId === reqItem.item_name);
+        return matchesItemId || matchesQbItemId;
+      });
+
+      // Match item in patient's preauth pharmacy details ref
+      const preAuthDetails = !!hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null;
+
+      // Determine pre-auth status, pre-auth no, pre-auth datetime
+      const statusName = matchedStatus?.statusName ?
+        (matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase()) :
+        (reqItem.pre_auth_status || "");
+      const preAuthNo = matchedStatus?.preAuthNumber || reqItem.pre_auth_no || "";
+      const preAuthDateTime = matchedStatus?.preAuthDate || reqItem.pre_auth_date_time || "";
+
+      // Determine if covered
+      let isItemCovered = false;
+      if (preAuthDetails && typeof preAuthDetails.isIncluded === 'boolean') {
+        isItemCovered = preAuthDetails.isIncluded;
+      } else if (matchedStatus || (statusName !== "" && statusName !== "Rejected")) {
+        isItemCovered = true;
+      } else if (
+        reqItem.covered === 1 ||
+        reqItem.covered === true ||
+        reqItem.covered === "Yes" ||
+        reqItem.covered === "1" ||
+        reqItem.is_covered === 1 ||
+        reqItem.is_covered === true ||
+        reqItem.is_covered === "Yes"
+      ) {
+        isItemCovered = true;
+      } else {
+        const patientComp = fullPrescriptionData.patient_company || fullPrescriptionData.company || prescription.patient_company;
+        isItemCovered = !!patientComp;
+      }
+
+      // Determine preAuthRequired
+      let isPreAuthReq = false;
+      if (preAuthDetails && typeof preAuthDetails.isPreAuthRequired === 'boolean') {
+        isPreAuthReq = preAuthDetails.isPreAuthRequired;
+      } else if (matchedStatus && typeof matchedStatus.isPreAuthRequired === 'boolean') {
+        isPreAuthReq = matchedStatus.isPreAuthRequired;
+      } else {
+        const rawPreAuthReq = reqItem.pre_auth_req ?? reqItem.pre_auth_required ?? reqItem.is_pre_auth_required ?? reqItem.preauth_required ?? reqItem.is_pre_auth;
+        if (rawPreAuthReq !== undefined && rawPreAuthReq !== null && rawPreAuthReq !== "") {
+          isPreAuthReq = (
+            rawPreAuthReq === 1 ||
+            rawPreAuthReq === true ||
+            rawPreAuthReq === "Yes" ||
+            rawPreAuthReq === "1"
+          );
+        } else if (isItemCovered) {
+          isPreAuthReq = true;
+        }
+      }
 
       try {
         // Get the invoiced quantity for this specific item from prescription
@@ -4639,14 +4812,14 @@ export default function IPDBill() {
             packageName: "",
             binLocation: "",
             hasStock: false, // Mark as no stock
-            covered: reqItem.covered === 1 || reqItem.covered === true,
-            preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
-            preAuthStatus: reqItem.pre_auth_status || "",
-            preAuthNo: reqItem.pre_auth_no || "",
-            preAuthDateTime: reqItem.pre_auth_date_time || "",
+            covered: isItemCovered,
+            preAuthRequired: isPreAuthReq,
+            preAuthStatus: statusName,
+            preAuthNo: preAuthNo,
+            preAuthDateTime: preAuthDateTime,
             coPayPercentage: reqItem.co_pay || 0,
             isFromPrescription: true,
-            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
+            custom_his_item_id: hisItemId,
           };
           await handleAddItemToDetails(itemWithoutStock);
           showAlert("warning", "Warning", `No stock available for item ${itemCode} from prescription. Item added to grid with no stock indicator.`);
@@ -4695,14 +4868,14 @@ export default function IPDBill() {
               kitName: "", // Add kitName
               packageName: "",
               binLocation: "",
-              covered: reqItem.covered === 1 || reqItem.covered === true,
-              preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
-              preAuthStatus: reqItem.pre_auth_status || "",
-              preAuthNo: reqItem.pre_auth_no || "",
-              preAuthDateTime: reqItem.pre_auth_date_time || "",
+              covered: isItemCovered,
+              preAuthRequired: isPreAuthReq,
+              preAuthStatus: statusName,
+              preAuthNo: preAuthNo,
+              preAuthDateTime: preAuthDateTime,
               coPayPercentage: reqItem.co_pay || 0,
               isFromPrescription: true,
-              custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
+              custom_his_item_id: hisItemId,
             };
             await handleAddItemToDetails(itemToAdd);
             remainingQtyToAllocate -= qtyToTake;
@@ -4742,14 +4915,14 @@ export default function IPDBill() {
             kitName: "",
             packageName: "",
             binLocation: "",
-            covered: reqItem.covered === 1 || reqItem.covered === true,
-            preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
-            preAuthStatus: reqItem.pre_auth_status || "",
-            preAuthNo: reqItem.pre_auth_no || "",
-            preAuthDateTime: reqItem.pre_auth_date_time || "",
+            covered: isItemCovered,
+            preAuthRequired: isPreAuthReq,
+            preAuthStatus: statusName,
+            preAuthNo: preAuthNo,
+            preAuthDateTime: preAuthDateTime,
             coPayPercentage: reqItem.co_pay || 0,
             isFromPrescription: true,
-            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
+            custom_his_item_id: hisItemId,
           };
           await handleNoBatchesFound(originalItemForAltPartial);
         }
@@ -5270,7 +5443,7 @@ export default function IPDBill() {
             fetchHeaders['Authorization'] = `token ${apiKey}:${apiSecret}`;
           }
 
-          const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${searchUHID}&PageIndex=1&PageSize=10&IsExpired=false`, {
+          const searchRes = await fetch(`${PATIENT_API_BASE_URL}?search_type=UHID&search_value=${searchUHID}&patient_visit_type=OPD&PageIndex=1&PageSize=10&IsExpired=false`, {
             method: 'GET',
             headers: fetchHeaders,
             credentials: 'include',
@@ -5924,7 +6097,7 @@ export default function IPDBill() {
             pre_auth_req: calculatedItem.preAuthRequired ? "Yes" : "No",
             pre_auth_status: calculatedItem.preAuthStatus || "",
             pre_auth_no: calculatedItem.preAuthNo || "",
-            pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+            pre_auth_date_time: formatPreAuthDateTimeForApi(calculatedItem.preAuthDateTime),
             custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
           };
         }),
@@ -6864,6 +7037,7 @@ export default function IPDBill() {
             isOpen={showPrescriptionList}
             onClose={() => setShowPrescriptionList(false)}
             onSelectPrescription={handleSelectPrescription}
+            isIPDPage={false}
           />
         )}
 

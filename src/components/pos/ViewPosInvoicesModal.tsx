@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { getAuthHeaders } from '../../utils/sessionAuth';
 import { securePrintPdf } from '@/utils/printHelper';
 import Button from "@/components/buttons/Button";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Button as UIButton } from "@/components/ui/button";
 import DataTableComponent, { TableCellComponents } from '../DataTable';
 import { Eye, Search, X } from 'lucide-react';
 
@@ -71,11 +73,11 @@ interface Invoice {
 
 const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [invoiceNumberSearchTerm, setInvoiceNumberSearchTerm] = useState('');
   const [patientNameSearchTerm, setPatientNameSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<{ from: Date | undefined, to: Date | undefined }>({ from: undefined, to: undefined });
-    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showItemsModal, setShowItemsModal] = useState(false);
   const [itemsForModal, setItemsForModal] = useState<any[]>([]);
@@ -83,11 +85,13 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const { } = useAuth();
   const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchedParamsRef = useRef<string>('');
 
   const fetchInvoices = async (invoiceNumber: string, patientName: string, dates: { from: Date | undefined, to: Date | undefined }) => {
     // Skip POS profile validation when showing only returns
     if (!posProfile && !showOnlyReturns) {
       showAlert("danger", "Error", "POS Profile is missing.");
+      setLoading(false);
       return;
     }
 
@@ -177,30 +181,55 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   };
 
   useEffect(() => {
-    if (isOpen) {
-      const today = new Date();
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      const initialDateRange = { from: yesterday, to: today };
-      setDateRange(initialDateRange);
-      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, { from: yesterday, to: today });
+    if (!isOpen) {
+      lastFetchedParamsRef.current = '';
+      setLoading(true);
+      return;
     }
-  }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns]);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-      searchTimeoutRef.current = setTimeout(() => {
-        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
-      }, 500); // Debounce search
+    const currentDates = dateRange.from ? dateRange : {
+      from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      to: new Date()
+    };
+
+    if (!dateRange.from) {
+      setDateRange(currentDates);
     }
+
+    const paramsKey = JSON.stringify({
+      isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns,
+      invoiceNumberSearchTerm, patientNameSearchTerm,
+      from: currentDates.from?.toISOString().split('T')[0],
+      to: currentDates.to?.toISOString().split('T')[0]
+    });
+
+    if (lastFetchedParamsRef.current === paramsKey) {
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const isInitialLoad = lastFetchedParamsRef.current === '';
+    lastFetchedParamsRef.current = paramsKey;
+
+    if (isInitialLoad) {
+      // Execute immediate fetch on initial modal open for stable loading skeletons
+      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, currentDates);
+    } else {
+      // Debounce user typing search changes
+      searchTimeoutRef.current = setTimeout(() => {
+        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, currentDates);
+      }, 300);
+    }
+
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [invoiceNumberSearchTerm, patientNameSearchTerm, dateRange, isOpen]);
+  }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns, invoiceNumberSearchTerm, patientNameSearchTerm, dateRange]);
 
   const handleViewDetails = async (invoice: Invoice) => {
     console.log('Selected invoice details:', invoice); // Debug log
@@ -300,28 +329,15 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-start justify-center z-[1000] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl my-4 overflow-hidden modal-enter max-h-[calc(100vh-2rem)] flex flex-col">
+    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[calc(100vh-5rem)] flex flex-col my-auto overflow-hidden modal-enter">
         {/* Header */}
-        <div className="bg-gradient-to-r px-6 py-4 text-white sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                <Search className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-black">Sale Bills</h2>
-                <p className="text-black text-xs mt-1">Manage and track all your invoices</p>
-              </div>
-            </div>
-            <button
-              className="w-8 h-8 rounded-xl bg-white bg-opacity-20 hover:bg-opacity-30 flex items-center justify-center text-white transition-all duration-200 hover:scale-105"
-              onClick={onClose}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
+          <CardTitle className="text-lg font-semibold text-gray-900">Sale Bills</CardTitle>
+          <UIButton onClick={onClose} variant="ghost" size="icon" className="p-0">
+            <X className="h-5 w-5" />
+          </UIButton>
+        </CardHeader>
 
         {/* Search Inputs */}
         <div className="px-6 py-4 border-b border-gray-200 space-y-4">
@@ -349,91 +365,89 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
           </div>
         </div>
 
-        {/* Invoice Count */}
-        {/* <div className="px-6 py-2 bg-gray-50 border-b border-gray-200">
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-semibold text-gray-900">{invoices.length}</span> invoices
-          </div>
-        </div> */}
+        {/* Scrollable DataTable Section */}
+        <div className="flex-1 overflow-hidden p-4 min-h-0 flex flex-col">
+          <DataTableComponent
+            columns={[
+              { accessorKey: 'idx', header: 'IDX', cell: ({ row }: any) => row.index + 1 },
+              { accessorKey: 'name', header: 'Invoice No' },
+              { accessorKey: 'customer', header: 'Customer' },
+              {
+                accessorKey: 'custom_patient_name', header: 'Patient', cell: ({ getValue }: any) => (
+                  <TableCellComponents type="user" value={getValue()} />
+                ),
+              },
+              { accessorKey: 'posting_date', header: 'Date', cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString() },
+              { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
+              { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${row.original.rounded_total.toFixed(2)}` },
+              { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
+              { accessorKey: 'visit_type', header: 'Visit Type', cell: ({ row }: any) => row.original.visit_type || '-' },
+              {
+                id: isIPDPage ? 'ipd_effect' : 'opd_effect',
+                header: isIPDPage ? 'IPD Effect' : 'OPD Effect',
+                cell: ({ row }: any) => {
+                  const hasEffect = isIPDPage
+                    ? row.original.custom_ipd_effect === 1
+                    : row.original.custom_opd_effect === 1;
 
-        <DataTableComponent
-          columns={[
-            { accessorKey: 'idx', header: 'IDX', cell: ({ row }: any) => row.index + 1 },
-            { accessorKey: 'name', header: 'Invoice No' },
-            { accessorKey: 'customer', header: 'Customer' },
-            {
-              accessorKey: 'custom_patient_name', header: 'Patient', cell: ({ getValue }: any) => (
-                <TableCellComponents type="user" value={getValue()} />
-              ),
-            },
-            { accessorKey: 'posting_date', header: 'Date', cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString() },
-            { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
-            { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${row.original.rounded_total.toFixed(2)}` },
-            { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
-            { accessorKey: 'visit_type', header: 'Visit Type', cell: ({ row }: any) => row.original.visit_type || '-' },
-            {
-              id: isIPDPage ? 'ipd_effect' : 'opd_effect',
-              header: isIPDPage ? 'IPD Effect' : 'OPD Effect',
-              cell: ({ row }: any) => {
-                const hasEffect = isIPDPage
-                  ? row.original.custom_ipd_effect === 1
-                  : row.original.custom_opd_effect === 1;
-
-                return (
-                  <div className="flex items-center justify-center">
-                    {hasEffect ? (
-                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="">
-                        <span className="text-gray-400 text-xs"></span>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-            },
-            { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }: any) => new Date(row.original.modified).toLocaleDateString() },
-            {
-              accessorKey: 'modified_by', header: 'Modified By', cell: ({ getValue }: any) => (
-                <TableCellComponents type="user" value={getValue()} />
-              ),
-            },
-            { id: 'action', header: 'Actions', cell: ({ row }: any) => <Button type="secondary-button" size="button-small" onClick={() => handleViewDetails(row.original)}>View</Button> },
-          ]}
-          data={invoices}
-          loading={loading}
-          columnNames={{
-            idx: 'IDX',
-            name: 'Invoice No',
-            customer: 'Customer',
-            custom_patient_name: 'Patient',
-            posting_date: 'Date',
-            posting_time: 'Time',
-            rounded_total: 'Amount',
-            status: 'Status',
-            visit_type: 'Visit Type',
-            ...(isIPDPage ? { ipd_effect: 'IPD Effect' } : { opd_effect: 'OPD Effect' }),
-            modified: 'Modified Date',
-            modified_by: 'Modified By',
-            action: 'Actions',
-          }}
-          hideFilters={true}
-          hideMeFilter={true}
-          onFilterClick={() => {}}
-          hideDatePicker={false}
-          onDataChange={(dates) => setDateRange({ from: dates?.from || undefined, to: dates?.to || undefined })}
-          hideShowColumns={true}
-        />
+                  return (
+                    <div className="flex items-center justify-center">
+                      {hasEffect ? (
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="">
+                          <span className="text-gray-400 text-xs"></span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+              },
+              { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }: any) => new Date(row.original.modified).toLocaleDateString() },
+              {
+                accessorKey: 'modified_by', header: 'Modified By', cell: ({ getValue }: any) => (
+                  <TableCellComponents type="user" value={getValue()} />
+                ),
+              },
+              { id: 'action', header: 'Actions', cell: ({ row }: any) => <Button type="secondary-button" size="button-medium" onClick={() => handleViewDetails(row.original)}>View</Button> },
+            ]}
+            data={invoices}
+            loading={loading}
+            columnNames={{
+              idx: 'IDX',
+              name: 'Invoice No',
+              customer: 'Customer',
+              custom_patient_name: 'Patient',
+              posting_date: 'Date',
+              posting_time: 'Time',
+              rounded_total: 'Amount',
+              status: 'Status',
+              visit_type: 'Visit Type',
+              ...(isIPDPage ? { ipd_effect: 'IPD Effect' } : { opd_effect: 'OPD Effect' }),
+              modified: 'Modified Date',
+              modified_by: 'Modified By',
+              action: 'Actions',
+            }}
+            hideFilters={true}
+            hideMeFilter={true}
+            onFilterClick={() => {}}
+            hideDatePicker={false}
+            onDataChange={(dates) => setDateRange({ from: dates?.from || undefined, to: dates?.to || undefined })}
+            hideShowColumns={true}
+            autoSize={true}
+            className="h-full"
+          />
+        </div>
 
         {/* Footer Actions */}
         <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end sticky bottom-0 z-10">
@@ -445,7 +459,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
       {/* Invoice Details Mini-Popup */}
       {showDetailsModal && selectedInvoice && (
-        <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-[1001] p-4">
+        <div className="fixed top-[56px] inset-x-0 bottom-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto relative">
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
@@ -522,7 +536,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
       {/* Items List Mini-Popup */}
       {showItemsModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[1002] p-4">
+        <div className="fixed top-[56px] inset-x-0 bottom-0 bg-black/70 flex items-center justify-center z-[51] p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[70vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="bg-gradient-to-r from-white-600 to-white-700 px-6 py-4 flex items-center justify-between">

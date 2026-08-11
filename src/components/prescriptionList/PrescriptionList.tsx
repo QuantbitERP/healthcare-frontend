@@ -103,6 +103,7 @@ interface Prescription {
   doctor_id: string;
   department: string;
   visit_id: string;
+  visit_type?: string;
   start_date: string;
   end_date: string;
   prescription_status?: "Pending" | "Completed";
@@ -116,12 +117,14 @@ interface PrescriptionListProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectPrescription: (prescription: Prescription) => void;
+  isIPDPage?: boolean;
 }
 
 const PrescriptionList: React.FC<PrescriptionListProps> = ({
   isOpen,
   onClose,
   onSelectPrescription,
+  isIPDPage = false,
 }) => {
   const { apiKey, apiSecret } = useAuth();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -153,28 +156,14 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     try {
       // Build query parameters
       const params: any = {
-        fields: JSON.stringify([
-          "name",
-          "prescription_number",
-          "custom_prescription_no",
-          "prescription_no",
-          "creation",
-          "full_name",
-          "patient_id",
-          "doctor",
-          "department",
-          "visit_id",
-          "requisition_from",
-          "mobile_number",
-          "aadhar_no"
-        ]),
+        fields: JSON.stringify(["*"]),
         limit_page_length: "2000000",
         order_by: "creation desc"
       };
 
       // Build filters array
       const filters: any[] = [
-        ["name", "like", "PR%"], // Add this filter to show only prescriptions
+        ["is_requisition", "=", 0], // Filter to show prescriptions (is_requisition = 0)
       ];
 
       if (search?.trim()) {
@@ -182,7 +171,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
           ["full_name", "like", `%${search.trim()}%`],
           ["patient_id", "like", `%${search.trim()}%`],
           ["mobile_number", "like", `%${search.trim()}%`],
-          ["aadhar_no", "like", `%${search.trim()}%`]
+          ["aadhar_no", "like", `%${search.trim()}%`],
+          ["prescription_no", "like", `%${search.trim()}%`]
         ]);
       }
 
@@ -215,17 +205,42 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
 
       const data: any[] = response.data.data || [];
 
-      // Store all prescriptions for summary
-      const allTransformedData = data.map((item: any, index: number) => ({
+      const getVisitType = (item: any) => {
+        const rawVType = item.visit_type || item.patient_visit_type || item.custom_visit_type || "";
+        if (rawVType) {
+          const upper = rawVType.toString().trim().toUpperCase();
+          if (upper === "IPD" || upper === "IP" || upper.includes("INPATIENT")) return "IPD";
+          if (upper === "OPD" || upper === "OP" || upper.includes("OUTPATIENT")) return "OPD";
+          return rawVType;
+        }
+        if (item.custom_is_ipd_invoice === 1 || item.custom_ipd_effect === 1) {
+          return "IPD";
+        }
+        return "OPD";
+      };
+
+      // Filter raw data according to page visit type context (isIPDPage)
+      const typeFilteredData = data.filter((item: any) => {
+        const vType = getVisitType(item);
+        if (isIPDPage) {
+          return vType === "IPD" || vType === "IP" || vType.includes("INPATIENT");
+        } else {
+          return vType === "OPD" || vType === "OP" || vType.includes("OUTPATIENT") || (!item.visit_type && !item.patient_visit_type && !item.custom_visit_type && !item.custom_is_ipd_invoice && !item.custom_ipd_effect);
+        }
+      });
+
+      // Store all prescriptions matching the visit type for summary
+      const allTransformedData = typeFilteredData.map((item: any, index: number) => ({
         id: index + 1,
         name: item.name || "",
-        prescription_number: item.custom_prescription_no || item.prescription_no || item.prescription_number || item.name || "",
+        prescription_number: item.prescription_no || item.display_number || item.prescription_number || item.custom_prescription_no || item.name || "",
         prescription_date: item.creation || "",
         patient_name: item.full_name || "",
         patient_id: item.patient_id || "",
         doctor_id: item.doctor || "",
         department: item.department || item.requisition_from || "",
         visit_id: item.visit_id || "",
+        visit_type: getVisitType(item),
         start_date: item.start_date || "",
         end_date: item.end_date || "",
         mobile_number: item.mobile_number || "",
@@ -233,9 +248,9 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       }));
 
       // Filter out completed prescriptions if showCompleted is false
-      let filteredData = data;
+      let filteredData = typeFilteredData;
       if (!showCompleted) {
-        filteredData = data.filter(
+        filteredData = typeFilteredData.filter(
           (prescription: Prescription) => prescription.prescription_status !== "Completed"
         );
       }
@@ -243,13 +258,14 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       const transformedData = filteredData.map((item: any, index: number) => ({
         id: index + 1,
         name: item.name || "",
-        prescription_number: item.custom_prescription_no || item.prescription_no || item.prescription_number || item.name || "",
+        prescription_number: item.prescription_no || item.display_number || item.prescription_number || item.custom_prescription_no || item.name || "",
         prescription_date: item.creation || "",
         patient_name: item.full_name || "",
         patient_id: item.patient_id || "",
         doctor_id: item.doctor || "",
         department: item.department || item.requisition_from || "",
         visit_id: item.visit_id || "",
+        visit_type: getVisitType(item),
         start_date: item.start_date || "",
         end_date: item.end_date || "",
         mobile_number: item.mobile_number || "",
@@ -265,7 +281,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [apiKey, apiSecret, showCompleted]);
+  }, [apiKey, apiSecret, showCompleted, isIPDPage]);
 
 
 
@@ -340,6 +356,21 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         <TableCellComponents type="date" value={getValue()} />
       ),
     },
+    {
+      accessorKey: "visit_type",
+      header: "Visit Type",
+      cell: ({ getValue }: any) => {
+        const val = getValue() || "OPD";
+        const isIPD = val === "IPD" || val === "IP" || val.includes("INPATIENT");
+        return (
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            isIPD ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
+          }`}>
+            {isIPD ? "IPD" : "OPD"}
+          </span>
+        );
+      },
+    },
     // {
     //   accessorKey: "visit_id",
     //   header: "Visit ID",
@@ -409,6 +440,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const columnNames = {
     prescription_number: "Prescription Number",
     prescription_date: "Prescription Date",
+    visit_type: "Visit Type",
     visit_id: "Visit ID",
     department: "Department",
     patient_name: "Patient Name",
@@ -422,8 +454,8 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 bg-opacity-50">
-      <Card className="w-[95vw] max-w-6xl max-h-[95vh] flex flex-col">
+    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <Card className="w-[95vw] max-w-6xl max-h-[calc(100vh-5rem)] flex flex-col my-auto shadow-2xl">
         <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
           <CardTitle className="text-lg font-semibold">Prescription Details</CardTitle>
           <UIButton onClick={onClose} variant="ghost" size="icon" className="p-0">
@@ -536,7 +568,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
           </div>
 
           {/* Scrollable DataTable Section */}
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-hidden p-4 min-h-0 flex flex-col">
             {/* DataTableComponent with built-in search and date filters */}
             <DataTableComponent
               pageName="Prescription"

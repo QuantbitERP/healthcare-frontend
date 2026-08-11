@@ -387,7 +387,8 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
 
         const transformedData = filteredRequisitions.map((item: any, index: number) => ({
           id: index + 1,
-          name: item.name,
+          name: item.prescription_no || item.display_number || item.prescription_number || item.name,
+          raw_name: item.name,
           patient_id: item.patient_id || "",
           patient_name: item.full_name || "",
           doctor: item.doctor || "",
@@ -405,7 +406,8 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
 
         setAllRequisitions(processedRequisitions.map((item: any, index: number) => ({
           id: index + 1,
-          name: item.name,
+          name: item.prescription_no || item.display_number || item.prescription_number || item.name,
+          raw_name: item.name,
           patient_id: item.patient_id || "",
           patient_name: item.full_name || "",
           doctor: item.doctor || "",
@@ -589,8 +591,8 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 bg-opacity-50">
-      <Card className="w-[95vw] max-w-6xl max-h-[95vh] flex flex-col">
+    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <Card className="w-[95vw] max-w-6xl max-h-[calc(100vh-5rem)] flex flex-col my-auto shadow-2xl">
         <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
           <CardTitle className="text-lg font-semibold">Patient Requisition List</CardTitle>
           <UIButton onClick={onClose} variant="ghost" size="icon" className="p-0">
@@ -778,7 +780,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
           </div>
 
           {/* Scrollable DataTable Section */}
-          <div className="flex-1 overflow-auto" style={{ height: 'calc(95vh - 200px)' }}>
+          <div className="flex-1 overflow-hidden p-4 min-h-0 flex flex-col">
             <DataTableComponent
               pageName="Patient Requisition"
               isRowSelectable={false}
@@ -798,6 +800,7 @@ const PatientRequisitionList: React.FC<PatientRequisitionListProps> = ({
               hideMeFilter={true}
               hideShowColumns={true}
               autoSize={true}
+              className="h-full"
             />
           </div>
         </CardContent>

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperat
 import Image from 'next/image';
 import Avatar from 'react-avatar';
 import Button from '../buttons/Button';
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 // import Tags from '@/components/statusTags/Tags';
 
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -292,12 +293,14 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
 
             try {
                 const apiParam = searchType === "uhid" ? "UHID" : searchType === "aadharCardNo" ? "Aadhar No" : searchType === "mobile" ? "Mobile No" : searchType === "fullName" ? "Full Name" : "Aadhar No";
-                console.log("API call with param:", apiParam, "and value:", value);
+                const visitTypeParam = isIPDPage ? "IPD" : "OPD";
+                console.log("API call with param:", apiParam, "value:", value, "visitType:", visitTypeParam);
 
                 const response = await axios.get(PATIENT_API_BASE_URL, {
                     params: {
                         search_type: apiParam,
                         search_value: value,
+                        patient_visit_type: visitTypeParam,
                         PageIndex: "1",
                         PageSize: "10",
                         IsExpired: "false",
@@ -306,9 +309,25 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                     withCredentials: true // Important for session-based authentication
                 });
                 const patients = response.data.message || [];
-                console.log("Search results:", patients);
-                setSearchResults(patients);
-                setShowDropdown(patients.length > 0);
+                const filteredPatients = patients.filter((p: any) => {
+                    const vType = (p.patientVisitType || p.visitType || p.custom_visit_type || p.visit_type || "").toString().trim().toUpperCase();
+                    const hasBedOrWard = !!(p.bedName || p.wardName || p.custom_bed_no || p.custom_ward || p.custom_bed || p.bed_no || p.ward || p.bed || p.admissionNo || p.ipdNo || p.ipd_no);
+                    const isAdmitted = p.isAdmitted === true || p.is_admitted === true || (p.status || "").toString().toUpperCase().includes("ADMIT");
+                    if (isIPDPage) {
+                        if ((vType === "OPD" || vType === "OP" || vType.includes("OUTPATIENT")) && !hasBedOrWard && !isAdmitted) {
+                            return false;
+                        }
+                        return true;
+                    } else {
+                        if ((vType === "IPD" || vType === "IP" || vType.includes("INPATIENT") || hasBedOrWard || isAdmitted) && !(vType === "OPD" || vType === "OP")) {
+                            return false;
+                        }
+                        return true;
+                    }
+                });
+                console.log("Search results (filtered for " + (isIPDPage ? "IPD" : "OPD") + "):", filteredPatients);
+                setSearchResults(filteredPatients);
+                setShowDropdown(filteredPatients.length > 0);
             } catch (error: any) {
                 console.error("Patient search failed:", error);
 
@@ -328,7 +347,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                 setIsLoading(false);
             }
         }, 500),
-        [apiKey, apiSecret, isInitialized, showAlert]
+        [apiKey, apiSecret, isInitialized, showAlert, isIPDPage]
     );
 
     const handleSearchChange = (value: string) => {
@@ -431,6 +450,32 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         if (rawSex && rawSex.toUpperCase() === "M") rawSex = "Male";
         if (rawSex && rawSex.toUpperCase() === "F") rawSex = "Female";
 
+        const isDischargedFlag = Boolean(
+            patient?.isDischarged === true ||
+            patient?.isDischarged === "true" ||
+            patient?.isDischarged === 1 ||
+            patient?.is_discharged === true ||
+            patient?.is_discharged === "true" ||
+            patient?.is_discharged === 1 ||
+            patient?.discharged === true ||
+            patient?.discharged === "true" ||
+            patient?.discharged === 1
+        );
+
+        const isFinalBillDoneFlag = Boolean(
+            patient?.isFinalBillDone === true ||
+            patient?.isFinalBillDone === "true" ||
+            patient?.isFinalBillDone === 1 ||
+            patient?.is_final_bill_done === true ||
+            patient?.is_final_bill_done === "true" ||
+            patient?.is_final_bill_done === 1 ||
+            patient?.final_bill_done === true ||
+            patient?.final_bill_done === "true" ||
+            patient?.final_bill_done === 1
+        );
+
+        const isDischargedBool = isDischargedFlag || isFinalBillDoneFlag;
+
         const newPatientData = {
             name: patient.patientFullName || patient.custom_patient_name || patient.patient_name || patient.name || "N/A",
             age: rawAge,
@@ -459,6 +504,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             expiryValidityTo: patient.expiryDate || patient.custom_validity_to || "",
             hospitalId: patient.hospitalId || patient.custom_hospital || "",
             coPay: patient.co_Pay || patient.co_pay || 0,
+            isDischarged: isDischargedBool,
         };
 
         console.log('New patient data being set:', newPatientData);
@@ -782,6 +828,11 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                                                 {patient.patientVisitType && (
                                                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                                                                         {patient.patientVisitType}
+                                                                    </span>
+                                                                )}
+                                                                {(patient.isDischarged === true || patient.isDischarged === "true" || patient.isDischarged === 1 || patient.is_discharged === true || patient.is_discharged === "true" || patient.is_discharged === 1 || patient.discharged === true || patient.discharged === "true" || patient.discharged === 1 || patient.isFinalBillDone === true || patient.isFinalBillDone === "true" || patient.isFinalBillDone === 1 || patient.is_final_bill_done === true || patient.is_final_bill_done === "true" || patient.is_final_bill_done === 1 || patient.final_bill_done === true || patient.final_bill_done === "true" || patient.final_bill_done === 1) && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                                                                        Discharged
                                                                     </span>
                                                                 )}
                                                             </div>

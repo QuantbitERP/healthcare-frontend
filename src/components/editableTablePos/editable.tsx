@@ -119,7 +119,7 @@ const EditableCell = ({
 
   const formatFromDateTimeInput = (val: string) => {
     if (!val) return '';
-    const formatted = String(val).replace('T', ' ');
+    let formatted = String(val).trim().replace(' ', 'T');
     if (formatted.length === 16) {
       return `${formatted}:00`;
     }
@@ -770,7 +770,7 @@ const EditableTable = ({
           }
 
           if (['rate', 'orderedQty', 'saleQty', 'returnQty', 'discountPercent', 'discountAmt',
-            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'covered', 'preAuthStatus'].includes(columnId)) {
+            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'covered', 'preAuthStatus', 'preAuthRequired', 'preAuthNo', 'preAuthDateTime'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow, true);
             }
@@ -1739,11 +1739,27 @@ const EditableTable = ({
     ...(showPreAuthFields ? [{
       accessorKey: "preAuthRequired",
       header: "Pre-auth Req.",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ getValue, row, column, table }: { getValue: any, row: any, column: any, table: any }) => {
         const item = row.original as Item;
+        const value = item.preAuthRequired ? 'Yes' : 'No';
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
-            {item.preAuthRequired ? 'Yes' : 'No'}
+            <Select
+              value={value}
+              onValueChange={(selectedValue) => {
+                const boolVal = selectedValue === 'Yes';
+                table.options.meta?.updateCell(row.index, column.id, boolVal);
+              }}
+              disabled={!item.covered}
+            >
+              <SelectTrigger className="h-8 w-full text-gray-700">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Yes">Yes</SelectItem>
+                <SelectItem value="No">No</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         );
       },
@@ -1752,6 +1768,7 @@ const EditableTable = ({
       accessorKey: "preAuthStatus",
       header: "Pre-auth Status",
       cell: ({ getValue, row, column, table }: { getValue: any, row: any, column: any, table: any }) => {
+        const item = row.original as Item;
         const value = getValue() || 'Pending';
         const statusColors: { [key: string]: string } = {
           'Approved': 'text-green-600',
@@ -1768,7 +1785,7 @@ const EditableTable = ({
               onValueChange={(selectedValue) => {
                 table.options.meta?.updateCell(row.index, column.id, selectedValue);
               }}
-              disabled={!row.original.covered}
+              disabled={!item.covered}
             >
               <SelectTrigger className={`h-8 w-full ${statusColor}`}>
                 <SelectValue placeholder="Select status" />
@@ -1789,7 +1806,7 @@ const EditableTable = ({
       header: "Pre-auth No.",
       cell: ({ getValue, row, column, table }: { getValue: any; row: any; column: any; table: any }) => {
         const item = row.original as Item;
-        const isDisabled = !!(item.isFromPrescription || isFromPrescription);
+        const isDisabled = !item.covered;
         return (
           <EditableCell
             value={getValue()}
@@ -1807,7 +1824,7 @@ const EditableTable = ({
       header: "Pre-auth Date & Time",
       cell: ({ getValue, row, column, table }: { getValue: any; row: any; column: any; table: any }) => {
         const item = row.original as Item;
-        const isDisabled = !!(item.isFromPrescription || isFromPrescription);
+        const isDisabled = !item.covered;
         return (
           <EditableCell
             value={getValue()}
