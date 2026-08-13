@@ -132,6 +132,20 @@ const formatPreAuthDateTimeForApi = (val: any): string => {
   if (!val) return "";
   let str = String(val).trim();
   if (!str) return "";
+  const ddmmyyyyMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i);
+  if (ddmmyyyyMatch) {
+    const [_, day, month, year, hhStr, mmStr, ssStr, ampm] = ddmmyyyyMatch;
+    let hours = hhStr ? parseInt(hhStr, 10) : 0;
+    const minutes = mmStr ? parseInt(mmStr, 10) : 0;
+    const seconds = ssStr ? parseInt(ssStr, 10) : 0;
+    if (ampm) {
+      const isPm = ampm.toUpperCase() === 'PM';
+      if (isPm && hours < 12) hours += 12;
+      if (!isPm && hours === 12) hours = 0;
+    }
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${year}-${pad(parseInt(month, 10))}-${pad(parseInt(day, 10))}T${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
   str = str.replace(' ', 'T');
   if (str.length === 16) {
     str = `${str}:00`;
@@ -4576,6 +4590,7 @@ export default function IPDBill() {
     for (const reqItem of fullRequisitionData.patient_requisition_item_details) {
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
+      const reqHisItemId = reqItem.prescription_item_id || reqItem.precription_item_id || reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "";
 
       console.log(`Processing requisition item: ${itemCode}, requestedQty: ${requestedQty}`);
 
@@ -4635,6 +4650,7 @@ export default function IPDBill() {
             packageName: "",
             binLocation: "",
             hasStock: false, // Mark as no stock
+            custom_his_item_id: reqHisItemId,
           };
           await handleAddItemToDetails(itemWithoutStock);
           showAlert("warning", "Warning", `No stock available for item ${itemCode} from requisition. Item added to grid with no stock indicator.`);
@@ -4684,6 +4700,7 @@ export default function IPDBill() {
               kitName: "", // Add kitName
               packageName: "",
               binLocation: "",
+              custom_his_item_id: reqHisItemId,
             };
             await handleAddItemToDetails(itemToAdd);
             remainingQtyToAllocate -= qtyToTake;
@@ -4723,6 +4740,7 @@ export default function IPDBill() {
             kitName: "",
             packageName: "",
             binLocation: "",
+            custom_his_item_id: reqHisItemId,
           };
           await handleNoBatchesFound(originalItemForAltPartial);
         }
@@ -4990,7 +5008,7 @@ export default function IPDBill() {
       console.log('Prescription item details:', reqItem);
       const itemCode = reqItem.item_code;
       const requestedQty = reqItem.req_qty;
-      const hisItemId = reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "";
+      const hisItemId = reqItem.prescription_item_id || reqItem.precription_item_id || reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "";
       console.log('Processing item - itemCode:', itemCode, 'requestedQty:', requestedQty);
 
       // Match item in preAuthStatuses
@@ -5036,20 +5054,6 @@ export default function IPDBill() {
       let isPreAuthReq = false;
       if (preAuthDetails && typeof preAuthDetails.isPreAuthRequired === 'boolean') {
         isPreAuthReq = preAuthDetails.isPreAuthRequired;
-      } else if (matchedStatus && typeof matchedStatus.isPreAuthRequired === 'boolean') {
-        isPreAuthReq = matchedStatus.isPreAuthRequired;
-      } else {
-        const rawPreAuthReq = reqItem.pre_auth_req ?? reqItem.pre_auth_required ?? reqItem.is_pre_auth_required ?? reqItem.preauth_required ?? reqItem.is_pre_auth;
-        if (rawPreAuthReq !== undefined && rawPreAuthReq !== null && rawPreAuthReq !== "") {
-          isPreAuthReq = (
-            rawPreAuthReq === 1 ||
-            rawPreAuthReq === true ||
-            rawPreAuthReq === "Yes" ||
-            rawPreAuthReq === "1"
-          );
-        } else if (isItemCovered) {
-          isPreAuthReq = true;
-        }
       }
 
       try {
@@ -7407,21 +7411,22 @@ export default function IPDBill() {
                   type="primary-button"
                   size="button-medium"
                   onClick={async () => {
+                    const printFormat = isReturn ? 'IP SALE RETURN INVOICE' : 'Pos Invoice print Format';
                     if (networkPrinter) {
                       try {
-                        await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
+                        await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', printFormat);
                         showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
                       } catch (error) {
                         console.error("Network printing failed:", error);
                         showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                         // Fallback to browser print
-                        const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+                        const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=${encodeURIComponent(printFormat)}&trigger_print=1&no_letterhead=0&_lang=en`;
                         securePrintPdf(printUrl, getAuthHeaders, showAlert);
                       }
                     } else {
                       // Fallback to browser print if network printer not available
                       console.warn('Network printer not available, using browser print');
-                      const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`;
+                      const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=${encodeURIComponent(printFormat)}&trigger_print=1&no_letterhead=0&_lang=en`;
                       securePrintPdf(printUrl, getAuthHeaders, showAlert);
                     }
                   }}

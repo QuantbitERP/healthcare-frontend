@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import { format, parseISO, isValid } from 'date-fns';
 
 import {
   useReactTable,
@@ -126,6 +127,30 @@ const EditableCell = ({
     return formatted;
   };
 
+  const formatForUiDisplay = (val: any) => {
+    if (!val) return '-';
+    const str = String(val).trim();
+    if (!str) return '-';
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+      return str;
+    }
+    try {
+      const cleanStr = str.replace(' ', 'T');
+      const isoStr = cleanStr.length === 16 ? `${cleanStr}:00` : cleanStr;
+      const d = parseISO(isoStr);
+      if (isValid(d)) {
+        return format(d, 'dd/MM/yyyy hh:mm a');
+      }
+      const fallbackDate = new Date(str);
+      if (isValid(fallbackDate)) {
+        return format(fallbackDate, 'dd/MM/yyyy hh:mm a');
+      }
+    } catch (e) {
+      console.error("Error formatting date for UI display:", e);
+    }
+    return str;
+  };
+
   const onBlur = () => {
     let finalValue = value;
     if (type === 'datetime-local') {
@@ -179,7 +204,7 @@ const EditableCell = ({
         ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
           ? `﷼${truncateToTwoDecimals(value).toFixed(2)}`
           : value.toString()
-        : (type === 'datetime-local' && value ? formatFromDateTimeInput(value) : value) || '-'
+        : (type === 'datetime-local' ? formatForUiDisplay(value) : value) || '-'
       }
     </div>
   );

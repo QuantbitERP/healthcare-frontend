@@ -31,7 +31,7 @@ import Image from "next/image";
 import BillBreakdown from "@/components/billbreakdown/billbreakdown";
 import { networkPrinter } from "@/utils/networkPrinter";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
-import { Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus, AlertTriangle } from 'lucide-react';
 import OpdCard from "@/components/OpdInfo/Opdinfo";
 import HorizontallyScrollableTable from "@/components/editableTablePos/editable";
 import PatientRequisitionList from "@/components/patientRequisitionList/PatientRequisitionList";
@@ -156,6 +156,7 @@ type SelectedPatient = {
   company?: string;
   visitID?: string;
   bed?: string;
+  isDischarged?: boolean;
 };
 
 // Enhanced Item Search Component
@@ -1864,6 +1865,7 @@ export default function IPDBill() {
   const [isGeneric, setIsGeneric] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
+  const [rawPatientData, setRawPatientData] = useState<any | null>(null);
   // const [searchResults, setSearchResults] = useState<any[]>([]);
   const [_showDropdown, setShowDropdown] = useState(false);
   const [showPosProfileSelector, setShowPosProfileSelector] = useState(false);
@@ -1899,6 +1901,52 @@ export default function IPDBill() {
   const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('credit');
 
   const [isIpdEffect, setIsIpdEffect] = useState(true);
+
+  const isDischargedFlag = Boolean(
+    patientData?.isDischarged ||
+    rawPatientData?.isDischarged === true ||
+    rawPatientData?.isDischarged === "true" ||
+    rawPatientData?.isDischarged === 1 ||
+    rawPatientData?.is_discharged === true ||
+    rawPatientData?.is_discharged === "true" ||
+    rawPatientData?.is_discharged === 1 ||
+    rawPatientData?.discharged === true ||
+    rawPatientData?.discharged === "true" ||
+    rawPatientData?.discharged === 1
+  );
+
+  const isFinalBillDoneFlag = Boolean(
+    rawPatientData?.isFinalBillDone === true ||
+    rawPatientData?.isFinalBillDone === "true" ||
+    rawPatientData?.isFinalBillDone === 1 ||
+    rawPatientData?.is_final_bill_done === true ||
+    rawPatientData?.is_final_bill_done === "true" ||
+    rawPatientData?.is_final_bill_done === 1 ||
+    rawPatientData?.final_bill_done === true ||
+    rawPatientData?.final_bill_done === "true" ||
+    rawPatientData?.final_bill_done === 1
+  );
+
+  const isDischargedPatient = isDischargedFlag || isFinalBillDoneFlag;
+
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalMessage, setStatusModalMessage] = useState("");
+
+  useEffect(() => {
+    if (isDischargedFlag && isFinalBillDoneFlag) {
+      setIsIpdEffect(false);
+      setStatusModalMessage('This patient is already discharged and final bill is done.');
+      setStatusModalOpen(true);
+    } else if (isDischargedFlag) {
+      setIsIpdEffect(false);
+      setStatusModalMessage('This patient is already discharged.');
+      setStatusModalOpen(true);
+    } else if (isFinalBillDoneFlag) {
+      setIsIpdEffect(false);
+      setStatusModalMessage('Final bill is done for this patient.');
+      setStatusModalOpen(true);
+    }
+  }, [isDischargedFlag, isFinalBillDoneFlag]);
 
   // New state variables for tax details
   const [taxTemplate, setTaxTemplate] = useState<string>('');
@@ -4022,7 +4070,7 @@ export default function IPDBill() {
             substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
-            uom: reqItem.unit,
+            uom: reqItem.unit || reqItem.uom || "",
             stockQty: 0,
             orderedQty: requestedQty, // Show original requested quantity
             saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
@@ -4072,7 +4120,7 @@ export default function IPDBill() {
               substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
               itemCode: itemCode,
               itemName: reqItem.item_name,
-              uom: reqItem.unit,
+              uom: reqItem.unit || reqItem.uom || "",
               stockQty: batchStockQty,
               orderedQty: requestedQty, // Use full requisition quantity instead of batch quantity
               saleQty: qtyToTake, // Keep saleQty as the actual batch quantity being allocated
@@ -4111,7 +4159,7 @@ export default function IPDBill() {
             substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
-            uom: reqItem.unit,
+            uom: reqItem.unit || reqItem.uom || "",
             stockQty: 0,
             orderedQty: requestedQty, // Show original requested quantity
             saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
@@ -4306,7 +4354,7 @@ export default function IPDBill() {
             substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
-            uom: reqItem.unit,
+            uom: reqItem.unit || reqItem.uom || "",
             stockQty: 0,
             orderedQty: requestedQty, // Show original requested quantity
             saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
@@ -4355,7 +4403,7 @@ export default function IPDBill() {
               substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
               itemCode: itemCode,
               itemName: reqItem.item_name,
-              uom: reqItem.unit,
+              uom: reqItem.unit || reqItem.uom || "",
               stockQty: batchStockQty,
               orderedQty: requestedQty, // Use full prescription quantity instead of batch quantity
               saleQty: qtyToTake, // Keep saleQty as the actual batch quantity being allocated
@@ -4394,7 +4442,7 @@ export default function IPDBill() {
             substituteItem: reqItem.item_code, // Pass the original itemCode as substituteItem
             itemCode: itemCode,
             itemName: reqItem.item_name,
-            uom: reqItem.unit,
+            uom: reqItem.unit || reqItem.uom || "",
             stockQty: 0,
             orderedQty: requestedQty, // Show original requested quantity
             saleQty: remainingQtyToAllocate, // Show remaining quantity to be invoiced
@@ -6386,14 +6434,21 @@ export default function IPDBill() {
                   <div className="flex items-center gap-2 pl-2">
                     <Checkbox
                       id="ipd-effect"
-                      checked={isIpdEffect}
-                      disabled={transactionType === 'cash'}
-                      onCheckedChange={(checked) => setIsIpdEffect(checked === true)}
-                      className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
+                      checked={isIpdEffect && !isDischargedPatient}
+                      disabled={transactionType === 'cash' || isDischargedPatient}
+                      onCheckedChange={(checked) => {
+                        if (isDischargedPatient) {
+                          showAlert('warning', 'Blocked', 'IPD Effect is blocked for discharged patients.');
+                          return;
+                        }
+                        setIsIpdEffect(checked === true);
+                      }}
+                      className={transactionType === 'cash' || isDischargedPatient ? 'opacity-50 cursor-not-allowed' : ''}
                     />
                     <Label
                       htmlFor="ipd-effect"
-                      className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                      className={`text-sm font-medium ${transactionType === 'cash' || isDischargedPatient ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                      title={isDischargedPatient ? "IPD Effect is blocked for discharged patients" : ""}
                     >
                       IPD Effect
                     </Label>
@@ -6758,6 +6813,30 @@ export default function IPDBill() {
             }}
           />
         )}
+
+        {/* Patient Status Warning Modal */}
+        <Dialog open={statusModalOpen} onOpenChange={setStatusModalOpen}>
+          <DialogContent className="sm:max-w-md bg-white p-6 rounded-lg shadow-xl border border-gray-200">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-amber-500" />
+                Patient Status Warning
+              </DialogTitle>
+              <DialogDescription className="pt-3 text-sm text-gray-700 font-medium leading-relaxed">
+                {statusModalMessage}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-6 flex justify-end">
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={() => setStatusModalOpen(false)}
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* High-Alert Confirmation Dialog */}
         <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>

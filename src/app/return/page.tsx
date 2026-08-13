@@ -31,7 +31,7 @@ import Image from "next/image";
 import BillBreakdown from "@/components/billbreakdown/billbreakdown";
 import { networkPrinter } from "@/utils/networkPrinter";
 import POSProfileSelector from '@/components/pos/POSProfileSelector';
-import { Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus, AlertTriangle } from 'lucide-react';
 import OpdCard from "@/components/OpdInfo/Opdinfo";
 import HorizontallyScrollableTable from "@/components/editableTablePos/editable";
 import PatientRequisitionList from "@/components/patientRequisitionList/PatientRequisitionList";
@@ -113,6 +113,31 @@ export interface Item {
   custom_his_item_id?: string; // Add custom_his_item_id for prescription item id matching
 }
 
+const formatPreAuthDateTimeForApi = (val: any): string => {
+  if (!val) return "";
+  let str = String(val).trim();
+  if (!str) return "";
+  const ddmmyyyyMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i);
+  if (ddmmyyyyMatch) {
+    const [_, day, month, year, hhStr, mmStr, ssStr, ampm] = ddmmyyyyMatch;
+    let hours = hhStr ? parseInt(hhStr, 10) : 0;
+    const minutes = mmStr ? parseInt(mmStr, 10) : 0;
+    const seconds = ssStr ? parseInt(ssStr, 10) : 0;
+    if (ampm) {
+      const isPm = ampm.toUpperCase() === 'PM';
+      if (isPm && hours < 12) hours += 12;
+      if (!isPm && hours === 12) hours = 0;
+    }
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${year}-${pad(parseInt(month, 10))}-${pad(parseInt(day, 10))}T${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+  str = str.replace(' ', 'T');
+  if (str.length === 16) {
+    str = `${str}:00`;
+  }
+  return str;
+};
+
 interface ItemSearchProps {
   onSelectItem: (item: Item) => void;
   placeholder?: string;
@@ -145,6 +170,8 @@ type SelectedPatient = {
   visitNo?: string;
   visitID?: string;
   bed?: string;
+  isDischarged?: boolean;
+  custom_visit_code?: string;
 };
 
 // Enhanced Item Search Component
@@ -317,7 +344,7 @@ const EnhancedItemSearch: React.FC<ItemSearchProps> = ({
   }, [searchTerm, selectedClassification, isGeneric, selectedCompany]);
 
   // Handle initial loading state
- 
+
 
   // useEffect for sub-search filtering
   useEffect(() => {
@@ -948,7 +975,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   if (!item.covered) {
     coPayPercent = 100;
   }
-  
+
   const patientAmount = totalAmount * (coPayPercent / 100);
   const payerAmount = totalAmount - patientAmount;
 
@@ -991,7 +1018,7 @@ export default function Return() {
   const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   // const PATIENT_API_BASE_URL = "https://192.168.6.254:8085/masterdata/search-patient";
   const ITEM_DETAILS_API_URL = 'https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.item_details';
- useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 7000); // Show splash screen for at least 7 seconds
@@ -1488,6 +1515,7 @@ export default function Return() {
   const [isGeneric, setIsGeneric] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
+  const [rawPatientData, setRawPatientData] = useState<any | null>(null);
   // const [searchResults, setSearchResults] = useState<any[]>([]);
   const [_showDropdown, setShowDropdown] = useState(false);
   const [showPosProfileSelector, setShowPosProfileSelector] = useState(false);
@@ -1524,6 +1552,53 @@ export default function Return() {
   const [transactionType, setTransactionType] = useState<'cash' | 'credit'>('cash');
 
   const [_isOpdEffect, setIsOpdEffect] = useState(false);
+  const [effectType, setEffectType] = useState<'default' | 'ipd' | 'opd'>('default');
+
+  const isDischargedFlag = Boolean(
+    patientData?.isDischarged ||
+    rawPatientData?.isDischarged === true ||
+    rawPatientData?.isDischarged === "true" ||
+    rawPatientData?.isDischarged === 1 ||
+    rawPatientData?.is_discharged === true ||
+    rawPatientData?.is_discharged === "true" ||
+    rawPatientData?.is_discharged === 1 ||
+    rawPatientData?.discharged === true ||
+    rawPatientData?.discharged === "true" ||
+    rawPatientData?.discharged === 1
+  );
+
+  const isFinalBillDoneFlag = Boolean(
+    rawPatientData?.isFinalBillDone === true ||
+    rawPatientData?.isFinalBillDone === "true" ||
+    rawPatientData?.isFinalBillDone === 1 ||
+    rawPatientData?.is_final_bill_done === true ||
+    rawPatientData?.is_final_bill_done === "true" ||
+    rawPatientData?.is_final_bill_done === 1 ||
+    rawPatientData?.final_bill_done === true ||
+    rawPatientData?.final_bill_done === "true" ||
+    rawPatientData?.final_bill_done === 1
+  );
+
+  const isDischargedPatient = isDischargedFlag || isFinalBillDoneFlag;
+
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalMessage, setStatusModalMessage] = useState("");
+
+  useEffect(() => {
+    if (isDischargedFlag && isFinalBillDoneFlag) {
+      setIsOpdEffect(false);
+      setStatusModalMessage('This patient is already discharged and final bill is done.');
+      setStatusModalOpen(true);
+    } else if (isDischargedFlag) {
+      setIsOpdEffect(false);
+      setStatusModalMessage('This patient is already discharged.');
+      setStatusModalOpen(true);
+    } else if (isFinalBillDoneFlag) {
+      setIsOpdEffect(false);
+      setStatusModalMessage('Final bill is done for this patient.');
+      setStatusModalOpen(true);
+    }
+  }, [isDischargedFlag, isFinalBillDoneFlag]);
 
   // New state variables for tax details
   const [taxTemplate, setTaxTemplate] = useState<string>('');
@@ -2153,6 +2228,7 @@ export default function Return() {
     setTotalPatientAmount(0);
     setTransactionType('cash');
     setIsOpdEffect(false);
+    setEffectType('default');
     setTaxTemplate('');
     setCgstAccounts([]);
     setSgstAccounts([]);
@@ -3006,7 +3082,7 @@ export default function Return() {
           pre_auth_req: calculatedItem.preAuthRequired ? "Yes" : "No",
           pre_auth_status: calculatedItem.preAuthStatus || "",
           pre_auth_no: calculatedItem.preAuthNo || "",
-          pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+          pre_auth_date_time: formatPreAuthDateTimeForApi(calculatedItem.preAuthDateTime),
           custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
         };
       }),
@@ -3054,7 +3130,7 @@ export default function Return() {
       custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
       custom_prescription_no: reqId || sourceDocumentName || requisitionNo || "",
       prescription_no: reqId || sourceDocumentName || requisitionNo || "",
-      custom_visit_code: patientData?.visitNo || patientData?.visitID || "",
+      custom_visit_code: patientData?.visitID || patientData?.custom_visit_code || patientData?.visitNo || "",
       visit_no: patientData?.visitNo || patientData?.visitID || "",
       custom_phone: patientData?.phone || "",
       custom_doctor_name: patientData?.doctor || "",
@@ -4062,7 +4138,7 @@ export default function Return() {
               preAuthDateTime: reqItem.pre_auth_date_time || "",
               coPayPercentage: reqItem.co_pay || 0,
               isFromPrescription: true,
-              custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
+              custom_his_item_id: reqItem.prescription_item_id || reqItem.precription_item_id || reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
             };
             await handleAddItemToDetails(itemToAdd);
             remainingQtyToAllocate -= qtyToTake;
@@ -4109,7 +4185,7 @@ export default function Return() {
             preAuthDateTime: reqItem.pre_auth_date_time || "",
             coPayPercentage: reqItem.co_pay || 0,
             isFromPrescription: true,
-            custom_his_item_id: reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
+            custom_his_item_id: reqItem.prescription_item_id || reqItem.precription_item_id || reqItem.his_item_id || reqItem.custom_his_item_id || reqItem.name || "",
           };
           await handleNoBatchesFound(originalItemForAltPartial);
         }
@@ -4630,7 +4706,8 @@ export default function Return() {
       // Load attachments for this invoice
       await loadInvoiceAttachments(fullInvoice.name);
 
-      const visitNum = fullInvoice.visit_no || fullInvoice.visitNo || fullInvoice.visitNumber || fullInvoice.visit_id || fullInvoice.custom_visit_code || "N/A";
+      const visitNum = fullInvoice.visit_no || fullInvoice.visitNo || fullInvoice.visitNumber || "N/A";
+      const visitGuid = fullInvoice.custom_visit_code || fullInvoice.visit_id || fullInvoice.visitID || fullInvoice.visit_no || "N/A";
       const newPatientData = {
         name: fullInvoice.custom_patient_name || fullInvoice.customer || "N/A",
         age: fullInvoice.custom_age || "N/A",
@@ -4645,7 +4722,7 @@ export default function Return() {
         visitType: fullInvoice.visit_type || fullInvoice.custom_visit_type || "N/A",
         company: fullInvoice.company || "N/A",
         visitNo: visitNum,
-        visitID: visitNum,
+        visitID: visitGuid,
         bed: fullInvoice.custom_bed_no || "N/A",
       };
       setPatientData(newPatientData);
@@ -4682,8 +4759,29 @@ export default function Return() {
       }
       setIsReturn(fullInvoice.is_return === 1);
       const isTrueVal = (val: any) => val === 1 || val === '1' || val === true || val === 'true';
+      const visitTypeStr = (fullInvoice.visit_type || '').toUpperCase();
+      const isIpd = isTrueVal(fullInvoice.custom_is_ipd_invoice) || visitTypeStr === 'IPD';
+      const isOpd = (!isIpd && (visitTypeStr === 'OPD' || fullInvoice.custom_is_ipd_invoice === 0));
+
       const hasIpdEffect = isTrueVal(fullInvoice.custom_ipd_effect);
-      setIsOpdEffect(hasIpdEffect);
+      const hasOpdEffect = isTrueVal(fullInvoice.custom_opd_effect);
+
+      if (hasIpdEffect) {
+        setIsOpdEffect(true);
+        setEffectType('ipd');
+      } else if (hasOpdEffect) {
+        setIsOpdEffect(true);
+        setEffectType('opd');
+      } else {
+        setIsOpdEffect(false);
+        if (isIpd) {
+          setEffectType('ipd');
+        } else if (isOpd) {
+          setEffectType('opd');
+        } else {
+          setEffectType('default');
+        }
+      }
       // Extract tax rates from invoice taxes array
       const taxRatesFromInvoice: { [key: string]: { cgst: number, sgst: number, igst: number } } = {};
       if (fullInvoice.taxes && Array.isArray(fullInvoice.taxes)) {
@@ -5064,15 +5162,16 @@ export default function Return() {
                 custom_uhid: patientData?.ABHAID || '',
                 custom_bed_no: patientData?.bed || '',
                 custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
-                custom_visit_code: patientData?.visitNo || patientData?.visitID || '',
+                custom_visit_code: patientData?.visitID || patientData?.custom_visit_code || patientData?.visitNo || '',
                 visit_no: patientData?.visitNo || patientData?.visitID || '',
                 custom_phone: patientData?.phone || '',
                 custom_doctor_name: patientData?.doctor || '',
                 custom_age: patientData?.age || '',
                 return_remarks: remarks || 'Direct return without original invoice',
-                // IPD effect flags - use manual checkbox state for direct return
-                custom_ipd_effect: _isOpdEffect ? 1 : 0,
-                custom_is_ipd_invoice: _isOpdEffect ? 1 : 0,
+                // Effect flags based on loaded invoice effectType and checkbox state (_isOpdEffect)
+                custom_ipd_effect: _isOpdEffect ? (effectType === 'opd' ? 0 : 1) : 0,
+                custom_opd_effect: _isOpdEffect ? (effectType === 'opd' ? 1 : 0) : 0,
+                custom_is_ipd_invoice: (effectType === 'ipd' || (patientData?.visitType || '').toUpperCase() === 'IPD') ? 1 : 0,
                 co_pay: globalCoPayPercent || 0,
                 transaction_type: transactionType === 'credit' ? 'Credit' : 'Cash',
                 is_cash_bill: transactionType === 'cash' ? 1 : 0,
@@ -5216,15 +5315,16 @@ export default function Return() {
               custom_uhid: patientData?.ABHAID || '',
               custom_bed_no: patientData?.bed || '',
               custom_req_no: reqId || sourceDocumentName || requisitionNo || '',
-              custom_visit_code: patientData?.visitNo || patientData?.visitID || '',
+              custom_visit_code: patientData?.visitID || patientData?.custom_visit_code || patientData?.visitNo || '',
               visit_no: patientData?.visitNo || patientData?.visitID || '',
               custom_phone: patientData?.phone || '',
               custom_doctor_name: patientData?.doctor || '',
               custom_age: patientData?.age || '',
               return_remarks: remarks || `Return invoice against ${originalInvoice}`,
-              // IPD effect flags from state
-              custom_ipd_effect: _isOpdEffect ? 1 : 0,
-              custom_is_ipd_invoice: _isOpdEffect ? 1 : 0,
+              // Effect flags based on loaded invoice effectType and checkbox state (_isOpdEffect)
+              custom_ipd_effect: _isOpdEffect ? (effectType === 'opd' ? 0 : 1) : 0,
+              custom_opd_effect: _isOpdEffect ? (effectType === 'opd' ? 1 : 0) : 0,
+              custom_is_ipd_invoice: (effectType === 'ipd' || (patientData?.visitType || '').toUpperCase() === 'IPD') ? 1 : 0,
               co_pay: globalCoPayPercent || 0,
               transaction_type: transactionType === 'credit' ? 'Credit' : 'Cash',
               is_cash_bill: transactionType === 'cash' ? 1 : 0,
@@ -5376,7 +5476,7 @@ export default function Return() {
 
       const payload = {
         doctype: "Sale Bill",
-      currency: "QAR",
+        currency: "QAR",
         customer: selectedCustomer || patientData.mrn || "PQR Ltd",
         pos_profile: posProfile,
         is_pos: 1,
@@ -5482,7 +5582,7 @@ export default function Return() {
             pre_auth_req: calculatedItem.preAuthRequired ? "Yes" : "No",
             pre_auth_status: calculatedItem.preAuthStatus || "",
             pre_auth_no: calculatedItem.preAuthNo || "",
-            pre_auth_date_time: calculatedItem.preAuthDateTime || "",
+            pre_auth_date_time: formatPreAuthDateTimeForApi(calculatedItem.preAuthDateTime),
             custom_his_item_id: calculatedItem.custom_his_item_id || item.custom_his_item_id || "",
           };
         }),
@@ -5527,7 +5627,7 @@ export default function Return() {
         custom_req_no: reqId || sourceDocumentName || requisitionNo || "",
         custom_prescription_no: reqId || sourceDocumentName || requisitionNo || "",
         prescription_no: reqId || sourceDocumentName || requisitionNo || "",
-        custom_visit_code: patientData?.visitNo || patientData?.visitID || "",
+        custom_visit_code: patientData?.visitID || patientData?.custom_visit_code || patientData?.visitNo || "",
         visit_no: patientData?.visitNo || patientData?.visitID || "",
         custom_phone: patientData?.phone || "",
         custom_doctor_name: patientData?.doctor || "",
@@ -5828,75 +5928,75 @@ export default function Return() {
   return (
     <>
       {/* Splash Screen */}
-      <SplashScreen 
-        show={initialLoading} 
-        message="Initializing Return Management System..." 
+      <SplashScreen
+        show={initialLoading}
+        message="Initializing Return Management System..."
       />
-      
+
       {/* Saving/Submitting Splash Screen */}
-      <SplashScreen 
-        show={isSaving} 
-        message={isReturn ? "Submitting Return... Please wait" : loadedInvoiceName && loadedInvoiceDocstatus === 0 ? "Submitting Invoice... Please wait" : "Saving Invoice... Please wait"} 
+      <SplashScreen
+        show={isSaving}
+        message={isReturn ? "Submitting Return... Please wait" : loadedInvoiceName && loadedInvoiceDocstatus === 0 ? "Submitting Invoice... Please wait" : "Saving Invoice... Please wait"}
       />
-      
+
       <div className="bg-gray-50 min-h-screen w-full overflow-x-hidden">
-      {/* Alert Component */}
-      {alert.show && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
-          <Alerts
-            heading={alert.heading}
-            content={alert.content}
-            variant={alert.variant}
-            showCloseIcon={true}
-            open={alert.show}
-            disappear={true}
-            onClick={() => setAlert(prev => ({ ...prev, show: false }))}
+        {/* Alert Component */}
+        {alert.show && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md">
+            <Alerts
+              heading={alert.heading}
+              content={alert.content}
+              variant={alert.variant}
+              showCloseIcon={true}
+              open={alert.show}
+              disappear={true}
+              onClick={() => setAlert(prev => ({ ...prev, show: false }))}
+            />
+          </div>
+        )}
+        <ToastContainer aria-label="Notifications" />
+        <div className="my-16 px-4 md:px-6">
+          <PageHeader
+            parentTitle="POS"
+            parentLink="/pos"
+            title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New OPD Bill"}
+            icon="assets/icons/BriefcaseIcon.svg"
+            posProfile={posProfile || undefined}
+            warehouse={selectedWarehouse || undefined}
+            rightButtons={
+              <div className="flex flex-row space-x-2">
+                <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
+                  Patient Requisition
+                </Button>
+                <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
+                  Prescription
+                </Button>
+                <Button type="primary-button" size="button-small" onClick={() => setShowPatientReturnRequisitionList(true)}>
+                  Return Requisition
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
+                  View Sale Bills
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={() => setShowPosProfileSelector(true)}>
+                  Change POS Profile
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={logout}>
+                  Logout
+                </Button>
+                <Button type="danger-button" size="button-small" onClick={clearPatient}>
+                  Clear Patient
+                </Button>
+              </div>
+            }
           />
         </div>
-      )}
-      <ToastContainer aria-label="Notifications" />
-      <div className="my-16 px-4 md:px-6">
-        <PageHeader
-          parentTitle="POS"
-          parentLink="/pos"
-          title={isReturn ? `Return Invoice - ${returnAgainstInvoice}` : "New OPD Bill"}
-          icon="assets/icons/BriefcaseIcon.svg"
-          posProfile={posProfile || undefined}
-          warehouse={selectedWarehouse || undefined}
-          rightButtons={
-            <div className="flex flex-row space-x-2">
-              <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
-                Patient Requisition
-              </Button>
-              <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
-                Prescription
-              </Button>
-              <Button type="primary-button" size="button-small" onClick={() => setShowPatientReturnRequisitionList(true)}>
-                Return Requisition
-              </Button>
-              <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
-                View Sale Bills
-              </Button>
-              <Button type="secondary-button" size="button-small" onClick={() => setShowPosProfileSelector(true)}>
-                Change POS Profile
-              </Button>
-              <Button type="secondary-button" size="button-small" onClick={logout}>
-                Logout
-              </Button>
-              <Button type="danger-button" size="button-small" onClick={clearPatient}>
-                Clear Patient
-              </Button>
-            </div>
-          }
-        />
-      </div>
 
-      {/* Main Content */}
-      <div className="flex flex-col lg:flex-row gap-0.5 py-6 px-4 mx-2 md:px-4 pb-24">
-        {/* Left Panel - Patient Search and Cards */}
-        <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
+        {/* Main Content */}
+        <div className="flex flex-col lg:flex-row gap-0.5 py-6 px-4 mx-2 md:px-4 pb-24">
+          {/* Left Panel - Patient Search and Cards */}
+          <div className="flex flex-col gap-6 w-full lg:w-80 xl:w-75 flex-shrink-0">
 
-          {/* <div className="flex flex-col items-center space-y-4">
+            {/* <div className="flex flex-col items-center space-y-4">
              <div className="w-full">
                <SelectInput
                  placeholder="Select Search Type"
@@ -5942,56 +6042,56 @@ export default function Return() {
              </div>
            </div> */}
 
-          <div>
-            <OpdCard
-              patientData={patientData}
-              onPatientChange={(p) => setPatientData(p)}
-              selectedWarehouse={selectedWarehouse}
-              setSelectedWarehouse={setSelectedWarehouse}
-              selectedCustomer={selectedCustomer}
-              setSelectedCustomer={setSelectedCustomer}
-              selectedCompany={selectedCompany}
-              setSelectedCompany={setSelectedCompany}
-              selectedBranch={selectedBranch}
-              setSelectedBranch={setSelectedBranch}
-              selectedDepartment={selectedDepartment}
-              setSelectedDepartment={setSelectedDepartment}
-              selectedSubDepartment={selectedSubDepartment}
-              setSelectedSubDepartment={setSelectedSubDepartment}
-              isReturn={isReturn}
-              onReturnStatusChange={setIsReturn}
+            <div>
+              <OpdCard
+                patientData={patientData}
+                onPatientChange={(p) => setPatientData(p)}
+                selectedWarehouse={selectedWarehouse}
+                setSelectedWarehouse={setSelectedWarehouse}
+                selectedCustomer={selectedCustomer}
+                setSelectedCustomer={setSelectedCustomer}
+                selectedCompany={selectedCompany}
+                setSelectedCompany={setSelectedCompany}
+                selectedBranch={selectedBranch}
+                setSelectedBranch={setSelectedBranch}
+                selectedDepartment={selectedDepartment}
+                setSelectedDepartment={setSelectedDepartment}
+                selectedSubDepartment={selectedSubDepartment}
+                setSelectedSubDepartment={setSelectedSubDepartment}
+                isReturn={isReturn}
+                onReturnStatusChange={setIsReturn}
+              />
+              {patientData && (
+                <div className="mt-2">
+                  <Button size="link-size" type="link-secondary" onClick={clearPatient}>
+                    Change Patient
+                  </Button>
+                </div>
+              )}
+            </div>
+            <BillBreakdown
+              totalBillAmount={totalBillAmount}
+              totalDiscountAmount={totalDiscountAmount}
+              totalCgstAmount={totalCgstAmount}
+              totalSgstAmount={totalSgstAmount}
+              totalIgstAmount={totalIgstAmount}
+              totalPayerAmount={totalPayerAmount}
+              totalPatientAmount={totalPatientAmount}
+              showPayerPatientAmounts={true}
+              posProfile={posProfile || undefined}
+              onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
+            // onRecordPayments prop is removed
             />
-            {patientData && (
-              <div className="mt-2">
-                <Button size="link-size" type="link-secondary" onClick={clearPatient}>
-                  Change Patient
-                </Button>
-              </div>
-            )}
           </div>
-          <BillBreakdown
-            totalBillAmount={totalBillAmount}
-            totalDiscountAmount={totalDiscountAmount}
-            totalCgstAmount={totalCgstAmount}
-            totalSgstAmount={totalSgstAmount}
-            totalIgstAmount={totalIgstAmount}
-            totalPayerAmount={totalPayerAmount}
-            totalPatientAmount={totalPatientAmount}
-            showPayerPatientAmounts={true}
-            posProfile={posProfile || undefined}
-            onRoundOffChange={(roundOffData) => setRoundedGrandTotal(roundOffData.grand_total)}
-          // onRecordPayments prop is removed
-          />
-        </div>
 
-        {/* Right Panel - Item Details */}
-        <div className="flex-1 min-w-0 space-y-2 text-sm">
-          <Card>
-            <CardHeader className="py-2 px-3">
-              <CardTitle>Item Details</CardTitle>
-            </CardHeader>
+          {/* Right Panel - Item Details */}
+          <div className="flex-1 min-w-0 space-y-2 text-sm">
+            <Card>
+              <CardHeader className="py-2 px-3">
+                <CardTitle>Item Details</CardTitle>
+              </CardHeader>
 
-            <CardContent className="space-y-2 overflow-x-auto p-3 pt-0">
+              <CardContent className="space-y-2 overflow-x-auto p-3 pt-0">
                 <div className="flex flex-col gap-2 w-full">
                   {/* First Row */}
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1.5fr_auto_1fr] gap-4 items-center">
@@ -6129,16 +6229,23 @@ export default function Return() {
                     <div className="flex items-center gap-2 pl-4 border-l border-gray-300">
                       <Checkbox
                         id="Opd-effect"
-                        checked={_isOpdEffect}
-                        disabled={transactionType === 'cash'}
-                        onCheckedChange={(checked) => setIsOpdEffect(checked === true)}
-                        className={transactionType === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}
+                        checked={_isOpdEffect && !isDischargedPatient}
+                        disabled={isDischargedPatient}
+                        onCheckedChange={(checked) => {
+                          if (isDischargedPatient) {
+                            showAlert('warning', 'Blocked', 'IPD Effect is blocked for discharged patients.');
+                            return;
+                          }
+                          setIsOpdEffect(checked === true);
+                        }}
+                        className={isDischargedPatient ? 'opacity-50 cursor-not-allowed' : ''}
                       />
                       <Label
                         htmlFor="Opd-effect"
-                        className={`text-sm font-medium ${transactionType === 'cash' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                        className={`text-sm font-medium ${isDischargedPatient ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'} whitespace-nowrap`}
+                        title={isDischargedPatient ? "IPD Effect is blocked for discharged patients" : ""}
                       >
-                        IPD Effect
+                        {effectType === 'ipd' ? 'IPD Effect' : effectType === 'opd' ? 'OPD Effect' : 'Effect'}
                       </Label>
                     </div>
 
@@ -6155,561 +6262,605 @@ export default function Return() {
                 </div>
 
 
-              <HorizontallyScrollableTable
-                hideTaxFields={true}
-                showInsuranceFields={true}
-                showPreAuthFields={true}
-                isFromPrescription={sourceDocumentType === 'prescription'}
-                items={items}
-                setItems={setItems}
-                fetchItemBatches={fetchItemBatches}
-                fetchSubstituteItems={fetchSubstituteItems}
-                fetchItemPrice={fetchItemPrice}
-                getBatchQty={getBatchQty}
-                fetchBinLocationFromItem={fetchBinLocationFromItem}
-                selectedWarehouse={selectedWarehouse}
-                calculateItemTaxAndTotals={calculateItemTaxAndTotals}
-                recalculateTotals={recalculateTotals}
-                fetchTaxDetails={fetchTaxDetails}
-                showAlert={showAlert}
-                isReturnMode={isReturn}
-                isReturnInvoice={isReturnInvoice}
-                isDirectReturn={isDirectReturn}
-                canChangeRate={canChangeRate}
-                barcode={barcode}
-                setBarcode={setBarcode}
-                reqId={reqId}
-                setReqId={setReqId}
-                isReqIdReadonly={isReqIdReadonly}
-                setIsReqIdReadonly={setIsReqIdReadonly}
-                isComplete={isComplete}
-                setIsComplete={setIsComplete}
-                isLoadingFromPosInvoice={isLoadingFromPosInvoice}
+                <HorizontallyScrollableTable
+                  hideTaxFields={true}
+                  showInsuranceFields={true}
+                  showPreAuthFields={true}
+                  isFromPrescription={sourceDocumentType === 'prescription'}
+                  items={items}
+                  setItems={setItems}
+                  fetchItemBatches={fetchItemBatches}
+                  fetchSubstituteItems={fetchSubstituteItems}
+                  fetchItemPrice={fetchItemPrice}
+                  getBatchQty={getBatchQty}
+                  fetchBinLocationFromItem={fetchBinLocationFromItem}
+                  selectedWarehouse={selectedWarehouse}
+                  calculateItemTaxAndTotals={calculateItemTaxAndTotals}
+                  recalculateTotals={recalculateTotals}
+                  fetchTaxDetails={fetchTaxDetails}
+                  showAlert={showAlert}
+                  isReturnMode={isReturn}
+                  isReturnInvoice={isReturnInvoice}
+                  isDirectReturn={isDirectReturn}
+                  canChangeRate={canChangeRate}
+                  barcode={barcode}
+                  setBarcode={setBarcode}
+                  reqId={reqId}
+                  setReqId={setReqId}
+                  isReqIdReadonly={isReqIdReadonly}
+                  setIsReqIdReadonly={setIsReqIdReadonly}
+                  isComplete={isComplete}
+                  setIsComplete={setIsComplete}
+                  isLoadingFromPosInvoice={isLoadingFromPosInvoice}
+                />
+              </CardContent>
+            </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+              <input
+                type="text"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-            </CardContent>
-          </Card>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
-            <input
-              type="text"
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            </div>
+            {/* Payment Table Component for New Bill Page */}
+            <PaymentTable
+              payments={recordedPayments}
+              setPayments={setRecordedPayments}
+              posProfile={posProfile ?? undefined}
+              // apiKey={isAuthenticated ? "session" : undefined}
+              // apiSecret={isAuthenticated ? "session" : undefined}
+              totalBillAmount={totalBillAmount}
+              transactionType={transactionType}
+              roundedGrandTotal={roundedGrandTotal}
+              isLoadedInvoice={!!loadedInvoiceName}
             />
           </div>
-          {/* Payment Table Component for New Bill Page */}
-          <PaymentTable
-            payments={recordedPayments}
-            setPayments={setRecordedPayments}
-            posProfile={posProfile ?? undefined}
-            // apiKey={isAuthenticated ? "session" : undefined}
-            // apiSecret={isAuthenticated ? "session" : undefined}
-            totalBillAmount={totalBillAmount}
-            transactionType={transactionType}
-            roundedGrandTotal={roundedGrandTotal}
-            isLoadedInvoice={!!loadedInvoiceName}
-          />
         </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 w-full min-h-16 px-4 md:px-6 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 border-y border-[#D9D9E0] bg-white z-10">
-        <div className="w-full sm:w-fit h-fit flex items-center gap-4 justify-center sm:justify-start">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Image
-                src="assets/icons/DotsVertical.svg"
-                alt="Dots"
-                width={50}
-                height={50}
-                className="cursor-pointer border rounded-md px-3 py-2 border-[#D9D9E0]"
-              />
-            </PopoverTrigger>
-            <PopoverContent className="bg-white mx-3 border shadow-md rounded p-0 space-y-2 w-40">
-              <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Case Papers</div>
-              <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Export to Word</div>
-              <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Patient Due Details</div>
-            </PopoverContent>
-          </Popover>
-          <Button type="secondary-button" size="button-medium">Preview & Print</Button>
-        </div>
-        <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
-          {isReturn ? (
-            // Show Cancel Return and Return Bill buttons when in return mode
-            <>
-              <Button type="danger-button" size="button-medium" disabled={isSaving} onClick={() => {
-                setIsReturnInvoice(false);
-                setIsDirectReturn(false);
-                setReturnAgainstInvoice('');
-                handleReset();
-              }}>
-                Cancel Return
-              </Button>
-              <Button
-                type="primary-outlined-button"
-                size="button-medium"
-                disabled={isSaving}
-                onClick={() => setShowSelectInvoiceModal(true)}
-              >
-                Return Bill
-              </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
-                Closing Entry
-              </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
-                Submit Return
-              </Button>
-            </>
-          ) : loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
-            // Show Print and Reset buttons for submitted invoices
-            <>
-              <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
-              <Button
-                type="primary-button"
-                size="button-medium"
-                disabled={isSaving}
-                onClick={async () => {
-                  if (networkPrinter) {
-                    try {
-                      await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
-                      showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
-                    } catch (error) {
-                      console.error("Network printing failed:", error);
-                      showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
-                      // Fallback to browser print
+        <div className="fixed bottom-0 left-0 w-full min-h-16 px-4 md:px-6 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 border-y border-[#D9D9E0] bg-white z-10">
+          <div className="w-full sm:w-fit h-fit flex items-center gap-4 justify-center sm:justify-start">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Image
+                  src="assets/icons/DotsVertical.svg"
+                  alt="Dots"
+                  width={50}
+                  height={50}
+                  className="cursor-pointer border rounded-md px-3 py-2 border-[#D9D9E0]"
+                />
+              </PopoverTrigger>
+              <PopoverContent className="bg-white mx-3 border shadow-md rounded p-0 space-y-2 w-40">
+                <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Case Papers</div>
+                <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Export to Word</div>
+                <div className="hover:bg-gray-100 text-[#60646C] text-sm font-normal px-2 py-2 rounded cursor-pointer">Patient Due Details</div>
+              </PopoverContent>
+            </Popover>
+            <Button type="secondary-button" size="button-medium">Preview & Print</Button>
+          </div>
+          <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-center sm:justify-end text-[#60646C] text-xs font-normal w-full sm:w-auto">
+            {isReturn ? (
+              // Show Cancel Return and Return Bill buttons when in return mode
+              <>
+                <Button type="danger-button" size="button-medium" disabled={isSaving} onClick={() => {
+                  setIsReturnInvoice(false);
+                  setIsDirectReturn(false);
+                  setReturnAgainstInvoice('');
+                  handleReset();
+                }}>
+                  Cancel Return
+                </Button>
+                <Button
+                  type="primary-outlined-button"
+                  size="button-medium"
+                  disabled={isSaving}
+                  onClick={() => setShowSelectInvoiceModal(true)}
+                >
+                  Return Bill
+                </Button>
+                <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
+                  Closing Entry
+                </Button>
+                <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={handleFinalizeAndPrint}>
+                  Submit Return
+                </Button>
+              </>
+            ) : loadedInvoiceName && loadedInvoiceDocstatus === 1 ? (
+              // Show Print and Reset buttons for submitted invoices
+              <>
+                <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
+                <Button
+                  type="primary-button"
+                  size="button-medium"
+                  disabled={isSaving}
+                  onClick={async () => {
+                    if (networkPrinter) {
+                      try {
+                        await networkPrinter.printDocument(loadedInvoiceName, 'Sale Bill', 'Sale Bill print Format');
+                        showAlert("success", "Print Success", `Invoice ${loadedInvoiceName} sent to network printer successfully!`);
+                      } catch (error) {
+                        console.error("Network printing failed:", error);
+                        showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
+                        // Fallback to browser print
+                        securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
+                        // Close splash screen after redirecting to print
+                        setIsSaving(false);
+                      }
+                    } else {
+                      // Fallback to browser print if network printer not available
+                      console.warn('Network printer not available, using browser print');
                       securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
                       // Close splash screen after redirecting to print
                       setIsSaving(false);
                     }
-                  } else {
-                    // Fallback to browser print if network printer not available
-                    console.warn('Network printer not available, using browser print');
-                    securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
-                    // Close splash screen after redirecting to print
-                    setIsSaving(false);
-                  }
-                }}
-              >
-                Print Invoice
-              </Button>
-            </>
-          ) : (
-            // Show all buttons for new invoices or drafts
-            <>
-              <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
-              <Button type="primary-outlined-button" size="button-medium" disabled={isSaving} onClick={handleSaveAsDraft}>
-                Save as Draft
-              </Button>
-              <Button
-                type="primary-outlined-button"
-                size="button-medium"
-                // disabled={isSaving}
-                onClick={() => setShowSelectInvoiceModal(true)}
-                disabled={isReturn}
-              >
-                Return Bill
-              </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
-                Closing Entry
-              </Button>
-              <Button type="primary-button" size="button-medium" disabled={isSaving || (!!loadedInvoiceName && isReturn)} onClick={handleFinalizeAndPrint}>
-                {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {showPosProfileSelector && (
-        <POSProfileSelector
-          isOpen={showPosProfileSelector}
-          onSelect={handlePOSProfileSelect}
-        />
-      )}
-
-      {showPatientRequisitionList && (
-        <PatientRequisitionList
-          isOpen={showPatientRequisitionList}
-          onClose={() => {
-            console.log('Closing PatientRequisitionList');
-            setShowPatientRequisitionList(false)
-          }}
-          onSelectRequisition={handleSelectRequisition}
-        />
-      )}
-
-      {showPatientReturnRequisitionList && (
-        <PatientReturnRequisitionList
-          isOpen={showPatientReturnRequisitionList}
-          onClose={() => {
-            console.log('Closing PatientReturnRequisitionList');
-            setShowPatientReturnRequisitionList(false)
-          }}
-          onSelectRequisition={handleSelectReturnRequisition}
-        />
-      )}
-
-      {showPrescriptionList && (
-        <PrescriptionList
-          isOpen={showPrescriptionList}
-          onClose={() => setShowPrescriptionList(false)}
-          onSelectPrescription={handleSelectPrescription}
-        />
-      )}
-
-      {/* --- START: Modified Modal Call --- */}
-      {showDocumentUpload && (
-        <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-100">
-          <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
-            <Document
-              setOpen={setShowDocumentUpload}
-              onFileSelect={(file) => setSelectedDocument(file)} // Pass the file to state
-            />
+                  }}
+                >
+                  Print Invoice
+                </Button>
+              </>
+            ) : (
+              // Show all buttons for new invoices or drafts
+              <>
+                <Button type="secondary-button" size="button-medium" disabled={isSaving} onClick={handleReset}>Reset</Button>
+                <Button type="primary-outlined-button" size="button-medium" disabled={isSaving} onClick={handleSaveAsDraft}>
+                  Save as Draft
+                </Button>
+                <Button
+                  type="primary-outlined-button"
+                  size="button-medium"
+                  // disabled={isSaving}
+                  onClick={() => setShowSelectInvoiceModal(true)}
+                  disabled={isReturn}
+                >
+                  Return Bill
+                </Button>
+                <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
+                  Closing Entry
+                </Button>
+                <Button type="primary-button" size="button-medium" disabled={isSaving || (!!loadedInvoiceName && isReturn)} onClick={handleFinalizeAndPrint}>
+                  {isReturn ? 'Submit Return' : (loadedInvoiceName && loadedInvoiceDocstatus === 0 ? 'Submit and Print' : 'Finalize and Print')}
+                </Button>
+              </>
+            )}
           </div>
         </div>
-      )}
-      {/* --- END: Modified Modal Call --- */}
 
-      {showViewPosInvoicesModal && (
-        <ViewPosInvoicesModal
-          isOpen={showViewPosInvoicesModal}
-          onClose={() => setShowViewPosInvoicesModal(false)}
+        {showPosProfileSelector && (
+          <POSProfileSelector
+            isOpen={showPosProfileSelector}
+            onSelect={handlePOSProfileSelect}
+          />
+        )}
+
+        {showPatientRequisitionList && (
+          <PatientRequisitionList
+            isOpen={showPatientRequisitionList}
+            onClose={() => {
+              console.log('Closing PatientRequisitionList');
+              setShowPatientRequisitionList(false)
+            }}
+            onSelectRequisition={handleSelectRequisition}
+          />
+        )}
+
+        {showPatientReturnRequisitionList && (
+          <PatientReturnRequisitionList
+            isOpen={showPatientReturnRequisitionList}
+            onClose={() => {
+              console.log('Closing PatientReturnRequisitionList');
+              setShowPatientReturnRequisitionList(false)
+            }}
+            onSelectRequisition={handleSelectReturnRequisition}
+          />
+        )}
+
+        {showPrescriptionList && (
+          <PrescriptionList
+            isOpen={showPrescriptionList}
+            onClose={() => setShowPrescriptionList(false)}
+            onSelectPrescription={handleSelectPrescription}
+          />
+        )}
+
+        {/* --- START: Modified Modal Call --- */}
+        {showDocumentUpload && (
+          <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-100">
+            <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
+              <Document
+                setOpen={setShowDocumentUpload}
+                onFileSelect={(file) => setSelectedDocument(file)} // Pass the file to state
+              />
+            </div>
+          </div>
+        )}
+        {/* --- END: Modified Modal Call --- */}
+
+        {showViewPosInvoicesModal && (
+          <ViewPosInvoicesModal
+            isOpen={showViewPosInvoicesModal}
+            onClose={() => setShowViewPosInvoicesModal(false)}
+            posProfile={posProfile}
+            showAlert={showAlert}
+            onLoadInvoice={handleLoadInvoice}
+            showOnlyReturns={true}
+          />
+        )}
+
+        {showAlternativeItemsPopover && itemSeekingAlternatives && (
+          <AlternativeItemsPopover
+            isOpen={showAlternativeItemsPopover}
+            onClose={() => setShowAlternativeItemsPopover(false)}
+            onSelectAlternative={handleSelectAlternativeItem}
+            alternativeItems={alternativeItems}
+            originalItem={itemSeekingAlternatives}
+          />
+        )}
+        <ClosingEntryModal // New ClosingEntryModal component
+          isOpen={showClosingEntryModal}
+          onClose={() => setShowClosingEntryModal(false)}
+          onSelectOpeningEntry={handleCreateClosingEntry}
           posProfile={posProfile}
           showAlert={showAlert}
-          onLoadInvoice={handleLoadInvoice}
-          showOnlyReturns={true}
         />
-      )}
+        {showSelectInvoiceModal && (
+          <SelectInvoiceModal
+            isOpen={showSelectInvoiceModal}
+            onClose={() => setShowSelectInvoiceModal(false)}
+            patientName={patientData?.name} // Pass patient name for default filtering
+            onSelect={async (invoices: any[]) => {  // Update to handle array of invoices
+              try {
+                if (!invoices || invoices.length === 0) {
+                  showAlert('danger', 'Error', 'No invoices selected');
+                  return;
+                }
 
-      {showAlternativeItemsPopover && itemSeekingAlternatives && (
-        <AlternativeItemsPopover
-          isOpen={showAlternativeItemsPopover}
-          onClose={() => setShowAlternativeItemsPopover(false)}
-          onSelectAlternative={handleSelectAlternativeItem}
-          alternativeItems={alternativeItems}
-          originalItem={itemSeekingAlternatives}
-        />
-      )}
-      <ClosingEntryModal // New ClosingEntryModal component
-        isOpen={showClosingEntryModal}
-        onClose={() => setShowClosingEntryModal(false)}
-        onSelectOpeningEntry={handleCreateClosingEntry}
-        posProfile={posProfile}
-        showAlert={showAlert}
-      />
-      {showSelectInvoiceModal && (
-        <SelectInvoiceModal
-          isOpen={showSelectInvoiceModal}
-          onClose={() => setShowSelectInvoiceModal(false)}
-          patientName={patientData?.name} // Pass patient name for default filtering
-          onSelect={async (invoices: any[]) => {  // Update to handle array of invoices
-            try {
-              if (!invoices || invoices.length === 0) {
-                showAlert('danger', 'Error', 'No invoices selected');
-                return;
-              }
+                // Set flag to prevent recalculation during invoice loading
+                setIsLoadingFromPosInvoice(true);
 
-              // Set flag to prevent recalculation during invoice loading
-              setIsLoadingFromPosInvoice(true);
+                // Load invoice data into the new_bill page for return processing
+                setIsReturn(true);
+                setIsReturnInvoice(true);
+                setIsDirectReturn(false); // This is not a direct return
 
-              // Load invoice data into the new_bill page for return processing
-              setIsReturn(true);
-              setIsReturnInvoice(true);
-              setIsDirectReturn(false); // This is not a direct return
+                // Use the first invoice for customer/patient data (assuming they're the same)
+                const firstInvoice = invoices[0];
+                const selectedInvoiceNames = invoices.map(inv => inv.name);
 
-              // Use the first invoice for customer/patient data (assuming they're the same)
-              const firstInvoice = invoices[0];
-              const selectedInvoiceNames = invoices.map(inv => inv.name);
+                setReturnAgainstInvoice(invoices.length === 1 ? firstInvoice.name : `${invoices.length} Invoices`);
+                setSelectedInvoicesForReturn(selectedInvoiceNames); // Store actual invoice names
+                setSelectedInvoicesData(invoices); // Store full invoice data for IPD effects
 
-              setReturnAgainstInvoice(invoices.length === 1 ? firstInvoice.name : `${invoices.length} Invoices`);
-              setSelectedInvoicesForReturn(selectedInvoiceNames); // Store actual invoice names
-              setSelectedInvoicesData(invoices); // Store full invoice data for IPD effects
+                // Load customer and patient data
+                setSelectedCustomer(firstInvoice.customer || '');
+                if (firstInvoice.custom_patient_name) {
+                  const visitNum = firstInvoice.visit_no || firstInvoice.visitNo || firstInvoice.visitNumber || '';
+                  const visitGuid = firstInvoice.custom_visit_code || firstInvoice.visit_id || firstInvoice.visitID || firstInvoice.visit_no || '';
+                  setPatientData({
+                    name: firstInvoice.custom_patient_name || '',
+                    age: firstInvoice.custom_age || '',
+                    sex: firstInvoice.custom_sex || '',
+                    phone: firstInvoice.custom_phone || '',
+                    ABHAID: firstInvoice.custom_abha_id || '',
+                    category: firstInvoice.custom_category || '',
+                    doctor: firstInvoice.custom_doctor_name || '',
+                    mrn: firstInvoice.custom_mrn || firstInvoice.custom_uhid || '',
+                    displayNo: firstInvoice.custom_display_no || '',
+                    dept: firstInvoice.custom_department || '',
+                    visitType: firstInvoice.visit_type || firstInvoice.custom_visit_type || '',
+                    company: firstInvoice.custom_company || firstInvoice.company || '',
+                    visitNo: visitNum,
+                    visitID: visitGuid,
+                    bed: firstInvoice.custom_bed || firstInvoice.custom_bed_no || '',
+                  });
+                }
 
-              // Load customer and patient data
-              setSelectedCustomer(firstInvoice.customer || '');
-              if (firstInvoice.custom_patient_name) {
-                const visitNum = firstInvoice.visit_no || firstInvoice.visitNo || firstInvoice.visitNumber || firstInvoice.visit_id || firstInvoice.custom_visit_code || '';
-                setPatientData({
-                  name: firstInvoice.custom_patient_name || '',
-                  age: firstInvoice.custom_age || '',
-                  sex: firstInvoice.custom_sex || '',
-                  phone: firstInvoice.custom_phone || '',
-                  ABHAID: firstInvoice.custom_abha_id || '',
-                  category: firstInvoice.custom_category || '',
-                  doctor: firstInvoice.custom_doctor_name || '',
-                  mrn: firstInvoice.custom_mrn || firstInvoice.custom_uhid || '',
-                  displayNo: firstInvoice.custom_display_no || '',
-                  dept: firstInvoice.custom_department || '',
-                  visitType: firstInvoice.visit_type || firstInvoice.custom_visit_type || '',
-                  company: firstInvoice.custom_company || firstInvoice.company || '',
-                  visitNo: visitNum,
-                  visitID: visitNum,
-                  bed: firstInvoice.custom_bed || firstInvoice.custom_bed_no || '',
-                });
-              }
+                // Load company, warehouse, and other settings
+                setSelectedCompany(firstInvoice.company || '');
+                setSelectedWarehouse(firstInvoice.set_warehouse || '');
+                setGlobalCoPayPercent(Number(firstInvoice.co_pay) || Number(firstInvoice.custom_co_pay) || 0);
+                setIsCoPayReadonly(true);
+                setIsTransactionTypeReadonly(true);
+                setPayerName(firstInvoice.custom_payer_name || '');
+                setSubInsurance(firstInvoice.custom_sub_insurance || '');
+                setNetwork(firstInvoice.custom_network || '');
+                setInsuranceNo(firstInvoice.custom_insurance_no || '');
+                setOtherNo(firstInvoice.custom_other_no || '');
+                setTotalPayerAmount(Number(firstInvoice.payer_amount) || 0);
+                setTotalPatientAmount(Number(firstInvoice.patient_amount) || 0);
 
-              // Load company, warehouse, and other settings
-              setSelectedCompany(firstInvoice.company || '');
-              setSelectedWarehouse(firstInvoice.set_warehouse || '');
-              setGlobalCoPayPercent(Number(firstInvoice.co_pay) || Number(firstInvoice.custom_co_pay) || 0);
-              setIsCoPayReadonly(true);
-              setIsTransactionTypeReadonly(true);
-              setPayerName(firstInvoice.custom_payer_name || '');
-              setSubInsurance(firstInvoice.custom_sub_insurance || '');
-              setNetwork(firstInvoice.custom_network || '');
-              setInsuranceNo(firstInvoice.custom_insurance_no || '');
-              setOtherNo(firstInvoice.custom_other_no || '');
-              setTotalPayerAmount(Number(firstInvoice.payer_amount) || 0);
-              setTotalPatientAmount(Number(firstInvoice.patient_amount) || 0);
+                // Set transaction type (Cash/Credit) from selected Sale Bill
+                if (firstInvoice.is_cash_bill === 1 || firstInvoice.is_cash_bill === true) {
+                  setTransactionType('cash');
+                } else if (firstInvoice.is_credit_bill === 1 || firstInvoice.is_credit_bill === true) {
+                  setTransactionType('credit');
+                } else if (firstInvoice.transaction_type || firstInvoice.transactionType) {
+                  const tType = (firstInvoice.transaction_type || firstInvoice.transactionType || '').toString().toLowerCase();
+                  setTransactionType(tType === 'credit' ? 'credit' : 'cash');
+                }
 
-              // Set transaction type (Cash/Credit) from selected Sale Bill
-              if (firstInvoice.is_cash_bill === 1 || firstInvoice.is_cash_bill === true) {
-                setTransactionType('cash');
-              } else if (firstInvoice.is_credit_bill === 1 || firstInvoice.is_credit_bill === true) {
-                setTransactionType('credit');
-              } else if (firstInvoice.transaction_type || firstInvoice.transactionType) {
-                const tType = (firstInvoice.transaction_type || firstInvoice.transactionType || '').toString().toLowerCase();
-                setTransactionType(tType === 'credit' ? 'credit' : 'cash');
-              }
+                // Set IPD/OPD effect based on selected invoices
+                const isTrueVal = (val: any) => val === 1 || val === '1' || val === true || val === 'true';
+                const hasAnyIPDEffect = invoices.some(inv => isTrueVal(inv.custom_ipd_effect));
+                const hasAnyOPDEffect = invoices.some(inv => isTrueVal(inv.custom_opd_effect));
+                const isAnyIPD = invoices.some(inv => isTrueVal(inv.custom_is_ipd_invoice) || (inv.visit_type || '').toUpperCase() === 'IPD');
+                const isAnyOPD = invoices.some(inv => (inv.visit_type || '').toUpperCase() === 'OPD');
 
-              // Set IPD effect based on selected invoices (only check if custom_ipd_effect is checked on sale bill)
-              const isTrueVal = (val: any) => val === 1 || val === '1' || val === true || val === 'true';
-              const hasAnyIPDEffect = invoices.some(inv => isTrueVal(inv.custom_ipd_effect));
-              setIsOpdEffect(hasAnyIPDEffect);
+                if (hasAnyIPDEffect) {
+                  setIsOpdEffect(true);
+                  setEffectType('ipd');
+                } else if (hasAnyOPDEffect) {
+                  setIsOpdEffect(true);
+                  setEffectType('opd');
+                } else {
+                  setIsOpdEffect(false);
+                  if (isAnyIPD) {
+                    setEffectType('ipd');
+                  } else if (isAnyOPD) {
+                    setEffectType('opd');
+                  } else {
+                    setEffectType('default');
+                  }
+                }
 
-              // Process all invoices and merge their items
-              const allLoadedItems: Item[] = [];
+                // Process all invoices and merge their items
+                const allLoadedItems: Item[] = [];
 
-              for (const invoice of invoices) {
-                // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
-                const loadedItems: Item[] = await Promise.all(
-                  invoice.items.map(async (item: any, index: number) => {
-                    let alreadyReturnedQty = 0;
+                for (const invoice of invoices) {
+                  // Load items with returnQty initialized to 0 and calculate alreadyReturnedQty
+                  const loadedItems: Item[] = await Promise.all(
+                    invoice.items.map(async (item: any, index: number) => {
+                      let alreadyReturnedQty = 0;
 
-                    try {
-                      // Fetch return invoices against this invoice
-                      // Use the same authentication logic as other functions
-                      const authHeaders = getAuthHeaders();
-                      // Convert HeadersInit to plain object for fetch compatibility
-                      const headers = typeof authHeaders === 'string' ?
-                        JSON.parse(authHeaders) :
-                        Array.isArray(authHeaders) ?
-                          Object.fromEntries(authHeaders) :
-                          authHeaders;
+                      try {
+                        // Fetch return invoices against this invoice
+                        // Use the same authentication logic as other functions
+                        const authHeaders = getAuthHeaders();
+                        // Convert HeadersInit to plain object for fetch compatibility
+                        const headers = typeof authHeaders === 'string' ?
+                          JSON.parse(authHeaders) :
+                          Array.isArray(authHeaders) ?
+                            Object.fromEntries(authHeaders) :
+                            authHeaders;
 
-                      let returnResponse = await fetch(
-                        `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
-                        {
-                          method: 'GET',
-                          headers,
-                          credentials: 'include',
-                        }
-                      );
-                      let returnData = await returnResponse.json();
-                      if (!returnData.data || returnData.data.length === 0) {
-                        returnResponse = await fetch(
-                          `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
+                        let returnResponse = await fetch(
+                          `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
                           {
                             method: 'GET',
                             headers,
                             credentials: 'include',
                           }
                         );
-                        returnData = await returnResponse.json();
-                      }
-
-                      if (returnData.data && returnData.data.length > 0) {
-                        for (const returnInv of returnData.data) {
-                          const returnInvAuthHeaders = getAuthHeaders();
-                          const returnHeaders = typeof returnInvAuthHeaders === 'string' ?
-                            JSON.parse(returnInvAuthHeaders) :
-                            Array.isArray(returnInvAuthHeaders) ?
-                              Object.fromEntries(returnInvAuthHeaders) :
-                              returnInvAuthHeaders;
-
-                          // Try fetching Sale Bill first, then POS Invoice if not found
-                          let returnInvResponse = await fetch(
-                            `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${returnInv.name}`,
+                        let returnData = await returnResponse.json();
+                        if (!returnData.data || returnData.data.length === 0) {
+                          returnResponse = await fetch(
+                            `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice?filters=[["return_against","=","${invoice.name}"],["docstatus","=",1]]&fields=["name"]&limit_page_length=100`,
                             {
                               method: 'GET',
-                              headers: returnHeaders,
+                              headers,
                               credentials: 'include',
                             }
                           );
-                          let returnInvData = await returnInvResponse.json();
-                          if (!returnInvData.data?.items) {
-                            returnInvResponse = await fetch(
-                              `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
+                          returnData = await returnResponse.json();
+                        }
+
+                        if (returnData.data && returnData.data.length > 0) {
+                          for (const returnInv of returnData.data) {
+                            const returnInvAuthHeaders = getAuthHeaders();
+                            const returnHeaders = typeof returnInvAuthHeaders === 'string' ?
+                              JSON.parse(returnInvAuthHeaders) :
+                              Array.isArray(returnInvAuthHeaders) ?
+                                Object.fromEntries(returnInvAuthHeaders) :
+                                returnInvAuthHeaders;
+
+                            // Try fetching Sale Bill first, then POS Invoice if not found
+                            let returnInvResponse = await fetch(
+                              `https://gmcerp.quantcloud.in/api/resource/Sale%20Bill/${returnInv.name}`,
                               {
                                 method: 'GET',
                                 headers: returnHeaders,
                                 credentials: 'include',
                               }
                             );
-                            returnInvData = await returnInvResponse.json();
-                          }
+                            let returnInvData = await returnInvResponse.json();
+                            if (!returnInvData.data?.items) {
+                              returnInvResponse = await fetch(
+                                `https://gmcerp.quantcloud.in/api/resource/POS%20Invoice/${returnInv.name}`,
+                                {
+                                  method: 'GET',
+                                  headers: returnHeaders,
+                                  credentials: 'include',
+                                }
+                              );
+                              returnInvData = await returnInvResponse.json();
+                            }
 
-                          if (returnInvData.data?.items) {
-                            const returnedItem = returnInvData.data.items.find(
-                              (ri: any) => ri.item_code === item.item_code
-                            );
-                            if (returnedItem) {
-                              alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                            if (returnInvData.data?.items) {
+                              const returnedItem = returnInvData.data.items.find(
+                                (ri: any) => ri.item_code === item.item_code
+                              );
+                              if (returnedItem) {
+                                alreadyReturnedQty += Math.abs(returnedItem.qty || 0);
+                              }
                             }
                           }
                         }
+                      } catch (error) {
+                        console.error('Failed to fetch already returned quantities:', error);
+                        alreadyReturnedQty = 0;
                       }
-                    } catch (error) {
-                      console.error('Failed to fetch already returned quantities:', error);
-                      alreadyReturnedQty = 0;
-                    }
 
-                    return {
-                      id: `${item.item_code}-${item.batch_no || ''}-${invoice.name}-${index}`, // Include invoice name in ID for uniqueness
-                      alternateBatches: '',
-                      substituteItem: '',
-                      itemCode: item.item_code,
-                      itemName: item.item_name,
-                      uom: item.uom,
-                      stockQty: item.actual_qty || 0,
-                      orderedQty: 0,
-                      saleQty: item.qty,
-                      returnQty: 0,
-                      alreadyReturnedQty,
-                      batch: item.batch_no || '',
-                      batchNo: item.batch_no || '',
-                      expiryDate: item.custom_expiry_date || '',
-                      batchStockQty: item.actual_batch_qty || 0,
-                      rate: item.price_list_rate || item.rate || 0, // Use price_list_rate (MRP) if available, fallback to rate
-                      taxTemplate: item.item_tax_template || '',
-                      description: item.description || '',
-                      itemAmount: item.base_amount || 0,
-                      discountPercent: item.discount_percentage || 0,
-                      discountAmt: item.discount_amount || 0,
-                      cgstPercent: item.cgst_rate || 0,
-                      cgstAmt: item.cgst_amount || 0,
-                      sgstPercent: item.sgst_rate || 0,
-                      sgstAmt: item.sgst_amount || 0,
-                      igstPercent: item.igst_rate || 0,
-                      igstAmt: item.igst_amount || 0,
-                      totalAmt: item.amount || 0,
-                      kitName: '',
-                      totalPckgAmt: 0,
-                      packageName: '',
-                      binLocation: item.custom_bin_location || '',
-                      warehouse: item.warehouse || '',
-                      marginType: item.margin_type || '',
-                      includedInPrintRate: true,
-                      mrp: item.custom_mrp || item.price_list_rate || 0,
-                      saleBillNo: invoice.name, // Add the source invoice number
-                      coPayPercentage: item.co_pay || 0,
-                      patientAmount: item.patient_amount || 0,
-                      payerAmount: item.payer_amount || 0,
-                      covered: item.co_pay !== undefined && item.co_pay !== null ? true : false,
-                      preAuthStatus: 'Approved', // Default to approved for returns if copay exists
-                    };
-                  })
-                );
+                      return {
+                        id: `${item.item_code}-${item.batch_no || ''}-${invoice.name}-${index}`, // Include invoice name in ID for uniqueness
+                        alternateBatches: '',
+                        substituteItem: '',
+                        itemCode: item.item_code,
+                        itemName: item.item_name,
+                        uom: item.uom,
+                        stockQty: item.actual_qty || 0,
+                        orderedQty: 0,
+                        saleQty: item.qty,
+                        returnQty: 0,
+                        alreadyReturnedQty,
+                        batch: item.batch_no || '',
+                        batchNo: item.batch_no || '',
+                        expiryDate: item.custom_expiry_date || '',
+                        batchStockQty: item.actual_batch_qty || 0,
+                        rate: item.price_list_rate || item.rate || 0, // Use price_list_rate (MRP) if available, fallback to rate
+                        taxTemplate: item.item_tax_template || '',
+                        description: item.description || '',
+                        itemAmount: item.base_amount || 0,
+                        discountPercent: item.discount_percentage || 0,
+                        discountAmt: item.discount_amount || 0,
+                        cgstPercent: item.cgst_rate || 0,
+                        cgstAmt: item.cgst_amount || 0,
+                        sgstPercent: item.sgst_rate || 0,
+                        sgstAmt: item.sgst_amount || 0,
+                        igstPercent: item.igst_rate || 0,
+                        igstAmt: item.igst_amount || 0,
+                        totalAmt: item.amount || 0,
+                        kitName: '',
+                        totalPckgAmt: 0,
+                        packageName: '',
+                        binLocation: item.custom_bin_location || '',
+                        warehouse: item.warehouse || '',
+                        marginType: item.margin_type || '',
+                        includedInPrintRate: true,
+                        mrp: item.custom_mrp || item.price_list_rate || 0,
+                        saleBillNo: invoice.name, // Add the source invoice number
+                        coPayPercentage: item.co_pay || 0,
+                        patientAmount: item.patient_amount || 0,
+                        payerAmount: item.payer_amount || 0,
+                        covered: item.co_pay !== undefined && item.co_pay !== null ? true : false,
+                        preAuthStatus: 'Approved', // Default to approved for returns if copay exists
+                      };
+                    })
+                  );
 
-                allLoadedItems.push(...loadedItems);
+                  allLoadedItems.push(...loadedItems);
+                }
+
+                setItems(allLoadedItems);
+
+                // Close modal
+                setShowSelectInvoiceModal(false);
+
+                // Show success message
+                const invoiceNames = invoices.map(inv => inv.name).join(', ');
+                showAlert('success', 'Invoices Loaded', `${invoices.length} invoice(s) loaded for return: ${invoiceNames}. Enter return quantities and submit.`);
+
+                // Reset flag after all data is loaded
+                setIsLoadingFromPosInvoice(false);
+              } catch (err) {
+                console.error('Error loading invoice for return:', err);
+                showAlert('danger', 'Error', 'Failed to load invoice data.');
+
+                // Reset flag on error
+                setIsLoadingFromPosInvoice(false);
               }
+            }}
+          />
+        )}
 
-              setItems(allLoadedItems);
+        {/* Patient Status Warning Modal */}
+        <Dialog open={statusModalOpen} onOpenChange={setStatusModalOpen}>
+          <DialogContent className="sm:max-w-md bg-white p-6 rounded-lg shadow-xl border border-gray-200">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-amber-500" />
+                Patient Status Warning
+              </DialogTitle>
+              <DialogDescription className="pt-3 text-sm text-gray-700 font-medium leading-relaxed">
+                {statusModalMessage}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-6 flex justify-end">
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={() => setStatusModalOpen(false)}
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-              // Close modal
-              setShowSelectInvoiceModal(false);
-
-              // Show success message
-              const invoiceNames = invoices.map(inv => inv.name).join(', ');
-              showAlert('success', 'Invoices Loaded', `${invoices.length} invoice(s) loaded for return: ${invoiceNames}. Enter return quantities and submit.`);
-              
-              // Reset flag after all data is loaded
-              setIsLoadingFromPosInvoice(false);
-            } catch (err) {
-              console.error('Error loading invoice for return:', err);
-              showAlert('danger', 'Error', 'Failed to load invoice data.');
-              
-              // Reset flag on error
-              setIsLoadingFromPosInvoice(false);
-            }
-          }}
-        />
-      )}
-
-      {/* High-Alert Confirmation Dialog */}
-      <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
-            <DialogDescription>
-              The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
-              <p className="text-sm text-gray-700">
-                <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
-              </p>
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleHighAlertCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleHighAlertConfirm}
-            >
-              Proceed
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* High-Alert Save/Submit Confirmation Dialog */}
-      <Dialog open={showHighAlertSaveDialog} onOpenChange={setShowHighAlertSaveDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">High Alert Items Warning</DialogTitle>
-            <DialogDescription>
-              The following items in your invoice belong to High Alert Classifications. Please handle with care.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <p className="text-sm font-medium text-yellow-800 mb-2">High Alert Items:</p>
-              {highAlertItems.map((item, index) => (
-                <p key={index} className="text-sm text-gray-700 mb-1">
-                  <strong>{item.itemName}</strong> ({item.itemCode}) - <span className="text-red-600">{item.custom_classification}</span>
+        {/* High-Alert Confirmation Dialog */}
+        <Dialog open={showHighAlertDialog} onOpenChange={setShowHighAlertDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">High Alert Classification Warning</DialogTitle>
+              <DialogDescription>
+                The following items belong to <span className="font-semibold text-red-600">{highAlertItem?.custom_classification}</span> High Alert Classification. Handle with care.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm font-medium text-yellow-800 mb-1">Item Details:</p>
+                <p className="text-sm text-gray-700">
+                  <strong>{highAlertItem?.itemName}</strong> ({highAlertItem?.itemCode})
                 </p>
-              ))}
+              </div>
             </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="secondary-button"
-              size="button-medium"
-              onClick={handleHighAlertSaveCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="primary-button"
-              size="button-medium"
-              onClick={handleHighAlertSaveConfirm}
-            >
-              Proceed with {pendingSaveAction === 'draft' ? 'Save' : 'Submit'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="flex gap-2">
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleHighAlertCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={handleHighAlertConfirm}
+              >
+                Proceed
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <style jsx>{`
+        {/* High-Alert Save/Submit Confirmation Dialog */}
+        <Dialog open={showHighAlertSaveDialog} onOpenChange={setShowHighAlertSaveDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">High Alert Items Warning</DialogTitle>
+              <DialogDescription>
+                The following items in your invoice belong to High Alert Classifications. Please handle with care.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm font-medium text-yellow-800 mb-2">High Alert Items:</p>
+                {highAlertItems.map((item, index) => (
+                  <p key={index} className="text-sm text-gray-700 mb-1">
+                    <strong>{item.itemName}</strong> ({item.itemCode}) - <span className="text-red-600">{item.custom_classification}</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2">
+              <Button
+                type="secondary-button"
+                size="button-medium"
+                onClick={handleHighAlertSaveCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={handleHighAlertSaveConfirm}
+              >
+                Proceed with {pendingSaveAction === 'draft' ? 'Save' : 'Submit'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <style jsx>{`
         .autocomplete-dropdown {
           position: absolute;
           top: 100%;
@@ -6765,7 +6916,7 @@ export default function Return() {
           margin-left: 8px;
         }
       `}</style>
-    </div>
+      </div>
     </>
   );
 }
