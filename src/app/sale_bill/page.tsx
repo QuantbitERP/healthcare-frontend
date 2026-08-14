@@ -3595,7 +3595,9 @@ export default function IPDBill() {
 
       // Check if this item is in the patient's preauth pharmacy list
       const hisItemId = item.custom_his_item_id || taxDetails.custom_his_item_id;
-      const preAuthDetails = !!hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null;
+      const preAuthDetails = (item.custom_his_item_id && preauthItemIdsRef.current.get(item.custom_his_item_id)) ||
+                             (taxDetails.custom_his_item_id && preauthItemIdsRef.current.get(taxDetails.custom_his_item_id)) ||
+                             (hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null);
 
       setItems(prevItems => {
         // Always add as a new item, as each batch-specific item has a unique ID now
@@ -4970,7 +4972,11 @@ export default function IPDBill() {
       });
 
       // Match item in patient's preauth pharmacy details ref
-      const preAuthDetails = !!hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null;
+      const preAuthDetails = (reqItem.custom_his_item_id && preauthItemIdsRef.current.get(reqItem.custom_his_item_id)) ||
+                             (reqItem.his_item_id && preauthItemIdsRef.current.get(reqItem.his_item_id)) ||
+                             (reqItem.itemId && preauthItemIdsRef.current.get(reqItem.itemId)) ||
+                             (reqItem.item_id && preauthItemIdsRef.current.get(reqItem.item_id)) ||
+                             (hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null);
 
       // Determine pre-auth status, pre-auth no, pre-auth datetime
       const statusName = matchedStatus?.statusName ?
