@@ -2046,41 +2046,67 @@ export default function IPDBill() {
   const getRequisitionQuantities = async (reqNo: string): Promise<{ total_qty: number; invoiced_qty: number }> => {
     try {
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
           Object.fromEntries(authHeaders) :
           authHeaders;
 
+      let docName = reqNo;
+      let prescriptionNo = reqNo;
+      let requisitionItems: any[] = [];
 
-      // Get total quantity from requisition items
-      const reqResponse = await fetch(
-        `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","patient_requisition_item_details"]`,
-        {
-          method: 'GET',
-          headers,
-          credentials: 'include',
+      try {
+        const reqResponse = await fetch(
+          `${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(reqNo)}?fields=["name","prescription_no","custom_prescription_no","patient_requisition_item_details"]`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+
+        if (reqResponse.ok) {
+          const reqData = await reqResponse.json();
+          docName = reqData.data?.name || reqNo;
+          prescriptionNo = reqData.data?.prescription_no || reqData.data?.custom_prescription_no || reqNo;
+          requisitionItems = reqData.data?.patient_requisition_item_details || [];
+        } else {
+          const filterSearchResponse = await fetch(
+            `${API_BASE_URL}/Patient%20Requisition?filters=[["prescription_no","=","${reqNo}"]]&fields=["name","prescription_no","patient_requisition_item_details"]`,
+            {
+              method: 'GET',
+              headers,
+              credentials: 'include',
+            }
+          );
+          if (filterSearchResponse.ok) {
+            const filterData = await filterSearchResponse.json();
+            if (filterData.data && filterData.data.length > 0) {
+              const matchedReq = filterData.data[0];
+              docName = matchedReq.name;
+              prescriptionNo = matchedReq.prescription_no || reqNo;
+              requisitionItems = matchedReq.patient_requisition_item_details || [];
+            }
+          }
         }
-      );
-
-      if (!reqResponse.ok) {
-        console.error("Failed to fetch requisition details");
-        return { total_qty: 0, invoiced_qty: 0 };
+      } catch (reqError) {
+        console.error("Error fetching requisition document details:", reqError);
       }
 
-      const reqData = await reqResponse.json();
-      const requisitionItems = reqData.data?.patient_requisition_item_details || [];
-
-      // Try different field names for quantity
       const totalQty = requisitionItems.reduce((sum: number, item: any) => {
         const qty = item.req_qty || item.quantity || item.qty || item.ordered_qty || item.requested_qty || 0;
         return sum + qty;
       }, 0);
 
-      // Get invoiced quantity from Sale bills
+      const searchKeys = Array.from(new Set([reqNo, docName, prescriptionNo].filter(Boolean)));
+      const invoiceFilters = JSON.stringify([
+        ["custom_req_no", "in", searchKeys],
+        ["docstatus", "=", 1]
+      ]);
+
       const invoiceResponse = await fetch(
-        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        `${API_BASE_URL}/Sale%20Bill?filters=${encodeURIComponent(invoiceFilters)}&fields=["name","custom_req_no"]`,
         {
           method: 'GET',
           headers,
@@ -2095,16 +2121,12 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log("Invoices for requisition", reqNo, ":", invoices);
       let invoicedQty = 0;
 
-      // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
-        console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
-
         try {
           const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/Sale%20Bill/${invoice.name}?fields=["name","items"]`,
+            `${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
@@ -2117,10 +2139,8 @@ export default function IPDBill() {
             const fullInvoice = fullInvoiceData.data;
 
             if (fullInvoice?.items) {
-              console.log("Invoice items:", fullInvoice.items);
               const invoiceQty = fullInvoice.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
               invoicedQty += invoiceQty;
-              console.log("Invoice qty:", invoiceQty, "Total invoiced so far:", invoicedQty);
             }
           }
         } catch (error) {
@@ -2128,7 +2148,7 @@ export default function IPDBill() {
         }
       }
 
-      console.log("Final quantities - Total:", totalQty, "Invoiced:", invoicedQty);
+      console.log(`Final quantities for ${reqNo} (keys: ${searchKeys.join(', ')}): Total=${totalQty}, Invoiced=${invoicedQty}`);
       return { total_qty: totalQty, invoiced_qty: invoicedQty };
     } catch (error) {
       console.error("Error getting requisition quantities:", error);
@@ -2140,19 +2160,20 @@ export default function IPDBill() {
   const getItemInvoicedQuantity = async (reqNo: string, itemCode: string): Promise<number> => {
     try {
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
           Object.fromEntries(authHeaders) :
           authHeaders;
 
+      const searchKeys = Array.from(new Set([reqNo].filter(Boolean)));
+      const invoiceFilters = JSON.stringify([
+        ["custom_req_no", "in", searchKeys],
+        ["docstatus", "=", 1]
+      ]);
 
-      console.log(`Getting invoiced quantity for item ${itemCode} in requisition ${reqNo}`);
-
-      // Get all invoices for this requisition
       const invoiceResponse = await fetch(
-        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+        `${API_BASE_URL}/Sale%20Bill?filters=${encodeURIComponent(invoiceFilters)}&fields=["name","custom_req_no"]`,
         {
           method: 'GET',
           headers,
@@ -2167,15 +2188,12 @@ export default function IPDBill() {
 
       const invoiceData = await invoiceResponse.json();
       const invoices = invoiceData.data || [];
-      console.log(`Found ${invoices.length} invoices for requisition ${reqNo}:`, invoices.map(inv => inv.name));
-
       let totalInvoicedQty = 0;
 
-      // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
         try {
           const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/Sale%20Bill/${invoice.name}?fields=["name","items"]`,
+            `${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
@@ -2187,28 +2205,19 @@ export default function IPDBill() {
             const fullInvoiceData = await fullInvoiceResponse.json();
             const fullInvoice = fullInvoiceData.data;
 
-            console.log(`Processing invoice ${invoice.name} for item ${itemCode}`);
-
             if (fullInvoice?.items) {
-              console.log(`Invoice ${invoice.name} has ${fullInvoice.items.length} items:`, fullInvoice.items.map((item: any) => ({ item_code: item.item_code, qty: item.qty })));
-
-              // Sum quantities for the specific item code
               const itemInvoiceQty = fullInvoice.items
                 .filter((item: any) => item.item_code === itemCode)
                 .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
 
-              console.log(`Item ${itemCode} quantity in invoice ${invoice.name}: ${itemInvoiceQty}`);
               totalInvoicedQty += itemInvoiceQty;
             }
-          } else {
-            console.error(`Failed to fetch full invoice details for ${invoice.name}:`, fullInvoiceResponse.status);
           }
         } catch (error) {
           console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
         }
       }
 
-      console.log(`Item ${itemCode} in requisition ${reqNo}: Invoiced quantity = ${totalInvoicedQty}`);
       return totalInvoicedQty;
     } catch (error) {
       console.error("Error getting item invoiced quantity:", error);
@@ -2218,69 +2227,7 @@ export default function IPDBill() {
 
   // Function to get invoiced quantity for a specific item from a prescription
   const getItemInvoicedQuantityFromPrescription = async (prescriptionNo: string, itemCode: string): Promise<number> => {
-    try {
-      const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
-      const headers = typeof authHeaders === 'string' ?
-        JSON.parse(authHeaders) :
-        Array.isArray(authHeaders) ?
-          Object.fromEntries(authHeaders) :
-          authHeaders;
-
-      // Get all invoices for this prescription
-      const invoiceResponse = await fetch(
-        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
-        {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        }
-      );
-
-      if (!invoiceResponse.ok) {
-        console.error("Failed to fetch invoice details for prescription item quantity calculation");
-        return 0;
-      }
-
-      const invoiceData = await invoiceResponse.json();
-      const invoices = invoiceData.data || [];
-      let totalInvoicedQty = 0;
-
-      // Fetch full invoice details for each invoice to get items
-      for (const invoice of invoices) {
-        try {
-          const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/Sale%20Bill/${invoice.name}?fields=["name","items"]`,
-            {
-              method: 'GET',
-              headers,
-              credentials: 'include',
-            }
-          );
-
-          if (fullInvoiceResponse.ok) {
-            const fullInvoiceData = await fullInvoiceResponse.json();
-            const fullInvoice = fullInvoiceData.data;
-
-            if (fullInvoice?.items) {
-              // Sum quantities for the specific item code
-              const itemInvoiceQty = fullInvoice.items
-                .filter((item: any) => item.item_code === itemCode)
-                .reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
-              totalInvoicedQty += itemInvoiceQty;
-            }
-          }
-        } catch (error) {
-          console.error("Failed to fetch full invoice details for", invoice.name, ":", error);
-        }
-      }
-
-      console.log(`Item ${itemCode} in prescription ${prescriptionNo}: Invoiced quantity = ${totalInvoicedQty}`);
-      return totalInvoicedQty;
-    } catch (error) {
-      console.error("Error getting prescription item invoiced quantity:", error);
-      return 0;
-    }
+    return getItemInvoicedQuantity(prescriptionNo, itemCode);
   };
 
   // Function to check if requisition is fully completed
@@ -2293,43 +2240,65 @@ export default function IPDBill() {
   const updateRequisitionStatus = async (reqNo: string, forceComplete: boolean = false): Promise<void> => {
     try {
       const authHeaders = getAuthHeaders();
-      // Convert HeadersInit to plain object for fetch compatibility
       const headers = typeof authHeaders === 'string' ?
         JSON.parse(authHeaders) :
         Array.isArray(authHeaders) ?
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      let status = "Pending";
+      let docName = reqNo;
+      try {
+        const reqResponse = await fetch(
+          `${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(reqNo)}?fields=["name"]`,
+          { method: 'GET', headers, credentials: 'include' }
+        );
+        if (reqResponse.ok) {
+          const reqData = await reqResponse.json();
+          docName = reqData.data?.name || reqNo;
+        } else {
+          const filterSearchResponse = await fetch(
+            `${API_BASE_URL}/Patient%20Requisition?filters=[["prescription_no","=","${reqNo}"]]&fields=["name"]`,
+            { method: 'GET', headers, credentials: 'include' }
+          );
+          if (filterSearchResponse.ok) {
+            const filterData = await filterSearchResponse.json();
+            if (filterData.data && filterData.data.length > 0) {
+              docName = filterData.data[0].name;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error resolving docName in updateRequisitionStatus:", err);
+      }
+
+      let isCompleted = 0;
 
       if (forceComplete) {
-        status = "Completed";
+        isCompleted = 1;
         console.log("Force completing requisition:", reqNo);
       } else {
-        // Check current status based on quantities
         const { total_qty, invoiced_qty } = await getRequisitionQuantities(reqNo);
         console.log("Checking requisition status - Total:", total_qty, "Invoiced:", invoiced_qty);
 
         if (total_qty > 0 && invoiced_qty >= total_qty) {
-          status = "Completed";
+          isCompleted = 1;
           console.log("Requisition marked as Completed");
         } else {
-          status = "Pending";
+          isCompleted = 0;
           console.log("Requisition marked as Pending");
         }
       }
 
-      console.log("Updating requisition", reqNo, "status to:", status);
+      console.log("Updating requisition", docName, "is_completed to:", isCompleted);
 
-      // Update the requisition status
       const response = await fetch(
-        `${API_BASE_URL}/Patient%20Requisition/${reqNo}`,
+        `${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(docName)}`,
         {
           method: 'PUT',
           headers,
           credentials: 'include',
           body: JSON.stringify({
-            custom_requisition_status: status
+            is_completed: isCompleted
           }),
         }
       );
@@ -2339,26 +2308,7 @@ export default function IPDBill() {
         console.error("Failed to update requisition status:", errorData);
       } else {
         const result = await response.json();
-        console.log(`Requisition ${reqNo} status updated to: ${status}`, result);
-
-        // Verify the update by fetching the requisition again
-        try {
-          const verifyResponse = await fetch(
-            `${API_BASE_URL}/Patient%20Requisition/${reqNo}?fields=["name","custom_requisition_status"]`,
-            {
-              method: 'GET',
-              headers,
-              credentials: 'include',
-            }
-          );
-
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            console.log("Verification - Current status in database:", verifyData.data?.custom_requisition_status);
-          }
-        } catch (verifyError) {
-          console.error("Failed to verify status update:", verifyError);
-        }
+        console.log(`Requisition ${docName} is_completed updated to: ${isCompleted}`, result);
       }
     } catch (error) {
       console.error("Error updating requisition status:", error);
@@ -3786,8 +3736,8 @@ export default function IPDBill() {
       return;
     }
 
-    // Check if requisition is fully completed
-    if (sourceDocumentName && sourceDocumentType === 'requisition') {
+    // Check if requisition/prescription is fully completed
+    if (sourceDocumentName && (sourceDocumentType === 'requisition' || sourceDocumentType === 'prescription')) {
       console.log("Checking requisition completion for:", sourceDocumentName);
       const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
       console.log("Is requisition fully completed?", isFullyCompleted);
@@ -6172,8 +6122,8 @@ export default function IPDBill() {
         // Update the docstatus state
         setLoadedInvoiceDocstatus(1);
 
-        // Update requisition status if this invoice is against a requisition
-        if (sourceDocumentName && sourceDocumentType === 'requisition') {
+        // Update requisition status if this invoice is against a requisition or prescription
+        if (sourceDocumentName && (sourceDocumentType === 'requisition' || sourceDocumentType === 'prescription')) {
           await updateRequisitionStatus(sourceDocumentName);
         }
 
@@ -6367,8 +6317,8 @@ export default function IPDBill() {
         return;
       }
 
-      // Check if requisition is fully completed
-      if (sourceDocumentName && sourceDocumentType === 'requisition') {
+      // Check if requisition/prescription is fully completed
+      if (sourceDocumentName && (sourceDocumentType === 'requisition' || sourceDocumentType === 'prescription')) {
         console.log("Checking requisition completion for:", sourceDocumentName);
         const isFullyCompleted = await isRequisitionFullyCompleted(sourceDocumentName);
         console.log("Is requisition fully completed?", isFullyCompleted);
@@ -6816,8 +6766,8 @@ export default function IPDBill() {
         setLoadedInvoiceName(invoiceName);
         setLoadedInvoiceDocstatus(1);
 
-        // Update requisition status if this invoice is against a requisition
-        if (sourceDocumentName && sourceDocumentType === 'requisition') {
+        // Update requisition status if this invoice is against a requisition or prescription
+        if (sourceDocumentName && (sourceDocumentType === 'requisition' || sourceDocumentType === 'prescription')) {
           await updateRequisitionStatus(sourceDocumentName, isComplete);
         }
 

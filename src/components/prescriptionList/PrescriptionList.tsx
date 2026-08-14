@@ -229,8 +229,11 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         }
       });
 
+      const isRecordCompleted = (item: any): boolean =>
+        item.is_completed === 1 || item.is_completed === "1" || item.is_completed === true;
+
       // Store all prescriptions matching the visit type for summary
-      const allTransformedData = typeFilteredData.map((item: any, index: number) => ({
+      const allTransformedData: Prescription[] = typeFilteredData.map((item: any, index: number) => ({
         id: index + 1,
         name: item.name || "",
         prescription_number: item.prescription_no || item.display_number || item.prescription_number || item.custom_prescription_no || item.name || "",
@@ -243,6 +246,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         visit_type: getVisitType(item),
         start_date: item.start_date || "",
         end_date: item.end_date || "",
+        prescription_status: isRecordCompleted(item) ? "Completed" : "Pending",
         mobile_number: item.mobile_number || "",
         aadhar_no: item.aadhar_no || "",
       }));
@@ -251,11 +255,11 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       let filteredData = typeFilteredData;
       if (!showCompleted) {
         filteredData = typeFilteredData.filter(
-          (prescription: Prescription) => prescription.prescription_status !== "Completed"
+          (item: any) => !isRecordCompleted(item)
         );
       }
 
-      const transformedData = filteredData.map((item: any, index: number) => ({
+      const transformedData: Prescription[] = filteredData.map((item: any, index: number) => ({
         id: index + 1,
         name: item.name || "",
         prescription_number: item.prescription_no || item.display_number || item.prescription_number || item.custom_prescription_no || item.name || "",
@@ -268,6 +272,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         visit_type: getVisitType(item),
         start_date: item.start_date || "",
         end_date: item.end_date || "",
+        prescription_status: isRecordCompleted(item) ? "Completed" : "Pending",
         mobile_number: item.mobile_number || "",
         aadhar_no: item.aadhar_no || "",
       }));
