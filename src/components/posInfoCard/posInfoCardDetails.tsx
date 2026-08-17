@@ -95,6 +95,10 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
 }) => {
   const [activeToggle, setActiveToggle] = useState<string>("General Information");
   const [selfPaying, setSelfPaying] = useState<boolean>(isSelfPaying);
+
+  React.useEffect(() => {
+    setSelfPaying(isSelfPaying);
+  }, [isSelfPaying]);
   const [pos, setPos] = useState<boolean>(isPos);
   const [stockUpdate, setStockUpdate] = useState<boolean>(updateStock);
   const [returnStatus] = useState<boolean>(isReturn);

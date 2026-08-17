@@ -16,6 +16,7 @@ import Dropdown from '../dropdownForPatientCard/Dropdown';
 import axios from "axios";
 import { debounce } from "lodash";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAlert } from "@/components/AlertContext/AlertContext";
 
 
@@ -46,6 +47,8 @@ interface PatientCardProps {
     isReturn: boolean;
     onReturnStatusChange: (status: boolean) => void;
     isIPDPage?: boolean;
+    isSelfPaying?: boolean;
+    onSelfPayingChange?: (val: boolean) => void;
 }
 
 type SelectOption = { label: string; value: string };
@@ -112,6 +115,8 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     isReturn,
     onReturnStatusChange,
     isIPDPage = false,
+    isSelfPaying: isSelfPayingProp,
+    onSelfPayingChange,
 }, ref) => {
     const [open, setOpen] = useState<boolean>(false);
     const { fetchWarehouses, fetchBranch, customers, companies: _companies, departments, fetchDoctors } = useFrappeApi();
@@ -121,6 +126,25 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
 
     // Local state for doctors since API hook doesn't provide setter
     const [localDoctors, setLocalDoctors] = useState<any[]>([]);
+
+    // State for tracking if patient was searched/selected from patient search
+    const [isPatientSearched, setIsPatientSearched] = useState<boolean>(false);
+
+    // Local state for self paying checkbox
+    const [localSelfPaying, setLocalSelfPaying] = useState<boolean>(isSelfPayingProp ?? false);
+
+    useEffect(() => {
+        if (isSelfPayingProp !== undefined) {
+            setLocalSelfPaying(isSelfPayingProp);
+        }
+    }, [isSelfPayingProp]);
+
+    const handleSelfPayingChange = (checked: boolean) => {
+        setLocalSelfPaying(checked);
+        if (onSelfPayingChange) {
+            onSelfPayingChange(checked);
+        }
+    };
 
     // State for editable fields
     const [editedPatient, setEditedPatient] = useState<SelectedPatient>({
@@ -191,6 +215,14 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     // Update internal state when patientData prop changes
     useEffect(() => {
         if (patientData) {
+            const hasSearchedInfo = Boolean(
+                (patientData as any).isSearched ||
+                (patientData.mrn && patientData.mrn !== "N/A" && patientData.mrn !== "") ||
+                (patientData.displayNo && patientData.displayNo !== "N/A" && patientData.displayNo !== "") ||
+                (patientData.visitID && patientData.visitID !== "N/A" && patientData.visitID !== "")
+            );
+            setIsPatientSearched(hasSearchedInfo);
+
             let parsedSex = patientData.sex || "";
             if (!parsedSex || parsedSex === "N/A") {
                 if (patientData.age && typeof patientData.age === "string") {
@@ -232,6 +264,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             const displayMRN = patientData.mrn && patientData.mrn !== "N/A" ? patientData.mrn : "";
             setSearchValue(displayName ? `${displayName}${displayMRN ? ` (${displayMRN})` : ''}` : '');
         } else {
+            setIsPatientSearched(false);
             // Clear patient data when patientData is null
             setEditedPatient({
                 name: '', age: '', sex: '', phone: '', ABHAID: '',
@@ -391,6 +424,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         setSearchResults([]);
         setShowDropdown(false);
         setHighlightedIndex(-1);
+        setIsPatientSearched(false);
         inputRef.current?.focus();
     };
 
@@ -505,10 +539,12 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             hospitalId: patient.hospitalId || patient.custom_hospital || "",
             coPay: patient.co_Pay || patient.co_pay || 0,
             isDischarged: isDischargedBool,
+            isSearched: true,
         };
 
         console.log('New patient data being set:', newPatientData);
 
+        setIsPatientSearched(true);
         setEditedPatient(newPatientData);
         if (onPatientChange) {
             onPatientChange(newPatientData, patient);
@@ -875,89 +911,57 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                     value={selectedWarehouse}
                                     onChange={handleWarehouseChange}
                                     placeholder="Select warehouse"
-                                    disabled={true} // Make readonly
+                                    disabled={isPatientSearched}
 
                                 />
                             </div>
                         </div>
                     </div>
                     <InfoRow
+                        icon="assets/icons/Building.svg"
+                        label="Customer Name"
+                        value={editedPatient.name === "N/A" ? "" : editedPatient.name || ''}
+                        onChange={(value) => handleFieldChange('name', value)}
+                        disabled={isPatientSearched}
+                    />
+                    <div className='flex flex-row h-8 items-center justify-between border-none border-0 border-input-none'>
+                        <div className='flex flex-row gap-1 items-center'>
+                            <Image src="assets/icons/Cash.svg" width={16} height={16} alt="Self Pay" />
+                            <span className='text-[#1C2024] text-xs font-normal'>Self Pay</span>
+                        </div>
+                        <div className="flex items-center justify-end w-[120px]">
+                            <Checkbox
+                                id="selfPay"
+                                checked={localSelfPaying}
+                                onCheckedChange={(checked) => handleSelfPayingChange(!!checked)}
+                                disabled={isPatientSearched}
+                            />
+                        </div>
+                    </div>
+                    <InfoRow
                         icon="assets/icons/Cake.svg"
                         label="Gender"
-                        value={editedPatient.sex}
-                        selectValue={editedPatient.sex}
-                        // onChange={(value) => handleFieldChange('age', value)}
+                        value={editedPatient.sex === "N/A" ? "" : editedPatient.sex}
+                        selectValue={editedPatient.sex === "N/A" ? "" : editedPatient.sex}
                         onSelectChange={(value) => handleFieldChange('sex', value)}
                         selectOptions={sexOptions}
-                        disabled={true}
+                        disabled={isPatientSearched}
                     />
-                    {/* This is the new row for Age only */}
+                    {/* This is the row for Age */}
                     <InfoRow
                         icon="assets/icons/Cake.svg"
                         label="Age"
-                        value={editedPatient.age}
+                        value={editedPatient.age === "N/A" ? "" : editedPatient.age}
                         onChange={(value) => handleFieldChange('age', value)}
-                        disabled={true}
+                        disabled={isPatientSearched}
                     />
-                    {/* <InfoRow
-                        icon="assets/icons/Phone.svg"
-                        label="Contact"
-                        value={editedPatient.phone}
-                        onChange={(value) => handleFieldChange('phone', value)}
-                        disabled={true}
-                    /> */}
                     <InfoRow
                         icon="assets/icons/Id.svg"
                         label="Visit No"
-                        value={editedPatient.visitNo || editedPatient.visitID || ''}
-                        disabled={true}
+                        value={editedPatient.visitNo === "N/A" ? "" : editedPatient.visitNo || editedPatient.visitID || ''}
+                        onChange={(value) => handleFieldChange('visitNo', value)}
+                        disabled={isPatientSearched}
                     />
-                    {/* <InfoRow
-                        icon="assets/icons/Id.svg"
-                        label="ABHA ID"
-                        value={editedPatient.ABHAID}
-                        onChange={(value) => handleFieldChange('ABHAID', value)}
-                    /> */}
-                    {/* <div className="flex flex-col gap-2 w-full">
-                        <div className='flex flex-row h-8 items-center justify-between'>
-                            <div className='flex flex-row gap-1'>
-                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
-                                <span className='w-full text-[#1C2024] text-xs font-normal'>Customer</span>
-                            </div>
-                            <div className='flex flex-row h-8 items-center justify-between'>
-                                <Dropdown
-                                    reasons={customers.map(customer => ({
-                                        key: customer.value,
-                                        value: customer.label,
-                                    }))}
-                                    value={selectedCustomer}
-                                    onChange={handleCustomerChange}
-                                    placeholder="Self Paid"
-                                    disabled={true}
-                                />
-                            </div>
-                        </div>
-                    </div> */}
-                    {/* <div className="flex flex-col gap-2 w-full">
-                        <div className='flex flex-row h-8 items-center justify-between'>
-                            <div className='flex flex-row gap-1'>
-                                <Image src="assets/icons/Cash.svg" width={16} height={16} alt='Cash' />
-                                <span className='w-full text-[#1C2024] text-xs font-normal'>Company</span>
-                            </div>
-                            <div className='flex flex-row h-8 items-center justify-between'>
-                                <Dropdown
-                                    reasons={companies.map(company => ({
-                                        key: company.value,
-                                        value: company.label,
-                                    }))}
-                                    value={selectedCompany}
-                                    onChange={handleCompanyChange}
-                                    placeholder="Select company"
-                                    disabled={true}
-                                />
-                            </div>
-                        </div>
-                    </div> */}
                     <div className="flex flex-col gap-2 w-full">
                         <div className='flex flex-row h-8 items-center justify-between'>
                             <div className='flex flex-row gap-1'>
@@ -984,7 +988,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                         value={selectedBranch}
                                         onChange={handleBranchChange}
                                         placeholder="Select Hospital"
-                                        disabled={true}
+                                        disabled={isPatientSearched}
                                     />
                                 )}
                             </div>
@@ -1005,46 +1009,42 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                     value={selectedDepartment}
                                     onChange={handleDepartmentChange}
                                     placeholder="Select department"
-                                    disabled={true}
+                                    disabled={isPatientSearched}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* <InfoRow
-                        icon="assets/icons/Building.svg"
-                        label="Customer Name"
-                        value={editedPatient.name || ''}
-                        onChange={(value) => handleFieldChange('name', value)}
-                        disabled={true}
-                    /> */}
                     <InfoRow
                         icon="assets/icons/DoorEnter.svg"
                         label="Visit Type"
-                        value={editedPatient.visitType || ''}
-                        disabled={true} // <-- 1. THIS IS YOUR ORIGINAL GOAL
+                        value={editedPatient.visitType === "N/A" ? "" : editedPatient.visitType || ''}
+                        onChange={(value) => handleFieldChange('visitType', value)}
+                        disabled={isPatientSearched}
                     />
                     <InfoRow
                         icon="assets/icons/FirstAidKit.svg"
                         label="Consulting Doctor"
-                        value={editedPatient.doctor}
+                        value={editedPatient.doctor === "N/A" ? "" : editedPatient.doctor}
                         onChange={(value) => handleFieldChange('doctor', value)}
                         selectOptions={localDoctors.map(doctor => ({ label: doctor.label, value: doctor.value }))}
-                        selectValue={editedPatient.doctor}
+                        selectValue={editedPatient.doctor === "N/A" ? "" : editedPatient.doctor}
                         onSelectChange={(value) => handleFieldChange('doctor', value)}
-                        disabled={true}
+                        disabled={isPatientSearched}
                     />
                     <InfoRow
                         icon="assets/icons/Id.svg"
                         label="Bed Name"
-                        value={editedPatient.bedName || ''}
-                        disabled={true}
+                        value={editedPatient.bedName === "N/A" ? "" : editedPatient.bedName || ''}
+                        onChange={(value) => handleFieldChange('bedName', value)}
+                        disabled={isPatientSearched}
                     />
                     <InfoRow
                         icon="assets/icons/Id.svg"
                         label="Ward Name"
-                        value={editedPatient.wardName || ''}
-                        disabled={true}
+                        value={editedPatient.wardName === "N/A" ? "" : editedPatient.wardName || ''}
+                        onChange={(value) => handleFieldChange('wardName', value)}
+                        disabled={isPatientSearched}
                     />
                     <DialogTrigger asChild>
                         <div className='w-fit h-fit flex justify-start'>
@@ -1079,6 +1079,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                     onClose={() => setOpen(false)}
                     isReturn={isReturn}
                     onReturnStatusChange={onReturnStatusChange}
+                    isSelfPaying={localSelfPaying}
                 />
             </DialogContent>
         </Dialog>
