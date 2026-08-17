@@ -2197,6 +2197,7 @@ export default function Return() {
     setSourceDocumentType('');
     setItems([]);
     setPatientData(null);
+    setRawPatientData(null);
     setShowDropdown(false);
     setShowPosProfileSelector(false);
     setShowPatientRequisitionList(false);
@@ -2331,6 +2332,7 @@ export default function Return() {
 
   const clearPatient = () => {
     setPatientData(null);
+    setRawPatientData(null);
     // setSearchValue("");
     // setSearchResults([]);
     setShowDropdown(false);
@@ -6045,7 +6047,10 @@ export default function Return() {
             <div>
               <OpdCard
                 patientData={patientData}
-                onPatientChange={(p) => setPatientData(p)}
+                onPatientChange={(p, raw) => {
+                  setPatientData(p);
+                  setRawPatientData(raw);
+                }}
                 selectedWarehouse={selectedWarehouse}
                 setSelectedWarehouse={setSelectedWarehouse}
                 selectedCustomer={selectedCustomer}
