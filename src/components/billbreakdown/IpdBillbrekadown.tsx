@@ -51,7 +51,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
   const [showRecordPayment, setShowRecordPayment] = useState(false);
   const [showTotalBreakdown, setShowTotalBreakdown] = useState(false);
   const [concessionAmount] = useState<number>(0);
-  const [isRoundedOff] = useState<boolean>(true);
+  const [isRoundedOff, setIsRoundedOff] = useState<boolean>(true);
   const [recordedPayments, setRecordedPayments] = useState<RecordedPayment[]>([]);
 
   // Editable fields state
@@ -192,7 +192,9 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
 
   const calculateOutstandingAmount = () => {
     const totalPaidAmount = calculateTotalPaidAmount();
-    const outstanding = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value - totalPaidAmount;
+    const baseTotal = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value;
+    const effectiveTotal = isRoundedOff ? Math.round(baseTotal) : baseTotal;
+    const outstanding = effectiveTotal - totalPaidAmount;
     return Math.max(0, outstanding);
   };
 
@@ -202,10 +204,10 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
   };
 
   const calculateRoundOffValues = () => {
-    const outstandingAmount = calculateOutstandingAmount();
-    const rounded_total = Math.round(totalBillAmount - concessionAmount - editableFields.balanceUtilized.value);
-    const rounding_adjustment = rounded_total - totalBillAmount;
-    const grand_total = isRoundedOff ? rounded_total : outstandingAmount;
+    const baseTotal = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value;
+    const rounded_total = Math.round(baseTotal);
+    const rounding_adjustment = rounded_total - baseTotal;
+    const grand_total = isRoundedOff ? rounded_total : baseTotal;
     return {
       rounded_total,
       rounding_adjustment,
@@ -317,7 +319,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
               {truncateToTwoDecimals(totalPatientAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
-          {/* <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -334,16 +336,15 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
                   : `- ${Math.abs(calculateRoundOffValues().rounding_adjustment).toFixed(2)}`}
               </span>
             )}
-          </div> */}
-          {/* {isRoundedOff && (
+          </div>
+          {isRoundedOff && (
             <div className="flex justify-between items-center pt-2 border-t border-[#D9D9E0]">
-
               <h3 className="text-[#1C2024] text-xs font-semibold">Grand Total</h3>
               <span className="text-[#1C2024] text-xs font-bold">
                 {calculateRoundOffValues().grand_total.toLocaleString()}
               </span>
             </div>
-          )} */}
+          )}
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
               {/* <div className="flex justify-between items-center">
@@ -410,7 +411,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
             <div className="flex justify-between items-center">
               <h3 className="text-[#1C2024] text-xs font-semibold">Outstanding Amount</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                {calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
               </span>
             </div>
 
@@ -477,7 +478,7 @@ const IPDBillBreakdown: React.FC<BillBreakdownProps> = ({
         posProfile={posProfile}
         apiKey={apiKey || undefined}
         apiSecret={apiSecret || undefined}
-        outstandingAmount={calculateRoundOffValues().grand_total}
+        outstandingAmount={calculateOutstandingAmount()}
         payments={recordedPayments}
         setPayments={setRecordedPayments}
       />

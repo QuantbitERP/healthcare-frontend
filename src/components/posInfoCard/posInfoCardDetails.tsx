@@ -72,7 +72,7 @@ const PosInfoCardDetails: React.FC<PosInfoCardDetailsProps> = ({
   postingDate,
   priceList,
   currency,
-  isSelfPaying = false,
+  isSelfPaying = true,
   isPos = true,
   updateStock = true,
   isReturn = false,

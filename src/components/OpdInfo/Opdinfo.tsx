@@ -131,7 +131,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     const [isPatientSearched, setIsPatientSearched] = useState<boolean>(false);
 
     // Local state for self paying checkbox
-    const [localSelfPaying, setLocalSelfPaying] = useState<boolean>(isSelfPayingProp ?? false);
+    const [localSelfPaying, setLocalSelfPaying] = useState<boolean>(isSelfPayingProp ?? true);
 
     useEffect(() => {
         if (isSelfPayingProp !== undefined) {

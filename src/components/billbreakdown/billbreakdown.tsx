@@ -210,7 +210,9 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
 
   const calculateOutstandingAmount = () => {
     const totalPaidAmount = calculateTotalPaidAmount();
-    const outstanding = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value - totalPaidAmount;
+    const baseTotal = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value;
+    const effectiveTotal = isRoundedOff ? Math.round(baseTotal) : baseTotal;
+    const outstanding = effectiveTotal - totalPaidAmount;
     return Math.max(0, outstanding);
   };
 
@@ -220,10 +222,10 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
   };
 
   const calculateRoundOffValues = () => {
-    const outstandingAmount = calculateOutstandingAmount();
-    const rounded_total = Math.round(totalBillAmount - concessionAmount - editableFields.balanceUtilized.value);
-    const rounding_adjustment = rounded_total - totalBillAmount;
-    const grand_total = isRoundedOff ? rounded_total : outstandingAmount;
+    const baseTotal = totalBillAmount - concessionAmount - editableFields.balanceUtilized.value;
+    const rounded_total = Math.round(baseTotal);
+    const rounding_adjustment = rounded_total - baseTotal;
+    const grand_total = isRoundedOff ? rounded_total : baseTotal;
     return {
       rounded_total,
       rounding_adjustment,
@@ -432,7 +434,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
             <div className="flex justify-between items-center">
               <h3 className="text-[#1C2024] text-xs font-semibold">Outstanding Amount</h3>
               <span className="text-[#1C2024] text-xs font-bold">
-                {calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {calculateOutstandingAmount().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
               </span>
             </div>
 
@@ -499,7 +501,7 @@ const BillBreakdown: React.FC<BillBreakdownProps> = ({
         posProfile={posProfile}
         apiKey={apiKey || undefined}
         apiSecret={apiSecret || undefined}
-        outstandingAmount={calculateRoundOffValues().grand_total}
+        outstandingAmount={calculateOutstandingAmount()}
         payments={recordedPayments}
         setPayments={setRecordedPayments}
       />
