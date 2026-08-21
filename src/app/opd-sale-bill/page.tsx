@@ -2086,7 +2086,7 @@ export default function IPDBill() {
 
       try {
         const reqResponse = await fetch(
-          `${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(reqNo)}?fields=["name","prescription_no","custom_prescription_no","patient_requisition_item_details"]`,
+          `${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(reqNo)}`,
           {
             method: 'GET',
             headers,
@@ -2101,7 +2101,7 @@ export default function IPDBill() {
           requisitionItems = reqData.data?.patient_requisition_item_details || [];
         } else {
           const filterSearchResponse = await fetch(
-            `${API_BASE_URL}/Patient%20Requisition?filters=[["prescription_no","=","${reqNo}"]]&fields=["name","prescription_no","patient_requisition_item_details"]`,
+            `${API_BASE_URL}/Patient%20Requisition?filters=[["prescription_no","=","${reqNo}"]]&fields=["name","prescription_no"]`,
             {
               method: 'GET',
               headers,
@@ -2114,7 +2114,14 @@ export default function IPDBill() {
               const matchedReq = filterData.data[0];
               docName = matchedReq.name;
               prescriptionNo = matchedReq.prescription_no || reqNo;
-              requisitionItems = matchedReq.patient_requisition_item_details || [];
+              const fullReqResp = await fetch(
+                `${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(docName)}`,
+                { method: 'GET', headers, credentials: 'include' }
+              );
+              if (fullReqResp.ok) {
+                const fullReqData = await fullReqResp.json();
+                requisitionItems = fullReqData.data?.patient_requisition_item_details || [];
+              }
             }
           }
         }
@@ -5280,7 +5287,7 @@ export default function IPDBill() {
           authHeaders;
 
       // Fetch the requisition/prescription document
-      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${sourceDocName}?fields=["name","patient_requisition_item_details"]`, {
+      const response = await fetch(`${API_BASE_URL}/Patient%20Requisition/${encodeURIComponent(sourceDocName)}`, {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -6386,7 +6393,11 @@ export default function IPDBill() {
 
         // Update requisition status if this invoice is against a requisition or prescription
         if (sourceDocumentName && (sourceDocumentType === 'requisition' || sourceDocumentType === 'prescription')) {
-          await updateRequisitionStatus(sourceDocumentName, isComplete);
+          try {
+            await updateRequisitionStatus(sourceDocumentName, isComplete);
+          } catch (statusError) {
+            console.error("Error updating requisition status during finalize:", statusError);
+          }
         }
 
         // Print the invoice using network printer
