@@ -105,6 +105,7 @@ export interface Item {
   coPayPercentage?: number; // Add co-pay percentage field
   patientAmount?: number; // Add patient amount field
   payerAmount?: number; // Add payer amount field
+  isManualPatientAmount?: boolean; // Track manual edit override for patient amount
   covered?: boolean; // Add covered checkbox field
   preAuthRequired?: boolean; // Add pre-auth required field
   preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
@@ -1002,18 +1003,25 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   }
 
   // Calculate payer and patient amounts based on co-pay percentage and pre-auth status
-  const copayApplies = item.covered && item.preAuthStatus === 'Approved';
-  let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
-  if (!item.covered) {
-    coPayPercent = 0;
+  let patientAmount: number;
+  let payerAmount: number;
+
+  if (item.isManualPatientAmount && item.patientAmount !== undefined) {
+    patientAmount = item.patientAmount;
+    payerAmount = Math.max(0, totalAmount - patientAmount);
+  } else {
+    const copayApplies = item.covered && item.preAuthStatus === 'Approved';
+    let coPayPercent = copayApplies ? (item.coPayPercentage ?? 0) : 0;
+    if (!item.covered) {
+      coPayPercent = 0;
+    }
+    payerAmount = totalAmount * (coPayPercent / 100);
+    patientAmount = totalAmount - payerAmount;
   }
-  
-  const patientAmount = totalAmount * (coPayPercent / 100);
-  const payerAmount = totalAmount - patientAmount;
 
   return {
     ...item,
-    coPayPercentage: !item.covered ? 0 : item.coPayPercentage,
+    coPayPercentage: !item.covered ? 0 : (item.coPayPercentage ?? 0),
     itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
     discountAmt: truncateToTwoDecimals(discountAmount), // Discount amount calculated on MRP
     cgstAmt: truncateToTwoDecimals(cgstAmount),
@@ -2463,12 +2471,14 @@ export default function IPDBill() {
 
             if (matchedStatus && matchedStatus.statusName) {
               console.log(`Match found for item ${item.itemCode}. Updating PreAuth Status to: ${matchedStatus.statusName}`);
-              return {
+              const updatedItem = {
                 ...item,
                 preAuthStatus: matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase(),
                 preAuthNo: matchedStatus.preAuthNumber || item.preAuthNo,
-                preAuthDateTime: matchedStatus.preAuthDate || item.preAuthDateTime
+                preAuthDateTime: matchedStatus.preAuthDate || item.preAuthDateTime,
+                isManualPatientAmount: false
               };
+              return calculateItemTaxAndTotals(updatedItem, true);
             }
             return item;
           });

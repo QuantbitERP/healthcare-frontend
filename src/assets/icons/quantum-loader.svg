@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xhtml" viewBox="0 0 90 90" width="90" height="90" role="img" aria-label="Loading">
+  <!-- Exact quantum-rings loader (HTML/CSS) embedded for faithful animation.
+       Open in a browser, or inline in HTML. For <img src="..."> prefer quantum-loader-pure.svg -->
+  <foreignObject x="0" y="0" width="90" height="90">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="width:90px;height:90px;margin:0;padding:0;overflow:hidden;">
+      <style>
+        :root {
+          --loader-color: #3b82f6;
+          --loader-color-rgb: 59, 130, 246;
+          --loader-speed: 1.2s;
+        }
+        .quantum-loader {
+          width: 90px;
+          height: 90px;
+          position: relative;
+          perspective: 500px;
+          transform-style: preserve-3d;
+        }
+        .quantum-ring {
+          position: absolute;
+          inset: 0;
+          border: 2px solid transparent;
+          border-radius: 50%;
+          animation-duration: calc(var(--loader-speed) * 2);
+          animation-iteration-count: infinite;
+          animation-timing-function: linear;
+          box-sizing: border-box;
+        }
+        .quantum-ring-1 {
+          border-top-color: var(--loader-color);
+          border-bottom-color: rgba(var(--loader-color-rgb), 0.3);
+          transform: rotateX(55deg) rotateY(15deg);
+          animation-name: quantum-spin-1;
+          filter: drop-shadow(0 0 4px rgba(var(--loader-color-rgb), 0.5));
+        }
+        .quantum-ring-2 {
+          border-left-color: var(--loader-color);
+          border-right-color: rgba(var(--loader-color-rgb), 0.2);
+          transform: rotateX(30deg) rotateY(-45deg);
+          animation-name: quantum-spin-2;
+          animation-duration: calc(var(--loader-speed) * 1.5);
+          filter: drop-shadow(0 0 4px rgba(var(--loader-color-rgb), 0.5));
+        }
+        .quantum-ring-3 {
+          border-top-color: var(--loader-color);
+          border-left-color: rgba(var(--loader-color-rgb), 0.4);
+          transform: rotateX(60deg) rotateY(60deg);
+          animation-name: quantum-spin-3;
+          animation-duration: calc(var(--loader-speed) * 2.5);
+          filter: drop-shadow(0 0 4px rgba(var(--loader-color-rgb), 0.4));
+        }
+        .quantum-core {
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          background-color: var(--loader-color);
+          border-radius: 50%;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 0 15px var(--loader-color);
+          animation: quantum-pulse 1.5s infinite ease-in-out;
+        }
+        @keyframes quantum-spin-1 {
+          0% { transform: rotateX(55deg) rotateY(15deg) rotateZ(0deg); }
+          100% { transform: rotateX(55deg) rotateY(15deg) rotateZ(360deg); }
+        }
+        @keyframes quantum-spin-2 {
+          0% { transform: rotateX(30deg) rotateY(-45deg) rotateZ(360deg); }
+          100% { transform: rotateX(30deg) rotateY(-45deg) rotateZ(0deg); }
+        }
+        @keyframes quantum-spin-3 {
+          0% { transform: rotateX(60deg) rotateY(60deg) rotateZ(0deg); }
+          100% { transform: rotateX(60deg) rotateY(60deg) rotateZ(360deg); }
+        }
+        @keyframes quantum-pulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.7; }
+          50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+        }
+      </style>
+      <div class="quantum-loader">
+        <div class="quantum-ring quantum-ring-1"></div>
+        <div class="quantum-ring quantum-ring-2"></div>
+        <div class="quantum-ring quantum-ring-3"></div>
+        <div class="quantum-core"></div>
+      </div>
+    </div>
+  </foreignObject>
+</svg>

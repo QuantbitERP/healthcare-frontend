@@ -55,6 +55,7 @@ interface Item {
   coPayPercentage?: number; // Add co-pay percentage field
   patientAmount?: number; // Add patient amount field
   payerAmount?: number; // Add payer amount field
+  isManualPatientAmount?: boolean; // Track manual edit override for patient amount
   covered?: boolean; // Add covered checkbox field
   preAuthRequired?: boolean; // Add pre-auth required field
   preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
@@ -201,7 +202,7 @@ const EditableCell = ({
       }`}
     >
       {type === 'number' && typeof value === 'number'
-        ? (column.id.includes('Amt') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
+        ? (column.id.includes('Amt') || column.id.includes('Amount') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
           ? `﷼${truncateToTwoDecimals(value).toFixed(2)}`
           : value.toString()
         : (type === 'datetime-local' ? formatForUiDisplay(value) : value) || '-'
@@ -728,6 +729,21 @@ const EditableTable = ({
 
           if (columnId === 'covered' && !parsedValue) {
             updatedRow.preAuthStatus = 'Pending';
+          }
+
+          if (columnId === 'patientAmount') {
+            const totalAmt = updatedRow.totalAmt || 0;
+            const userPatientAmt = Math.max(0, parsedValue);
+            updatedRow.patientAmount = userPatientAmt;
+            updatedRow.payerAmount = Math.max(0, totalAmt - userPatientAmt);
+            if (totalAmt > 0) {
+              updatedRow.coPayPercentage = Math.min(100, Math.max(0, (updatedRow.payerAmount / totalAmt) * 100));
+            }
+            updatedRow.isManualPatientAmount = true;
+          }
+
+          if (['coPayPercentage', 'preAuthStatus', 'covered'].includes(columnId)) {
+            updatedRow.isManualPatientAmount = false;
           }
 
           if (columnId === 'discountAmt') {
@@ -1696,48 +1712,22 @@ const EditableTable = ({
     {
       accessorKey: "patientAmount",
       header: "Patient Payer",
-      cell: ({ row }) => {
-        const item = row.original as Item;
-        const rate = item.rate !== null ? item.rate : 0;
-        const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
-        const baseAmount = quantity * rate;
-        const discountAmount = baseAmount * (item.discountPercent / 100);
-        const itemAmountAfterDiscount = baseAmount - discountAmount;
-        
-        // Co-pay calculations apply if pre-auth fields are not shown, OR if they are shown and covered & approved
-        const copayApplies = !showPreAuthFields || (item.covered && item.preAuthStatus === 'Approved');
-        let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
-        if (!item.covered) {
-          coPayPercent = 0;
-        }
-        const payerAmount = itemAmountAfterDiscount * (coPayPercent / 100);
-        const patientAmount = itemAmountAfterDiscount - payerAmount;
-
-        return (
-          <div className="px-2 py-1 min-h-[32px] flex items-center">
-            ﷼{truncateToTwoDecimals(patientAmount).toFixed(2)}
-          </div>
-        );
-      },
+      cell: ({ getValue, row, column, table }) => (
+        <EditableCell
+          value={getValue()}
+          row={row}
+          column={column}
+          table={table}
+          type="number"
+        />
+      ),
     },
     {
       accessorKey: "payerAmount",
       header: "Customer Payer",
       cell: ({ row }) => {
         const item = row.original as Item;
-        const rate = item.rate !== null ? item.rate : 0;
-        const quantity = item.returnQty && item.returnQty > 0 ? item.returnQty : item.saleQty;
-        const baseAmount = quantity * rate;
-        const discountAmount = baseAmount * (item.discountPercent / 100);
-        const itemAmountAfterDiscount = baseAmount - discountAmount;
-        
-        // Co-pay calculations apply if pre-auth fields are not shown, OR if they are shown and covered & approved
-        const copayApplies = !showPreAuthFields || (item.covered && item.preAuthStatus === 'Approved');
-        let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
-        if (!item.covered) {
-          coPayPercent = 0;
-        }
-        const payerAmount = itemAmountAfterDiscount * (coPayPercent / 100);
+        const payerAmount = item.payerAmount !== undefined && item.payerAmount !== null ? item.payerAmount : 0;
 
         return (
           <div className="px-2 py-1 min-h-[32px] flex items-center">
