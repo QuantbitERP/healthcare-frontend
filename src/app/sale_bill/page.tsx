@@ -4993,7 +4993,9 @@ export default function IPDBill() {
                              (reqItem.his_item_id && preauthItemIdsRef.current.get(reqItem.his_item_id)) ||
                              (reqItem.itemId && preauthItemIdsRef.current.get(reqItem.itemId)) ||
                              (reqItem.item_id && preauthItemIdsRef.current.get(reqItem.item_id)) ||
-                             (hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null);
+                             (reqItem.prescription_item_id && preauthItemIdsRef.current.get(reqItem.prescription_item_id)) ||
+                             (hisItemId ? preauthItemIdsRef.current.get(hisItemId) : null) ||
+                             (itemCode ? preauthItemIdsRef.current.get(itemCode) : null);
 
       // Determine pre-auth status, pre-auth no, pre-auth datetime
       const statusName = matchedStatus?.statusName ?
@@ -5002,12 +5004,13 @@ export default function IPDBill() {
       const preAuthNo = matchedStatus?.preAuthNumber || reqItem.pre_auth_no || "";
       const preAuthDateTime = matchedStatus?.preAuthDate || reqItem.pre_auth_date_time || "";
 
-      // Determine if covered
+      // Determine if covered: Strictly use Patient Search API (isIncluded) if available
       let isItemCovered = false;
       if (preAuthDetails && typeof preAuthDetails.isIncluded === 'boolean') {
         isItemCovered = preAuthDetails.isIncluded;
-      } else if (matchedStatus || (statusName !== "" && statusName !== "Rejected")) {
-        isItemCovered = true;
+      } else if (preauthItemIdsRef.current.size > 0) {
+        // Patient Search API data is available for this patient, but item is NOT in the covered list
+        isItemCovered = false;
       } else if (
         reqItem.covered === 1 ||
         reqItem.covered === true ||
@@ -5019,8 +5022,7 @@ export default function IPDBill() {
       ) {
         isItemCovered = true;
       } else {
-        const patientComp = fullPrescriptionData.patient_company || fullPrescriptionData.company || prescription.patient_company;
-        isItemCovered = !!patientComp;
+        isItemCovered = false;
       }
 
       // Determine preAuthRequired
@@ -6962,12 +6964,15 @@ export default function IPDBill() {
                   const itemMap = new Map();
                   const pharmacyDetails = rawPatient?.patinetCompnayPreauthPharmacyDetailsDTO || [];
                   pharmacyDetails.forEach((d: any) => {
-                    if (d.itemId) {
-                      itemMap.set(d.itemId, {
-                        isIncluded: d.isIncluded,
-                        isPreAuthRequired: d.isPreAuthRequired
-                      });
-                    }
+                    const entry = {
+                      isIncluded: Boolean(d.isIncluded),
+                      isPreAuthRequired: Boolean(d.isPreAuthRequired)
+                    };
+                    if (d.itemId) itemMap.set(String(d.itemId), entry);
+                    if (d.itemCode) itemMap.set(String(d.itemCode), entry);
+                    if (d.qbItemId) itemMap.set(String(d.qbItemId), entry);
+                    if (d.hisItemId) itemMap.set(String(d.hisItemId), entry);
+                    if (d.item_code) itemMap.set(String(d.item_code), entry);
                   });
                   preauthItemIdsRef.current = itemMap;
                 }}
