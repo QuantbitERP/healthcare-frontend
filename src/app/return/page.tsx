@@ -138,6 +138,13 @@ const formatPreAuthDateTimeForApi = (val: any): string => {
   return str;
 };
 
+const formatPreAuthStatus = (status?: string): string => {
+  if (!status) return "";
+  const str = String(status).trim();
+  if (str.toLowerCase() === "partially approved") return "Partially Approved";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
 interface ItemSearchProps {
   onSelectItem: (item: Item) => void;
   placeholder?: string;
@@ -970,7 +977,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
   });
 
   // Calculate payer and patient amounts based on co-pay percentage and pre-auth status
-  const copayApplies = item.covered && item.preAuthStatus === 'Approved';
+  const copayApplies = item.covered && (item.preAuthStatus === 'Approved' || item.preAuthStatus === 'Partially Approved');
   let coPayPercent = copayApplies ? (item.coPayPercentage || 0) : 100;
   if (!item.covered) {
     coPayPercent = 100;
@@ -981,7 +988,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   return {
     ...item,
-    coPayPercentage: !item.covered ? 0 : item.coPayPercentage,
+    coPayPercentage: !item.covered ? 0 : Math.round((item.coPayPercentage ?? 0) * 100) / 100,
     payerAmount: truncateToTwoDecimals(payerAmount),
     patientAmount: truncateToTwoDecimals(patientAmount),
     itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
@@ -4079,7 +4086,7 @@ export default function Return() {
             hasStock: false, // Mark as no stock
             covered: reqItem.covered === 1 || reqItem.covered === true,
             preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
-            preAuthStatus: reqItem.pre_auth_status || "",
+            preAuthStatus: formatPreAuthStatus(reqItem.pre_auth_status),
             preAuthNo: reqItem.pre_auth_no || "",
             preAuthDateTime: reqItem.pre_auth_date_time || "",
             coPayPercentage: reqItem.co_pay || 0,
@@ -4135,7 +4142,7 @@ export default function Return() {
               binLocation: "",
               covered: reqItem.covered === 1 || reqItem.covered === true,
               preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
-              preAuthStatus: reqItem.pre_auth_status || "",
+              preAuthStatus: formatPreAuthStatus(reqItem.pre_auth_status),
               preAuthNo: reqItem.pre_auth_no || "",
               preAuthDateTime: reqItem.pre_auth_date_time || "",
               coPayPercentage: reqItem.co_pay || 0,
@@ -4182,7 +4189,7 @@ export default function Return() {
             binLocation: "",
             covered: reqItem.covered === 1 || reqItem.covered === true,
             preAuthRequired: reqItem.pre_auth_req === 1 || reqItem.pre_auth_req === true || reqItem.pre_auth_req === "Yes",
-            preAuthStatus: reqItem.pre_auth_status || "",
+            preAuthStatus: formatPreAuthStatus(reqItem.pre_auth_status),
             preAuthNo: reqItem.pre_auth_no || "",
             preAuthDateTime: reqItem.pre_auth_date_time || "",
             coPayPercentage: reqItem.co_pay || 0,
@@ -4935,7 +4942,7 @@ export default function Return() {
             payerAmount: invItem.payer_amount || 0,
             covered: invItem.covered === 1,
             preAuthRequired: invItem.pre_auth_req === "Yes" || invItem.pre_auth_req === 1,
-            preAuthStatus: invItem.pre_auth_status || "",
+            preAuthStatus: formatPreAuthStatus(invItem.pre_auth_status),
             preAuthNo: invItem.pre_auth_no || "",
             preAuthDateTime: invItem.pre_auth_date_time || "",
             isFromPrescription: !!(fullInvoice.source_prescription || fullInvoice.custom_prescription_no || invItem.custom_is_prescribed === 1 || invItem.is_from_prescription === 1),
@@ -6736,8 +6743,11 @@ export default function Return() {
                         coPayPercentage: item.co_pay || 0,
                         patientAmount: item.patient_amount || 0,
                         payerAmount: item.payer_amount || 0,
-                        covered: item.co_pay !== undefined && item.co_pay !== null ? true : false,
-                        preAuthStatus: 'Approved', // Default to approved for returns if copay exists
+                        covered: item.covered === 1 || item.covered === true || (item.co_pay !== undefined && item.co_pay !== null && item.co_pay > 0),
+                        preAuthRequired: item.pre_auth_req === "Yes" || item.pre_auth_req === 1 || item.pre_auth_req === true,
+                        preAuthStatus: formatPreAuthStatus(item.pre_auth_status) || 'Approved',
+                        preAuthNo: item.pre_auth_no || "",
+                        preAuthDateTime: item.pre_auth_date_time || "",
                       };
                     })
                   );

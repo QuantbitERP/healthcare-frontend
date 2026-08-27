@@ -58,7 +58,7 @@ interface Item {
   isManualPatientAmount?: boolean; // Track manual edit override for patient amount
   covered?: boolean; // Add covered checkbox field
   preAuthRequired?: boolean; // Add pre-auth required field
-  preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
+  preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved, Partially Approved)
   preAuthNo?: string; // Add pre-auth number field
   preAuthDateTime?: string; // Add pre-auth date and time field
   isFromPrescription?: boolean; // Add flag to track if item is loaded from prescription
@@ -201,10 +201,12 @@ const EditableCell = ({
           : 'cursor-pointer hover:bg-gray-100'
       }`}
     >
-      {type === 'number' && typeof value === 'number'
+      {type === 'number' && (typeof value === 'number' || (typeof value === 'string' && value !== '' && !isNaN(Number(value))))
         ? (column.id.includes('Amt') || column.id.includes('Amount') || column.id.includes('rate') || column.id === 'itemAmount' || column.id === 'totalAmt' || column.id === 'totalPckgAmt' || column.id === 'mrp')
-          ? `﷼${truncateToTwoDecimals(value).toFixed(2)}`
-          : value.toString()
+          ? `﷼${truncateToTwoDecimals(Number(value)).toFixed(2)}`
+          : (column.id === 'coPayPercentage' || column.id.includes('Percent') || column.id.includes('Percentage'))
+            ? Number(value).toFixed(2)
+            : value.toString()
         : (type === 'datetime-local' ? formatForUiDisplay(value) : value) || '-'
       }
     </div>
@@ -623,9 +625,9 @@ const EditableTable = ({
             parsedValue = parseFloat(value) || 0;
           }
 
-          // Validate co-pay percentage range (0-100)
+          // Validate co-pay percentage range (0-100) and round to 2 decimal places
           if (columnId === 'coPayPercentage') {
-            parsedValue = Math.min(Math.max(parsedValue, 0), 100);
+            parsedValue = Math.round(Math.min(Math.max(parsedValue, 0), 100) * 100) / 100;
           }
 
           // Stock validation for saleQty
@@ -737,7 +739,7 @@ const EditableTable = ({
             updatedRow.patientAmount = userPatientAmt;
             updatedRow.payerAmount = Math.max(0, totalAmt - userPatientAmt);
             if (totalAmt > 0) {
-              updatedRow.coPayPercentage = Math.min(100, Math.max(0, (updatedRow.payerAmount / totalAmt) * 100));
+              updatedRow.coPayPercentage = Math.round(Math.min(100, Math.max(0, (updatedRow.payerAmount / totalAmt) * 100)) * 100) / 100;
             }
             updatedRow.isManualPatientAmount = true;
           }
@@ -1787,6 +1789,7 @@ const EditableTable = ({
         const value = getValue() || 'Pending';
         const statusColors: { [key: string]: string } = {
           'Approved': 'text-green-600',
+          'Partially Approved': 'text-emerald-600',
           'Pending': 'text-yellow-600',
           'Rejected': 'text-red-600',
           'Initiated': 'text-blue-600'
@@ -1807,6 +1810,7 @@ const EditableTable = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Partially Approved">Partially Approved</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Rejected">Rejected</SelectItem>
                 <SelectItem value="Initiated">Initiated</SelectItem>

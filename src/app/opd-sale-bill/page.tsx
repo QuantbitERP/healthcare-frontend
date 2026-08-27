@@ -106,7 +106,7 @@ export interface Item {
   isManualPatientAmount?: boolean; // Track manual edit override for patient amount
   covered?: boolean; // Add covered checkbox field
   preAuthRequired?: boolean; // Add pre-auth required field
-  preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved)
+  preAuthStatus?: string; // Add pre-auth status field (Rejected, Pending, Initiated, Approved, Partially Approved)
   preAuthNo?: string; // Add pre-auth number field
   preAuthDateTime?: string; // Add pre-auth date and time field
   isFromPrescription?: boolean; // Add flag to track if item is loaded from prescription
@@ -1013,7 +1013,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     patientAmount = item.patientAmount;
     payerAmount = Math.max(0, totalAmount - patientAmount);
   } else {
-    const copayApplies = item.covered && item.preAuthStatus === 'Approved';
+    const copayApplies = item.covered && (item.preAuthStatus === 'Approved' || item.preAuthStatus === 'Partially Approved');
     let coPayPercent = copayApplies ? (item.coPayPercentage ?? 0) : 0;
     if (!item.covered) {
       coPayPercent = 0;
@@ -1024,7 +1024,7 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
 
   return {
     ...item,
-    coPayPercentage: !item.covered ? 0 : (item.coPayPercentage ?? 0),
+    coPayPercentage: !item.covered ? 0 : Math.round((item.coPayPercentage ?? 0) * 100) / 100,
     itemAmount: truncateToTwoDecimals(itemAmountAfterDiscount), // Amount after discount (taxable amount)
     discountAmt: truncateToTwoDecimals(discountAmount), // Discount amount calculated on MRP
     cgstAmt: truncateToTwoDecimals(cgstAmount),
@@ -2487,7 +2487,9 @@ export default function IPDBill() {
             if (matchedStatus && matchedStatus.statusName) {
               const updatedItem = {
                 ...item,
-                preAuthStatus: matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase(),
+                preAuthStatus: matchedStatus.statusName.trim().toLowerCase() === 'partially approved'
+                  ? 'Partially Approved'
+                  : (matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase()),
                 preAuthNo: matchedStatus.preAuthNumber || item.preAuthNo,
                 preAuthDateTime: matchedStatus.preAuthDate || item.preAuthDateTime,
                 isManualPatientAmount: false
@@ -4744,7 +4746,7 @@ export default function IPDBill() {
 
       // Determine pre-auth status, pre-auth no, pre-auth datetime
       const statusName = matchedStatus?.statusName ?
-        (matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase()) :
+        (matchedStatus.statusName.trim().toLowerCase() === 'partially approved' ? 'Partially Approved' : (matchedStatus.statusName.charAt(0).toUpperCase() + matchedStatus.statusName.slice(1).toLowerCase())) :
         (reqItem.pre_auth_status || "");
       const preAuthNo = matchedStatus?.preAuthNumber || reqItem.pre_auth_no || "";
       const preAuthDateTime = matchedStatus?.preAuthDate || reqItem.pre_auth_date_time || "";
@@ -5668,7 +5670,7 @@ export default function IPDBill() {
             payerAmount: invItem.payer_amount || 0,
             covered: invItem.covered === 1,
             preAuthRequired: invItem.pre_auth_req === "Yes" || invItem.pre_auth_req === 1,
-            preAuthStatus: invItem.pre_auth_status || "",
+            preAuthStatus: (invItem.pre_auth_status && invItem.pre_auth_status.trim().toLowerCase() === "partially approved") ? "Partially Approved" : (invItem.pre_auth_status || ""),
             preAuthNo: invItem.pre_auth_no || "",
             preAuthDateTime: invItem.pre_auth_date_time || "",
             isFromPrescription: !!(fullInvoice.source_prescription || fullInvoice.custom_prescription_no || invItem.custom_is_prescribed === 1 || invItem.is_from_prescription === 1),
