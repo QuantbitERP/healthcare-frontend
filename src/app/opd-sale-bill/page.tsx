@@ -1803,6 +1803,7 @@ export default function IPDBill() {
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
   const [rawPatientData, setRawPatientData] = useState<any | null>(null);
+  const [isSelfPaying, setIsSelfPaying] = useState<boolean>(true);
   const [payerDetailsFromSearch, setPayerDetailsFromSearch] = useState(false);
   const [selectedPayerCompanyId, setSelectedPayerCompanyId] = useState<string>('');
   const preauthItemIdsRef = useRef<Map<string, { isIncluded: boolean, isPreAuthRequired: boolean }>>(new Map());
@@ -2676,8 +2677,9 @@ export default function IPDBill() {
 
   const clearPatient = () => {
     setPatientData(null);
+    setRawPatientData(null);
+    setIsSelfPaying(true);
     preauthItemIdsRef.current = new Map();
-    setRawPatientData(null); // setSearchValue("");
     // setSearchResults([]);
     setShowDropdown(false);
     setItems([]);
@@ -6591,6 +6593,8 @@ export default function IPDBill() {
                 setSelectedSubDepartment={setSelectedSubDepartment}
                 isReturn={isReturn}
                 onReturnStatusChange={setIsReturn}
+                isSelfPaying={isSelfPaying}
+                onSelfPayingChange={setIsSelfPaying}
               />
               {patientData && (
                 <div className="mt-2">

@@ -1784,6 +1784,7 @@ export default function IPDBill() {
   const [items, setItems] = useState<Item[]>([]);
   const [patientData, setPatientData] = useState<SelectedPatient | null>(null);
   const [rawPatientData, setRawPatientData] = useState<any | null>(null);
+  const [isSelfPaying, setIsSelfPaying] = useState<boolean>(true);
 
   // Holds the preauth-eligible item IDs for the currently selected patient.
   // Pure lookup data read during item search — never rendered, so a ref
@@ -2670,6 +2671,8 @@ export default function IPDBill() {
 
   const clearPatient = () => {
     setPatientData(null);
+    setRawPatientData(null);
+    setIsSelfPaying(true);
     preauthItemIdsRef.current = new Map();
     // setSearchValue("");
     // setSearchResults([]);
@@ -6992,6 +6995,8 @@ export default function IPDBill() {
                 setSelectedSubDepartment={setSelectedSubDepartment}
                 isReturn={isReturn}
                 onReturnStatusChange={setIsReturn}
+                isSelfPaying={isSelfPaying}
+                onSelfPayingChange={setIsSelfPaying}
               />
               {patientData && (
                 <div className="mt-2">

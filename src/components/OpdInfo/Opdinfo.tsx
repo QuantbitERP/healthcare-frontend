@@ -139,6 +139,17 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         }
     }, [isSelfPayingProp]);
 
+    useEffect(() => {
+        if (!patientData) {
+            setIsPatientSearched(false);
+            if (isSelfPayingProp !== undefined) {
+                setLocalSelfPaying(isSelfPayingProp);
+            } else {
+                setLocalSelfPaying(true);
+            }
+        }
+    }, [patientData, isSelfPayingProp]);
+
     const handleSelfPayingChange = (checked: boolean) => {
         setLocalSelfPaying(checked);
         if (onSelfPayingChange) {
@@ -543,6 +554,36 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         };
 
         console.log('New patient data being set:', newPatientData);
+
+        // Determine Self Pay status based on patient search API response data
+        let isPatientSelfPay = true;
+        if (patient.isSelfPaying !== undefined) {
+            isPatientSelfPay = Boolean(patient.isSelfPaying);
+        } else if (patient.is_self_paying !== undefined) {
+            isPatientSelfPay = Boolean(patient.is_self_paying);
+        } else if (patient.isSelfPaid !== undefined) {
+            isPatientSelfPay = Boolean(patient.isSelfPaid);
+        } else if (patient.is_self_paid !== undefined) {
+            isPatientSelfPay = Boolean(patient.is_self_paid);
+        } else {
+            const companyVal = String(patient.patientCompany || patient.custom_patient_company || patient.company || "").trim();
+            const payerNameVal = String(patient.payerName || patient.custom_payer_name || "").trim();
+            const payerTypeVal = String(patient.payerType || patient.custom_payer_category || patient.patientCategory || patient.category || "").trim();
+            const insuranceNoVal = String(patient.insurnaceNo || patient.insuranceNo || patient.custom_insurance_no || "").trim();
+
+            const isNonSelfCompany = Boolean(companyVal && !["SELF", "SELF PAY", "SELF-PAY", "SELF PAID", "SELF-PAID", "CASH", "N/A", "NONE"].includes(companyVal.toUpperCase()));
+            const isNonSelfPayer = Boolean(payerNameVal && !["SELF", "SELF PAY", "SELF-PAY", "SELF PAID", "SELF-PAID", "CASH", "N/A", "NONE"].includes(payerNameVal.toUpperCase()));
+            const isInsurancePayerType = Boolean(payerTypeVal && !["SELF", "SELF PAY", "SELF-PAY", "SELF PAID", "SELF-PAID", "CASH", "N/A", "NONE"].includes(payerTypeVal.toUpperCase()));
+            const hasInsuranceNo = Boolean(insuranceNoVal && insuranceNoVal !== "N/A");
+
+            if (isNonSelfCompany || isNonSelfPayer || isInsurancePayerType || hasInsuranceNo) {
+                isPatientSelfPay = false;
+            } else {
+                isPatientSelfPay = true;
+            }
+        }
+
+        handleSelfPayingChange(isPatientSelfPay);
 
         setIsPatientSearched(true);
         setEditedPatient(newPatientData);
