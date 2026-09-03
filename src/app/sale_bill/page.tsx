@@ -4492,33 +4492,43 @@ export default function IPDBill() {
     console.log('Customer population - available customers:', customers);
 
     if (customers && customers.length > 0) {
-      // If requisition has a patient company, try to find matching customer
-      if (fullRequisitionData.patient_company) {
-        console.log('Looking for customer matching:', fullRequisitionData.patient_company);
-        const matchingCustomer = customers.find((customer: any) =>
-          customer.label === fullRequisitionData.patient_company || customer.value === fullRequisitionData.patient_company
+      const candidates = [
+        fullRequisitionData.payer_name,
+        fullRequisitionData.custom_payer_name,
+        requisition.payer_name,
+        requisition.custom_payer_name,
+        fullRequisitionData.patient_company,
+        fullRequisitionData.company,
+        requisition.patient_company,
+        requisition.company,
+        fullRequisitionData.customer,
+        fullRequisitionData.custom_customer,
+        fullRequisitionData.payer_type,
+        fullRequisitionData.custom_payer_category,
+      ].filter((val): val is string => Boolean(val && typeof val === 'string' && val.trim() !== '' && val.trim() !== 'N/A'));
+
+      let matchingCustomer: any = null;
+      for (const candidate of candidates) {
+        const trimmedCandidate = candidate.trim().toUpperCase();
+        matchingCustomer = customers.find((customer: any) =>
+          String(customer.label || '').trim().toUpperCase() === trimmedCandidate ||
+          String(customer.value || '').trim().toUpperCase() === trimmedCandidate ||
+          String(customer.name || '').trim().toUpperCase() === trimmedCandidate
         );
-        console.log('Found matching customer:', matchingCustomer);
-        if (matchingCustomer) {
-          setSelectedCustomer(matchingCustomer.value);
-          console.log('Set customer to requisition patient company:', matchingCustomer.value);
-        } else {
-          // If no matching customer found, default to self-paid
-          console.log('No matching customer found, looking for self-paid customer');
-          const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
-          if (defaultSelfPaidCustomer) {
-            setSelectedCustomer(defaultSelfPaidCustomer.value);
-            console.log('No matching customer found for requisition, defaulted to self-paid:', defaultSelfPaidCustomer.value);
-          }
-        }
-      } else {
-        // If requisition has no patient company, default to self-paid
-        console.log('Requisition has no patient company, looking for self-paid customer');
+        if (matchingCustomer) break;
+      }
+
+      if (matchingCustomer) {
+        setSelectedCustomer(matchingCustomer.value);
+        console.log('Set customer to matching requisition payer/company:', matchingCustomer.value);
+      } else if (isSelfPaying) {
         const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
         if (defaultSelfPaidCustomer) {
           setSelectedCustomer(defaultSelfPaidCustomer.value);
-          console.log('Requisition has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+          console.log('Requisition patient is self-paying, defaulted to self-paid:', defaultSelfPaidCustomer.value);
         }
+      } else {
+        console.log('Requisition patient is non-self-paying and no matching payer customer was found; preserving customer without defaulting to self-paid.');
       }
     } else {
       console.log('No customers available for population');
@@ -4875,6 +4885,9 @@ export default function IPDBill() {
           departmentName: fullPrescriptionData.department_name || fullPrescriptionData.department || prescription.department_name || "",
           visitID: visitIdToCheck || "",
           visitNumber: visitIdToCheck || "",
+          payerName: fullPrescriptionData.payer_name || fullPrescriptionData.custom_payer_name || prescription.payer_name || prescription.custom_payer_name || "",
+          payerType: fullPrescriptionData.payer_type || fullPrescriptionData.custom_payer_category || prescription.payer_type || prescription.custom_payer_category || "",
+          insurnaceNo: fullPrescriptionData.insurance_no || fullPrescriptionData.custom_insurance_no || prescription.insurance_no || prescription.custom_insurance_no || "",
         };
 
         if (opdCardRef.current) {
@@ -4913,31 +4926,68 @@ export default function IPDBill() {
       }
     }
 
-    // Auto-set customer based on prescription's patient company or default to self-paid
+    const companyVal = String(fullPrescriptionData.patient_company || fullPrescriptionData.company || prescription.patient_company || prescription.company || "").trim();
+    const payerNameVal = String(fullPrescriptionData.payer_name || fullPrescriptionData.custom_payer_name || prescription.payer_name || prescription.custom_payer_name || "").trim();
+    const payerTypeVal = String(fullPrescriptionData.payer_type || fullPrescriptionData.custom_payer_category || prescription.payer_type || prescription.custom_payer_category || "").trim();
+    const insuranceNoVal = String(fullPrescriptionData.insurance_no || fullPrescriptionData.custom_insurance_no || prescription.insurance_no || prescription.custom_insurance_no || "").trim();
+
+    const isNonSelfCompany = Boolean(companyVal && !["SELF", "SELF PAY", "SELF-PAY", "SELF PAID", "SELF-PAID", "CASH", "N/A", "NONE"].includes(companyVal.toUpperCase()));
+    const isNonSelfPayer = Boolean(payerNameVal && !["SELF", "SELF PAY", "SELF-PAY", "SELF PAID", "SELF-PAID", "CASH", "N/A", "NONE"].includes(payerNameVal.toUpperCase()));
+    const isInsurancePayerType = Boolean(payerTypeVal && !["SELF", "SELF PAY", "SELF-PAY", "SELF PAID", "SELF-PAID", "CASH", "N/A", "NONE"].includes(payerTypeVal.toUpperCase()));
+    const hasInsuranceNo = Boolean(insuranceNoVal && insuranceNoVal !== "N/A");
+
+    let isPrescriptionSelfPay = true;
+    if (fullPrescriptionData.is_self_paying !== undefined) {
+      isPrescriptionSelfPay = Boolean(fullPrescriptionData.is_self_paying);
+    } else if (fullPrescriptionData.isSelfPaying !== undefined) {
+      isPrescriptionSelfPay = Boolean(fullPrescriptionData.isSelfPaying);
+    } else if (prescription.is_self_paying !== undefined) {
+      isPrescriptionSelfPay = Boolean(prescription.is_self_paying);
+    } else if (prescription.isSelfPaying !== undefined) {
+      isPrescriptionSelfPay = Boolean(prescription.isSelfPaying);
+    } else if (isNonSelfCompany || isNonSelfPayer || isInsurancePayerType || hasInsuranceNo) {
+      isPrescriptionSelfPay = false;
+    }
+
+    // Auto-set customer based on prescription's payer/company or default to self-paid
     if (customers && customers.length > 0) {
-      // If prescription has a patient company, try to find matching customer
-      if (fullPrescriptionData.patient_company) {
-        const matchingCustomer = customers.find((customer: any) =>
-          customer.label === fullPrescriptionData.patient_company || customer.value === fullPrescriptionData.patient_company
+      const candidates = [
+        fullPrescriptionData.payer_name,
+        fullPrescriptionData.custom_payer_name,
+        prescription.payer_name,
+        prescription.custom_payer_name,
+        fullPrescriptionData.patient_company,
+        fullPrescriptionData.company,
+        prescription.patient_company,
+        prescription.company,
+        fullPrescriptionData.customer,
+        fullPrescriptionData.custom_customer,
+        fullPrescriptionData.payer_type,
+        fullPrescriptionData.custom_payer_category,
+      ].filter((val): val is string => Boolean(val && typeof val === 'string' && val.trim() !== '' && val.trim() !== 'N/A'));
+
+      let matchingCustomer: any = null;
+      for (const candidate of candidates) {
+        const trimmedCandidate = candidate.trim().toUpperCase();
+        matchingCustomer = customers.find((customer: any) =>
+          String(customer.label || '').trim().toUpperCase() === trimmedCandidate ||
+          String(customer.value || '').trim().toUpperCase() === trimmedCandidate ||
+          String(customer.name || '').trim().toUpperCase() === trimmedCandidate
         );
-        if (matchingCustomer) {
-          setSelectedCustomer(matchingCustomer.value);
-          console.log('Set customer to prescription patient company:', matchingCustomer.value);
-        } else {
-          // If no matching customer found, default to self-paid
-          const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
-          if (defaultSelfPaidCustomer) {
-            setSelectedCustomer(defaultSelfPaidCustomer.value);
-            console.log('No matching customer found for prescription, defaulted to self-paid:', defaultSelfPaidCustomer.value);
-          }
-        }
-      } else {
-        // If prescription has no patient company, default to self-paid
+        if (matchingCustomer) break;
+      }
+
+      if (matchingCustomer) {
+        setSelectedCustomer(matchingCustomer.value);
+        console.log('Set customer to matching prescription payer/company:', matchingCustomer.value);
+      } else if (isPrescriptionSelfPay) {
         const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
         if (defaultSelfPaidCustomer) {
           setSelectedCustomer(defaultSelfPaidCustomer.value);
-          console.log('Prescription has no patient company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+          console.log('Prescription patient is self-paying, defaulted to self-paid:', defaultSelfPaidCustomer.value);
         }
+      } else {
+        console.log('Prescription patient is non-self-paying and no matching payer customer was found; preserving customer without defaulting to self-paid.');
       }
     }
 

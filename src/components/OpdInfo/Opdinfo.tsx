@@ -601,31 +601,45 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             }
         }
 
-        // Auto-set customer based on patient's company or default to self-paid
+        // Auto-set customer based on patient's payer/company or default to self-paid
         if (setSelectedCustomer && customers.length > 0) {
-            // If patient has a company, try to find matching customer
-            if (newPatientData.company && newPatientData.company !== "N/A") {
-                const matchingCustomer = customers.find((customer: any) =>
-                    customer.label === newPatientData.company || customer.value === newPatientData.company
+            const candidates = [
+                patient.payerName,
+                patient.custom_payer_name,
+                newPatientData.payerName,
+                patient.patientCompany,
+                patient.custom_patient_company,
+                newPatientData.company,
+                patient.customer,
+                patient.custom_customer,
+                patient.company,
+                patient.payerType,
+                patient.custom_payer_category,
+            ].filter((val): val is string => Boolean(val && typeof val === 'string' && val.trim() !== '' && val.trim() !== 'N/A'));
+
+            let matchingCustomer: any = null;
+            for (const candidate of candidates) {
+                const trimmedCandidate = candidate.trim().toUpperCase();
+                matchingCustomer = customers.find((customer: any) =>
+                    String(customer.label || '').trim().toUpperCase() === trimmedCandidate ||
+                    String(customer.value || '').trim().toUpperCase() === trimmedCandidate ||
+                    String(customer.name || '').trim().toUpperCase() === trimmedCandidate
                 );
-                if (matchingCustomer) {
-                    setSelectedCustomer(matchingCustomer.value);
-                    console.log('Set customer to patient company:', matchingCustomer.value);
-                } else {
-                    // If no matching customer found, default to self-paid
-                    const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
-                    if (defaultSelfPaidCustomer) {
-                        setSelectedCustomer(defaultSelfPaidCustomer.value);
-                        console.log('No matching customer found, defaulted to self-paid:', defaultSelfPaidCustomer.value);
-                    }
-                }
-            } else {
-                // If patient has no company, default to self-paid
+                if (matchingCustomer) break;
+            }
+
+            if (matchingCustomer) {
+                setSelectedCustomer(matchingCustomer.value);
+                console.log('Set customer to matching payer/company:', matchingCustomer.value);
+            } else if (isPatientSelfPay) {
+                // Only default to self-paid if patient is self-paying
                 const defaultSelfPaidCustomer = customers.find((customer: any) => customer.isSelfPaid);
                 if (defaultSelfPaidCustomer) {
                     setSelectedCustomer(defaultSelfPaidCustomer.value);
-                    console.log('Patient has no company, defaulted to self-paid:', defaultSelfPaidCustomer.value);
+                    console.log('Patient is self-paying, set customer to default self-paid:', defaultSelfPaidCustomer.value);
                 }
+            } else {
+                console.log('Patient is non-self-paying and no matching payer customer was found; preserving customer without defaulting to self-paid.');
             }
         }
 
