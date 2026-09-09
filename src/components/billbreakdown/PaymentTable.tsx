@@ -31,12 +31,51 @@ interface PaymentTableProps {
   transactionType?: 'cash' | 'credit';
   roundedGrandTotal?: number;
   isLoadedInvoice?: boolean; // Flag to indicate if invoice is loaded from draft
+  totalPatientAmount?: number;
+  coPay?: number;
+  showAlert?: (variant: any, heading: string, content: string) => void;
 }
 
-const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posProfile, apiKey, apiSecret, totalBillAmount, transactionType, roundedGrandTotal, isLoadedInvoice }) => {
+const PaymentTable: React.FC<PaymentTableProps> = ({
+  payments,
+  setPayments,
+  posProfile,
+  apiKey,
+  apiSecret,
+  totalBillAmount,
+  transactionType,
+  roundedGrandTotal,
+  isLoadedInvoice,
+  totalPatientAmount,
+  coPay,
+  showAlert,
+}) => {
   const [expandedCells, setExpandedCells] = useState<{ [key: string]: boolean }>({});
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [manuallyEdited, setManuallyEdited] = useState<boolean>(false);
+
+  const isCredit = transactionType === 'credit';
+
+  // Clamp payments if totalPatientAmount decreases below current total paid on credit bills
+  useEffect(() => {
+    if (isCredit && totalPatientAmount !== undefined && totalPatientAmount >= 0) {
+      const currentTotalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+      if (currentTotalPaid > totalPatientAmount + 0.01) {
+        let remainingAllowed = totalPatientAmount;
+        setPayments(prev =>
+          prev.map(p => {
+            const currentAmt = parseFloat(p.paidAmount) || 0;
+            const newAmt = Math.max(0, Math.min(currentAmt, remainingAllowed));
+            remainingAllowed = Math.max(0, remainingAllowed - newAmt);
+            return {
+              ...p,
+              paidAmount: newAmt.toFixed(2),
+            };
+          })
+        );
+      }
+    }
+  }, [totalPatientAmount, isCredit]);
 
   // Auto-set paid amount based on transaction type (only for new invoices, not loaded ones)
   useEffect(() => {
@@ -139,7 +178,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
           transactionNo: '',
           bankName: '',
           branchName: '',
-          paidAmount: totalBillAmount.toFixed(2),
+          paidAmount: transactionType === 'credit' ? '0' : totalBillAmount.toFixed(2),
           paymentDate: new Date().toISOString().split('T')[0],
           approvalNo: '',
           custom_bank_name: '',
@@ -156,8 +195,9 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
     // Only auto-update payment amount if:
     // 1. Invoice is NOT loaded from draft (isLoadedInvoice is false/undefined)
     // 2. User has NOT manually edited the payment amount
-    if (isLoadedInvoice || manuallyEdited) {
-      return; // Skip auto-update for loaded invoices or manually edited payments
+    // 3. Transaction type is cash (do not overwrite credit bills with totalBillAmount!)
+    if (isLoadedInvoice || manuallyEdited || transactionType === 'credit') {
+      return; // Skip auto-update for loaded invoices, manually edited, or credit bills
     }
 
     // Update the paidAmount of the last payment entry when totalBillAmount changes
@@ -187,7 +227,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
         custom_transaction_no: ''
       }]);
     }
-  }, [totalBillAmount, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited]);
+  }, [totalBillAmount, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited, transactionType]);
 
   const handleAddPayment = () => {
     const defaultPaymentMode = paymentMethods.length > 0 ? paymentMethods[0].mode_of_payment : '';
@@ -197,7 +237,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
       transactionNo: '',
       bankName: '',
       branchName: '',
-      paidAmount: totalBillAmount.toFixed(2),
+      paidAmount: '0',
       paymentDate: new Date().toISOString().split('T')[0],
       approvalNo: '',
       custom_bank_name: '',
@@ -215,9 +255,35 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
   };
 
   const handlePaymentChange = (paymentId: number, field: string, value: string) => {
-    // Mark as manually edited if user changes the paid amount
     if (field === 'paidAmount') {
       setManuallyEdited(true);
+
+      // Validation for Credit transactions
+      if (isCredit) {
+        // Only allow numbers and at most one decimal point
+        if (value !== '' && !/^\d*\.?\d*$/.test(value)) {
+          return;
+        }
+
+        const maxAllowed = totalPatientAmount !== undefined ? totalPatientAmount : 0;
+        const otherPaymentsTotal = payments
+          .filter(p => p.id !== paymentId)
+          .reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+
+        const newRowAmount = parseFloat(value) || 0;
+        const newTotalPaid = otherPaymentsTotal + newRowAmount;
+
+        if (newTotalPaid > maxAllowed + 0.001) {
+          if (showAlert) {
+            showAlert(
+              'warning',
+              'Payment Exceeds Patient Amount',
+              `Paid amount cannot exceed patient bill amount of ${maxAllowed.toFixed(2)}`
+            );
+          }
+          return; // Do not allow typing more amount!
+        }
+      }
     }
     
     setPayments(prevPayments =>
@@ -330,12 +396,14 @@ const PaymentTable: React.FC<PaymentTableProps> = ({ payments, setPayments, posP
                 <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'paidAmount') }}>
                   <input
                     type="text"
+                    inputMode="decimal"
                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
                     style={{
                       minWidth: expandedCells[`${payment.id}-paidAmount`] ? '320px' : '120px',
                       width: expandedCells[`${payment.id}-paidAmount`] ? '320px' : '100%'
                     }}
                     placeholder="Amount"
+                    title={isCredit ? `Max allowed: ${(totalPatientAmount || 0).toFixed(2)}` : undefined}
                     value={payment.paidAmount}
                     onChange={(e) => handlePaymentChange(payment.id, 'paidAmount', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'paidAmount')}

@@ -733,6 +733,10 @@ const EditableTable = ({
             updatedRow.preAuthStatus = 'Pending';
           }
 
+          if (columnId === 'coPayPercentage' && parsedValue > 0) {
+            updatedRow.covered = true;
+          }
+
           if (columnId === 'patientAmount') {
             const totalAmt = updatedRow.totalAmt || 0;
             const userPatientAmt = Math.max(0, parsedValue);

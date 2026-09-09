@@ -1010,7 +1010,10 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     patientAmount = item.patientAmount;
     payerAmount = Math.max(0, totalAmount - patientAmount);
   } else {
-    const copayApplies = item.covered && (item.preAuthStatus === 'Approved' || item.preAuthStatus === 'Partially Approved');
+    const isPreAuthReq = Boolean(item.preAuthRequired) || (item as any).pre_auth_req === 'Yes' || (item as any).pre_auth_req === 1;
+    const preAuthApproved = item.preAuthStatus === 'Approved' || item.preAuthStatus === 'Partially Approved';
+    const preAuthOk = !isPreAuthReq || preAuthApproved;
+    const copayApplies = item.covered && preAuthOk;
     let coPayPercent = copayApplies ? (item.coPayPercentage ?? 0) : 0;
     if (!item.covered) {
       coPayPercent = 0;
@@ -1933,6 +1936,29 @@ export default function IPDBill() {
   const [payerNameOptions, setPayerNameOptions] = useState<{ label: string; value: string }[]>([]);
   const [subInsuranceOptions, setSubInsuranceOptions] = useState<{ label: string; value: string }[]>([]);
   const [networkOptions, setNetworkOptions] = useState<{ label: string; value: string }[]>([]);
+
+  // Always keep totalPatientAmount and totalPayerAmount synchronized with items
+  useEffect(() => {
+    if (isReturn) {
+      const patientTotal = items.reduce((sum, itm) => {
+        const returnQty = itm.returnQty || 0;
+        const saleQty = itm.saleQty || 1;
+        return sum + ((itm.patientAmount || 0) * returnQty / saleQty);
+      }, 0);
+      const payerTotal = items.reduce((sum, itm) => {
+        const returnQty = itm.returnQty || 0;
+        const saleQty = itm.saleQty || 1;
+        return sum + ((itm.payerAmount || 0) * returnQty / saleQty);
+      }, 0);
+      setTotalPatientAmount(patientTotal);
+      setTotalPayerAmount(payerTotal);
+    } else {
+      const patientTotal = items.reduce((sum, itm) => sum + (itm.patientAmount || 0), 0);
+      const payerTotal = items.reduce((sum, itm) => sum + (itm.payerAmount || 0), 0);
+      setTotalPatientAmount(patientTotal);
+      setTotalPayerAmount(payerTotal);
+    }
+  }, [items, isReturn]);
 
   // Auto-select default self-paid customer once data is available
   useEffect(() => {
@@ -3640,7 +3666,12 @@ export default function IPDBill() {
           // Add alternateBatches only if it's an alternative item
           alternateBatches: item.substituteItem ? "1" : "",
           includedInPrintRate: true, // Always consider included_in_print_rate as true
-          covered: (preAuthDetails && typeof preAuthDetails.isIncluded === 'boolean') ? preAuthDetails.isIncluded : item.covered,
+          covered: (preAuthDetails && typeof preAuthDetails.isIncluded === 'boolean')
+            ? preAuthDetails.isIncluded
+            : (item.covered !== undefined ? item.covered : (transactionType === 'credit')),
+          coPayPercentage: (item.coPayPercentage !== undefined && item.coPayPercentage !== null)
+            ? item.coPayPercentage
+            : (transactionType === 'credit' && globalCoPayPercent > 0 ? globalCoPayPercent : 0),
           preAuthRequired: (preAuthDetails && typeof preAuthDetails.isPreAuthRequired === 'boolean') ? preAuthDetails.isPreAuthRequired : item.preAuthRequired,
         });
         console.log("handleAddItemToDetails - newItemWithCalculations: ", newItemWithCalculations); // Log here
@@ -3655,12 +3686,16 @@ export default function IPDBill() {
           const newTotalCgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.cgstAmt, 0);
           const newTotalSgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.sgstAmt, 0);
           const newTotalIgstAmount = allCalculatedItems.reduce((sum, itm) => sum + itm.igstAmt, 0);
+          const newTotalPatientAmount = allCalculatedItems.reduce((sum, itm) => sum + (itm.patientAmount || 0), 0);
+          const newTotalPayerAmount = allCalculatedItems.reduce((sum, itm) => sum + (itm.payerAmount || 0), 0);
 
           setTotalBillAmount(newTotalBillAmount);
           setTotalDiscountAmount(newTotalDiscountAmount);
           setTotalCgstAmount(newTotalCgstAmount);
           setTotalSgstAmount(newTotalSgstAmount);
           setTotalIgstAmount(newTotalIgstAmount);
+          setTotalPatientAmount(newTotalPatientAmount);
+          setTotalPayerAmount(newTotalPayerAmount);
 
           return allCalculatedItems;
         } else {
@@ -3702,6 +3737,15 @@ export default function IPDBill() {
     if (isSaving) {
       console.log('Save operation already in progress');
       return;
+    }
+
+    if (transactionType === 'credit') {
+      const maxAllowed = totalPatientAmount !== undefined ? totalPatientAmount : 0;
+      const totalPaid = recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+      if (totalPaid > maxAllowed + 0.01) {
+        showAlert("danger", "Validation Error", `Paid amount (${totalPaid.toFixed(2)}) cannot exceed patient bill amount (${maxAllowed.toFixed(2)}).`);
+        return;
+      }
     }
 
     // Restrict saving if any covered item has pre-auth status as Pending or Initiated (or not set, defaulting to Pending)
@@ -6141,6 +6185,15 @@ export default function IPDBill() {
       return;
     }
 
+    if (transactionType === 'credit') {
+      const maxAllowed = totalPatientAmount !== undefined ? totalPatientAmount : 0;
+      const totalPaid = recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+      if (totalPaid > maxAllowed + 0.01) {
+        showAlert("danger", "Validation Error", `Paid amount (${totalPaid.toFixed(2)}) cannot exceed patient bill amount (${maxAllowed.toFixed(2)}).`);
+        return;
+      }
+    }
+
     // Restrict submitting based on pre-auth rules
     const invalidPreAuthItems = items.filter(item => {
       const isCovered = item.covered === true;
@@ -7239,11 +7292,13 @@ export default function IPDBill() {
                           const updatedItems = items.map(item => {
                             const updatedItem = {
                               ...item,
-                              coPayPercentage: !item.covered ? 0 : globalCoPayPercent
+                              covered: true,
+                              coPayPercentage: globalCoPayPercent
                             };
                             return calculateItemTaxAndTotals(updatedItem, true);
                           });
                           setItems(updatedItems);
+                          recalculateTotals(updatedItems);
                           showAlert("success", "Success", `Co-Pay % applied to all items.`);
                         }}
                       >
@@ -7401,6 +7456,9 @@ export default function IPDBill() {
               transactionType={transactionType}
               roundedGrandTotal={roundedGrandTotal}
               isLoadedInvoice={!!loadedInvoiceName}
+              totalPatientAmount={totalPatientAmount}
+              coPay={globalCoPayPercent}
+              showAlert={showAlert}
             />
           </div>
         </div>
