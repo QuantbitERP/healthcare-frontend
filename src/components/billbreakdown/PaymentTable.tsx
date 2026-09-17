@@ -178,7 +178,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
           transactionNo: '',
           bankName: '',
           branchName: '',
-          paidAmount: transactionType === 'credit' ? '0' : totalBillAmount.toFixed(2),
+          paidAmount: transactionType === 'credit' ? '0' : Number(totalBillAmount || 0).toFixed(2),
           paymentDate: new Date().toISOString().split('T')[0],
           approvalNo: '',
           custom_bank_name: '',
@@ -207,7 +207,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         const updatedPayments = [...prevPayments];
         updatedPayments[lastPaymentIndex] = {
           ...updatedPayments[lastPaymentIndex],
-          paidAmount: totalBillAmount.toFixed(0),
+          paidAmount: Number(totalBillAmount || 0).toFixed(0),
         };
         return updatedPayments;
       });
@@ -219,7 +219,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         transactionNo: '',
         bankName: '',
         branchName: '',
-        paidAmount: totalBillAmount.toFixed(0),
+        paidAmount: Number(totalBillAmount || 0).toFixed(0),
         paymentDate: new Date().toISOString().split('T')[0],
         approvalNo: '',
         custom_bank_name: '',
@@ -229,25 +229,32 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
     }
   }, [totalBillAmount, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited, transactionType]);
 
+  const handleCellClick = (paymentId: number, field: string) => {
+    setExpandedCells(prev => ({ ...prev, [`${paymentId}-${field}`]: !prev[`${paymentId}-${field}`] }));
+  };
+
   const handleAddPayment = () => {
     const defaultPaymentMode = paymentMethods.length > 0 ? paymentMethods[0].mode_of_payment : '';
+    let initialAmount = '0';
+    if (isCredit) {
+      const currentPaid = payments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+      const remaining = Math.max(0, Number(totalPatientAmount || 0) - currentPaid);
+      initialAmount = remaining > 0 ? remaining.toFixed(2) : '0';
+    }
+
     setPayments([...payments, {
       id: Date.now(),
       paymentMode: defaultPaymentMode,
       transactionNo: '',
       bankName: '',
       branchName: '',
-      paidAmount: '0',
+      paidAmount: initialAmount,
       paymentDate: new Date().toISOString().split('T')[0],
       approvalNo: '',
       custom_bank_name: '',
       custom_branch_name: '',
       custom_transaction_no: ''
     }]);
-  };
-
-  const handleCellClick = (paymentId: number, field: string) => {
-    setExpandedCells(prev => ({ ...prev, [`${paymentId}-${field}`]: !prev[`${paymentId}-${field}`] }));
   };
 
   const handleRemovePayment = (paymentId: number) => {
@@ -265,7 +272,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
           return;
         }
 
-        const maxAllowed = totalPatientAmount !== undefined ? totalPatientAmount : 0;
+        const maxAllowed = Number(totalPatientAmount || 0);
         const otherPaymentsTotal = payments
           .filter(p => p.id !== paymentId)
           .reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
@@ -403,7 +410,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
                       width: expandedCells[`${payment.id}-paidAmount`] ? '320px' : '100%'
                     }}
                     placeholder="Amount"
-                    title={isCredit ? `Max allowed: ${(totalPatientAmount || 0).toFixed(2)}` : undefined}
+                    title={isCredit ? `Max allowed: ${Number(totalPatientAmount || 0).toFixed(2)}` : undefined}
                     value={payment.paidAmount}
                     onChange={(e) => handlePaymentChange(payment.id, 'paidAmount', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'paidAmount')}

@@ -592,12 +592,15 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
         }
 
         // Auto-set hospital based on patient's hospitalId
-        if (patient.hospitalId && setSelectedBranch) {
-            // Find the branch where custom_hospital_id matches patient.hospitalId
+        const targetHospital = patient.hospitalId || patient.custom_hospital || "";
+        if (targetHospital && setSelectedBranch) {
+            // Find the branch where custom_hospital_id or value matches patient.hospitalId
             // Branches might not be populated if this is called early, so we also use a useEffect
-            const matchingBranch = branches.find((b: any) => b.custom_hospital_id === patient.hospitalId);
+            const matchingBranch = branches.find((b: any) => b.custom_hospital_id === targetHospital || b.value === targetHospital);
             if (matchingBranch) {
                 setSelectedBranch(matchingBranch.value);
+            } else if (branches.some((b: any) => b.value === targetHospital)) {
+                setSelectedBranch(targetHospital);
             }
         }
 
@@ -643,41 +646,41 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
             }
         }
 
-        // Fetch doctors for patient's department if available
-        // Use department for doctors API since that's what we have in patient data
-        if (newPatientData.dept && newPatientData.dept !== "N/A" && fetchDoctors) {
-            console.log('Fetching doctors for department:', newPatientData.dept);
-            fetchDoctors(newPatientData.dept).then(doctorData => {
-                setLocalDoctors(doctorData);
-                // If API succeeds but returns empty doctors, still set from patient data
-                if (!doctorData || doctorData.length === 0) {
-                    if (newPatientData.doctor && newPatientData.doctor !== "N/A") {
-                        console.log('No doctors found from API, setting doctor from patient data:', newPatientData.doctor);
-                        const patientDoctor = [{
+        // Fetch doctors for patient's hospital/branch
+        const targetBranchForDoctors = targetHospital || selectedBranch || (branches.length > 0 ? branches[0].value : '');
+        if (fetchDoctors && targetBranchForDoctors) {
+            console.log('Fetching doctors for branch/hospital:', targetBranchForDoctors);
+            fetchDoctors(targetBranchForDoctors).then(doctorData => {
+                let updatedDoctors = Array.isArray(doctorData) ? [...doctorData] : [];
+                if (newPatientData.doctor && newPatientData.doctor !== "N/A") {
+                    const exists = updatedDoctors.some(d => d.value === newPatientData.doctor || d.label === newPatientData.doctor);
+                    if (!exists) {
+                        updatedDoctors.unshift({
                             name: newPatientData.doctor,
                             label: newPatientData.doctor,
                             value: newPatientData.doctor
-                        }];
-                        setLocalDoctors(patientDoctor);
+                        });
                     }
                 }
+                setLocalDoctors(updatedDoctors);
             }).catch(error => {
                 console.error('Failed to fetch doctors:', error);
-                // If doctors API fails, still set the doctor from patient data
                 if (newPatientData.doctor && newPatientData.doctor !== "N/A") {
-                    console.log('Setting doctor from patient data due to API failure:', newPatientData.doctor);
-                    // Create a doctors array with just the patient's doctor for the dropdown
-                    const patientDoctor = [{
+                    setLocalDoctors([{
                         name: newPatientData.doctor,
                         label: newPatientData.doctor,
                         value: newPatientData.doctor
-                    }];
-                    setLocalDoctors(patientDoctor);
+                    }]);
                 } else {
-                    // Clear doctors if API fails and no patient doctor available
                     setLocalDoctors([]);
                 }
             });
+        } else if (newPatientData.doctor && newPatientData.doctor !== "N/A") {
+            setLocalDoctors([{
+                name: newPatientData.doctor,
+                label: newPatientData.doctor,
+                value: newPatientData.doctor
+            }]);
         }
 
         const displayName = newPatientData.name !== "N/A" ? newPatientData.name : patient.patientFullName || patient.name || "";
@@ -811,7 +814,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
     // Auto-select hospital when branches load if a patient with hospitalId is already selected
     useEffect(() => {
         if (editedPatient.hospitalId && branches.length > 0 && setSelectedBranch && !selectedBranch) {
-            const matchingBranch = branches.find(b => b.custom_hospital_id === editedPatient.hospitalId);
+            const matchingBranch = branches.find(b => b.custom_hospital_id === editedPatient.hospitalId || b.value === editedPatient.hospitalId);
             if (matchingBranch) {
                 setSelectedBranch(matchingBranch.value);
             }

@@ -627,8 +627,8 @@ export const useFrappeApi = () => {
   // Fetch doctors
   const fetchDoctors = useCallback(async (branch: string) => {
     if (!isAuthenticated) {
-      console.error("Not authenticated. Cannot fetch doctors.");
-      throw new Error("Authentication required to fetch doctors.");
+      console.warn("Not authenticated. Cannot fetch doctors.");
+      return [];
     }
 
     if (!branch) {
@@ -664,15 +664,18 @@ export const useFrappeApi = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.warn(`Fetch doctors returned status: ${response.status}`);
+        setDoctors([]);
+        return [];
       }
 
       const data = await response.json();
-      const doctorData = data.message.data.items.map((doctor: any) => ({
-        name: doctor.value,
-        label: doctor.value,
-        value: doctor.value, // Use doctor.value for both label and value
-      }));
+      const items = data?.message?.data?.items || data?.message?.items || [];
+      const doctorData = items.map((doctor: any) => ({
+        name: doctor.value || doctor.name || doctor.doctor_name || '',
+        label: doctor.value || doctor.label || doctor.doctor_name || '',
+        value: doctor.value || doctor.name || doctor.doctor_name || '',
+      })).filter((d: any) => Boolean(d.value));
 
       setDoctors(doctorData);
       return doctorData;

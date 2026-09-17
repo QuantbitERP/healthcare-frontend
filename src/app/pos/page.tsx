@@ -589,17 +589,17 @@ export default function POS() {
               </p>
               <p>
                 <strong>Grand Total:</strong> ₹
-                {(
+                {Number(
                   selectedInvoice.grand_total ?? selectedInvoice.rounded_total ?? 0
                 ).toFixed(2)}
               </p>
               <p>
                 <strong>Paid Amount:</strong> ₹
-                {(selectedInvoice.paid_amount || 0).toFixed(2)}
+                {Number(selectedInvoice.paid_amount || 0).toFixed(2)}
               </p>
               <p>
                 <strong>Outstanding Amount:</strong> ₹
-                {(selectedInvoice.outstanding_amount || 0).toFixed(2)}
+                {Number(selectedInvoice.outstanding_amount || 0).toFixed(2)}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
@@ -715,10 +715,10 @@ export default function POS() {
                         {item.qty}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                        ₹{(item.rate || 0).toFixed(2)}
+                        ₹{Number(item.rate || 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">
-                        ₹{(item.amount || 0).toFixed(2)}
+                        ₹{Number(item.amount || 0).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -734,7 +734,7 @@ export default function POS() {
                     <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
                       ₹
                       {itemsForModal
-                        .reduce((sum: number, item: any) => sum + (item.amount || 0), 0)
+                        .reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0)
                         .toFixed(2)}
                     </td>
                   </tr>

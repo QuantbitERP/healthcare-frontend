@@ -379,7 +379,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
               },
               { accessorKey: 'posting_date', header: 'Date', cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString() },
               { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
-              { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${row.original.rounded_total.toFixed(2)}` },
+              { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${Number(row.original.rounded_total || 0).toFixed(2)}` },
               { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
               { accessorKey: 'visit_type', header: 'Visit Type', cell: ({ row }: any) => row.original.visit_type || '-' },
               {
@@ -473,9 +473,9 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
               <p><strong>Patient Name:</strong> {selectedInvoice.custom_patient_name}</p>
               <p><strong>Date:</strong> {new Date(selectedInvoice.posting_date).toLocaleDateString()}</p>
               <p><strong>Time:</strong> {selectedInvoice.posting_time ? selectedInvoice.posting_time.substring(0, 5) : 'N/A'}</p>
-              <p><strong>Total Amount:</strong> ₹{selectedInvoice.rounded_total.toFixed(2)}</p>
-              <p><strong>Paid Amount:</strong> ₹{selectedInvoice.paid_amount ? selectedInvoice.paid_amount.toFixed(2) : '0.00'}</p>
-              <p><strong>Outstanding Amount:</strong> ₹{selectedInvoice.outstanding_amount ? selectedInvoice.outstanding_amount.toFixed(2) : '0.00'}</p>
+              <p><strong>Total Amount:</strong> ₹{Number(selectedInvoice.rounded_total || 0).toFixed(2)}</p>
+              <p><strong>Paid Amount:</strong> ₹{selectedInvoice.paid_amount ? Number(selectedInvoice.paid_amount).toFixed(2) : '0.00'}</p>
+              <p><strong>Outstanding Amount:</strong> ₹{selectedInvoice.outstanding_amount ? Number(selectedInvoice.outstanding_amount).toFixed(2) : '0.00'}</p>
               <p><strong>Status:</strong> <span className={`status-badge ${selectedInvoice.status?.toLowerCase()}`}>{selectedInvoice.status}</span></p>
               <p><strong>Visit Type:</strong> {selectedInvoice.visit_type || 'N/A'}</p>
               <p><strong>Modified:</strong> {new Date(selectedInvoice.modified).toLocaleString()}</p>
@@ -572,8 +572,8 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                       <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.item_code}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{item.item_name || item.item_code}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.qty}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">₹{(item.rate || 0).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">₹{(item.amount || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right">₹{Number(item.rate || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">₹{Number(item.amount || 0).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -581,7 +581,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                   <tr>
                     <td colSpan={5} className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Total:</td>
                     <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
-                      ₹{itemsForModal.reduce((sum, item) => sum + (item.amount || 0), 0).toFixed(2)}
+                      ₹{itemsForModal.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2)}
                     </td>
                   </tr>
                 </tfoot>

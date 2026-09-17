@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 import Button from "@/components/buttons/Button";
 import { useAuth } from '@/context/AuthContext';
 import { getAuthHeaders } from '@/utils/sessionAuth';
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ClosingEntryModalProps {
   isOpen: boolean;
@@ -60,9 +61,12 @@ type POSClosingEntry = {
     name: string;
     pos_invoice: string;
     posting_date: string;
+    posting_time?: string;
     customer: string;
     grand_total: number;
     is_return: number;
+    bill_type?: string;
+    custom_is_ipd_invoice?: number;
     idx: number;
   }>;
   payment_reconciliation: Array<{
@@ -90,6 +94,9 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
   const [closingEntryData, setClosingEntryData] = useState<POSClosingEntry | null>(null);
   const [showClosingDetails, setShowClosingDetails] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 15;
   const {  } = useAuth();
 
   const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
@@ -100,6 +107,31 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
       fetchOpenPOSOpeningEntries(posProfile);
     }
   }, [isOpen, posProfile]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [closingEntryData, sortOrder]);
+
+  const sortedTransactions = useMemo(() => {
+    if (!closingEntryData?.pos_transactions) return [];
+    return [...closingEntryData.pos_transactions].sort((a, b) => {
+      const dtA = (a.posting_date || '') + ' ' + (a.posting_time || '');
+      const dtB = (b.posting_date || '') + ' ' + (b.posting_time || '');
+      const comparison = dtA.localeCompare(dtB);
+      if (comparison !== 0) {
+        return sortOrder === 'desc' ? -comparison : comparison;
+      }
+      return sortOrder === 'desc'
+        ? (b.pos_invoice || '').localeCompare(a.pos_invoice || '')
+        : (a.pos_invoice || '').localeCompare(b.pos_invoice || '');
+    });
+  }, [closingEntryData?.pos_transactions, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedTransactions.length / pageSize));
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedTransactions.slice(start, start + pageSize);
+  }, [sortedTransactions, currentPage, pageSize]);
 
   const fetchOpenPOSOpeningEntries = async (profile: string) => {
     setLoadingEntries(true);
@@ -357,7 +389,35 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
               {/* POS Transactions */}
               {closingEntryData.pos_transactions && closingEntryData.pos_transactions.length > 0 && (
                 <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3 text-gray-800">POS Transactions</h3>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 className="font-semibold text-lg text-gray-800">
+                      POS Transactions ({sortedTransactions.length})
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 font-medium">Sort Date:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-colors"
+                        title="Click to toggle Date sort order"
+                      >
+                        {sortOrder === 'desc' ? (
+                          <>
+                            <ArrowDown className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Latest First (Desc)</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowUp className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Oldest First (Asc)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-100">
@@ -365,24 +425,101 @@ const ClosingEntryModal: React.FC<ClosingEntryModalProps> = ({
                           <th className="px-4 py-2 text-left">#</th>
                           <th className="px-4 py-2 text-left">Invoice</th>
                           <th className="px-4 py-2 text-left">Customer</th>
-                          <th className="px-4 py-2 text-left">Date</th>
+                          <th
+                            className="px-4 py-2 text-left cursor-pointer select-none hover:bg-gray-200 transition-colors"
+                            onClick={() => {
+                              setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                            }}
+                            title="Click to toggle Date sort"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Date</span>
+                              {sortOrder === 'desc' ? (
+                                <ArrowDown className="w-3.5 h-3.5 text-blue-600" />
+                              ) : (
+                                <ArrowUp className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="px-4 py-2 text-center">Type</th>
                           <th className="px-4 py-2 text-right">Amount (﷼)</th>
                           <th className="px-4 py-2 text-center">Return</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {closingEntryData.pos_transactions.map((txn, index) => (
-                          <tr key={txn.name} className="border-t">
-                            <td className="px-4 py-2">{index + 1}</td>
-                            <td className="px-4 py-2">{txn.pos_invoice}</td>
-                            <td className="px-4 py-2">{txn.customer}</td>
-                            <td className="px-4 py-2">{txn.posting_date}</td>
-                            <td className="px-4 py-2 text-right">﷼{txn.grand_total.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-center">{txn.is_return ? 'Yes' : 'No'}</td>
-                          </tr>
-                        ))}
+                        {paginatedTransactions.map((txn, index) => {
+                          const itemIndex = (currentPage - 1) * pageSize + index + 1;
+                          return (
+                            <tr key={txn.pos_invoice || txn.name || index} className="border-t hover:bg-gray-50/50">
+                              <td className="px-4 py-2">{itemIndex}</td>
+                              <td className="px-4 py-2 font-medium">{txn.pos_invoice}</td>
+                              <td className="px-4 py-2">{txn.customer}</td>
+                              <td className="px-4 py-2 whitespace-nowrap">
+                                <div>{txn.posting_date}</div>
+                                {txn.posting_time && (
+                                  <div className="text-xs text-gray-400">{txn.posting_time}</div>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                    txn.bill_type === 'IPD' || txn.custom_is_ipd_invoice === 1
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}
+                                >
+                                  {txn.bill_type || (txn.custom_is_ipd_invoice === 1 ? 'IPD' : 'OPD')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right">﷼{txn.grand_total.toFixed(2)}</td>
+                              <td className="px-4 py-2 text-center">{txn.is_return ? 'Yes' : 'No'}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Pagination Footer */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t text-xs text-gray-600">
+                    <div>
+                      Showing{' '}
+                      <span className="font-semibold text-gray-800">
+                        {sortedTransactions.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                      </span>{' '}
+                      to{' '}
+                      <span className="font-semibold text-gray-800">
+                        {Math.min(currentPage * pageSize, sortedTransactions.length)}
+                      </span>{' '}
+                      of{' '}
+                      <span className="font-semibold text-gray-800">{sortedTransactions.length}</span> records
+                      (15 per page)
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center gap-0.5 px-2.5 py-1 border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-gray-700 shadow-sm transition-colors"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Prev</span>
+                      </button>
+
+                      <span className="px-2.5 py-1 bg-gray-100 rounded font-medium text-gray-700">
+                        Page {currentPage} of {totalPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage >= totalPages}
+                        className="inline-flex items-center gap-0.5 px-2.5 py-1 border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-gray-700 shadow-sm transition-colors"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
