@@ -71,12 +71,30 @@ interface Invoice {
   visit_type?: string;
 }
 
+const formatDateToYMD = (d: Date | undefined): string => {
+  if (!d || isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseYMDToDate = (str: string): Date | undefined => {
+  if (!str) return undefined;
+  const parts = str.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return undefined;
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+};
+
 const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onClose, posProfile, showAlert, onLoadInvoice, isIPDPage = false, excludeIPDInvoices = false, showOnlyReturns = false }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [invoiceNumberSearchTerm, setInvoiceNumberSearchTerm] = useState('');
   const [patientNameSearchTerm, setPatientNameSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined, to: Date | undefined }>({ from: undefined, to: undefined });
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined, to: Date | undefined }>(() => ({
+    from: new Date(Date.now() - (showOnlyReturns ? 30 : 1) * 24 * 60 * 60 * 1000),
+    to: new Date()
+  }));
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showItemsModal, setShowItemsModal] = useState(false);
@@ -117,6 +135,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       // Show only return invoices if showOnlyReturns is true
       if (showOnlyReturns) {
         filters.push(['is_return', '=', 1]);
+        filters.push(['docstatus', '!=', 2]);
       }
 
       if (invoiceNumber) {
@@ -126,10 +145,10 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         filters.push(['custom_patient_name', 'like', `%${patientName}%`]);
       }
       if (dates.from) {
-        filters.push(['posting_date', '>=', dates.from.toISOString().split('T')[0]]);
+        filters.push(['posting_date', '>=', formatDateToYMD(dates.from)]);
       }
       if (dates.to) {
-        filters.push(['posting_date', '<=', dates.to.toISOString().split('T')[0]]);
+        filters.push(['posting_date', '<=', formatDateToYMD(dates.to)]);
       }
 
       // Use the same authentication logic as other functions
@@ -181,26 +200,29 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   };
 
   useEffect(() => {
+    if (isOpen) {
+      setDateRange({
+        from: new Date(Date.now() - (showOnlyReturns ? 30 : 1) * 24 * 60 * 60 * 1000),
+        to: new Date()
+      });
+    }
+  }, [isOpen, showOnlyReturns]);
+
+  useEffect(() => {
     if (!isOpen) {
       lastFetchedParamsRef.current = '';
       setLoading(true);
       return;
     }
 
-    const currentDates = dateRange.from ? dateRange : {
-      from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      to: new Date()
-    };
-
-    if (!dateRange.from) {
-      setDateRange(currentDates);
-    }
+    const fromStr = dateRange.from ? formatDateToYMD(dateRange.from) : '';
+    const toStr = dateRange.to ? formatDateToYMD(dateRange.to) : '';
 
     const paramsKey = JSON.stringify({
       isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns,
       invoiceNumberSearchTerm, patientNameSearchTerm,
-      from: currentDates.from?.toISOString().split('T')[0],
-      to: currentDates.to?.toISOString().split('T')[0]
+      from: fromStr,
+      to: toStr
     });
 
     if (lastFetchedParamsRef.current === paramsKey) {
@@ -216,11 +238,11 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
     if (isInitialLoad) {
       // Execute immediate fetch on initial modal open for stable loading skeletons
-      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, currentDates);
+      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
     } else {
       // Debounce user typing search changes
       searchTimeoutRef.current = setTimeout(() => {
-        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, currentDates);
+        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
       }, 300);
     }
 
@@ -333,7 +355,9 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[calc(100vh-5rem)] flex flex-col my-auto overflow-hidden modal-enter">
         {/* Header */}
         <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-          <CardTitle className="text-lg font-semibold text-gray-900">Sale Bills</CardTitle>
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            {showOnlyReturns ? "Return Sale Bills" : "Sale Bills"}
+          </CardTitle>
           <UIButton onClick={onClose} variant="ghost" size="icon" className="p-0">
             <X className="h-5 w-5" />
           </UIButton>
@@ -341,8 +365,8 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
         {/* Search Inputs */}
         <div className="px-6 py-4 border-b border-gray-200 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search by Invoice No</label>
               <input
                 type="text"
@@ -352,7 +376,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 onChange={(e) => setInvoiceNumberSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex-1">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search by Patient Name</label>
               <input
                 type="text"
@@ -360,6 +384,47 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 placeholder="Enter patient name..."
                 value={patientNameSearchTerm}
                 onChange={(e) => setPatientNameSearchTerm(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={dateRange.from ? formatDateToYMD(dateRange.from) : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDateRange(prev => ({
+                    ...prev,
+                    from: val ? parseYMDToDate(val) : undefined
+                  }));
+                }}
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">To Date</label>
+                {(dateRange.from || dateRange.to) && (
+                  <button
+                    type="button"
+                    onClick={() => setDateRange({ from: undefined, to: undefined })}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
+                  >
+                    Clear Dates
+                  </button>
+                )}
+              </div>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={dateRange.to ? formatDateToYMD(dateRange.to) : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDateRange(prev => ({
+                    ...prev,
+                    to: val ? parseYMDToDate(val) : undefined
+                  }));
+                }}
               />
             </div>
           </div>

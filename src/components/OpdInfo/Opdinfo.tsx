@@ -933,7 +933,7 @@ const OpdCard = forwardRef<OpdCardRef, PatientCardProps>(({
                                                             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
                                                                 <span>MRN: {highlightMatch(patient.mrn || 'N/A', searchValue)}</span>
                                                                 <span>Age: {patient.ageDisplay || 'N/A'}</span>
-                                                                <span>Visit ID: {patient.visitID || 'N/A'}</span>
+                                                                <span>Visit No: {patient.visitNumber || patient.visitNo || patient.patientVisitNo || patient.visit_no || patient.custom_visit_code || patient.visitID || 'N/A'}</span>
                                                                 <span>Visit Date: {patient.visitDateTime || 'N/A'}</span>
                                                                 <span>Gender: {patient.genderValue || 'N/A'}</span>
                                                                 {patient.mobileNo && <span>Mobile: {highlightMatch(patient.mobileNo, searchValue)}</span>}

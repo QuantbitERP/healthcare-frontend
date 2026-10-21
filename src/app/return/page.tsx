@@ -1782,15 +1782,26 @@ export default function Return() {
 
       console.log("Total quantity calculated:", totalQty);
 
-      // Get invoiced quantity from POS invoices
-      const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+      // Get invoiced quantity from invoices
+      let invoiceResponse = await fetch(
+        `${API_BASE_URL}/Sale%20Bill?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
         {
           method: 'GET',
           headers,
           credentials: 'include',
         }
       );
+
+      if (!invoiceResponse.ok) {
+        invoiceResponse = await fetch(
+          `${API_BASE_URL}/POS%20Invoice?filters=[["custom_req_no","=","${reqNo}"],["docstatus","=",1]]&fields=["name","custom_req_no"]`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+      }
 
       if (!invoiceResponse.ok) {
         console.error("Failed to fetch invoice details");
@@ -1807,14 +1818,25 @@ export default function Return() {
         console.log("Processing invoice:", invoice.name, "custom_req_no:", invoice.custom_req_no);
 
         try {
-          const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+          let fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
               credentials: 'include',
             }
           );
+
+          if (!fullInvoiceResponse.ok) {
+            fullInvoiceResponse = await fetch(
+              `${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
+              {
+                method: 'GET',
+                headers,
+                credentials: 'include',
+              }
+            );
+          }
 
           if (fullInvoiceResponse.ok) {
             const fullInvoiceData = await fullInvoiceResponse.json();
@@ -1878,14 +1900,25 @@ export default function Return() {
       // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
         try {
-          const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+          let fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
               credentials: 'include',
             }
           );
+
+          if (!fullInvoiceResponse.ok) {
+            fullInvoiceResponse = await fetch(
+              `${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
+              {
+                method: 'GET',
+                headers,
+                credentials: 'include',
+              }
+            );
+          }
 
           if (fullInvoiceResponse.ok) {
             const fullInvoiceData = await fullInvoiceResponse.json();
@@ -1933,14 +1966,25 @@ export default function Return() {
           authHeaders;
 
       // Get all invoices for this prescription
-      const invoiceResponse = await fetch(
-        `${API_BASE_URL}/POS%20Invoice?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
+      let invoiceResponse = await fetch(
+        `${API_BASE_URL}/Sale%20Bill?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
         {
           method: 'GET',
           headers,
           credentials: 'include',
         }
       );
+
+      if (!invoiceResponse.ok) {
+        invoiceResponse = await fetch(
+          `${API_BASE_URL}/POS%20Invoice?filters=[["source_prescription","=","${prescriptionNo}"],["docstatus","=",1]]&fields=["name","source_prescription"]`,
+          {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }
+        );
+      }
 
       if (!invoiceResponse.ok) {
         console.error("Failed to fetch invoice details for prescription item quantity calculation");
@@ -1954,14 +1998,25 @@ export default function Return() {
       // Fetch full invoice details for each invoice to get items
       for (const invoice of invoices) {
         try {
-          const fullInvoiceResponse = await fetch(
-            `${API_BASE_URL}/POS%20Invoice/${invoice.name}?fields=["name","items"]`,
+          let fullInvoiceResponse = await fetch(
+            `${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
             {
               method: 'GET',
               headers,
               credentials: 'include',
             }
           );
+
+          if (!fullInvoiceResponse.ok) {
+            fullInvoiceResponse = await fetch(
+              `${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}?fields=["name","items"]`,
+              {
+                method: 'GET',
+                headers,
+                credentials: 'include',
+              }
+            );
+          }
 
           if (fullInvoiceResponse.ok) {
             const fullInvoiceData = await fullInvoiceResponse.json();
@@ -3266,12 +3321,21 @@ export default function Return() {
             Object.fromEntries(authHeaders) :
             authHeaders;
 
-        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+        let response = await fetch(`${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(loadedInvoiceName)}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
           body: JSON.stringify(finalPayload),
         });
+
+        if (!response.ok) {
+          response = await fetch(`${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(loadedInvoiceName)}`, {
+            method: 'PUT',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(finalPayload),
+          });
+        }
 
         if (response.ok) {
           const result = await response.json();
@@ -4692,11 +4756,19 @@ export default function Return() {
           Object.fromEntries(authHeaders) :
           authHeaders;
 
-      const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoice.name}`, {
+      let response = await fetch(`${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoice.name)}`, {
         method: 'GET',
         headers,
         credentials: 'include',
       });
+
+      if (!response.ok) {
+        response = await fetch(`${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoice.name)}`, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+      }
 
       if (!response.ok) {
         showAlert("danger", "Error", "Failed to load invoice details.");
@@ -5036,12 +5108,21 @@ export default function Return() {
             authHeaders;
 
         // Submit the draft invoice
-        const response = await fetch(`${API_BASE_URL}/POS%20Invoice/${loadedInvoiceName}`, {
+        let response = await fetch(`${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(loadedInvoiceName)}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
           body: JSON.stringify({ docstatus: 1 }),
         });
+
+        if (!response.ok) {
+          response = await fetch(`${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(loadedInvoiceName)}`, {
+            method: 'PUT',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({ docstatus: 1 }),
+          });
+        }
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -5790,12 +5871,21 @@ export default function Return() {
         //     Object.fromEntries(authHeaders) : 
         //     authHeaders;
 
-        const submitResponse = await fetch(`${API_BASE_URL}/POS%20Invoice/${invoiceName}`, {
+        let submitResponse = await fetch(`${API_BASE_URL}/Sale%20Bill/${encodeURIComponent(invoiceName)}`, {
           method: 'PUT',
           headers,
           credentials: 'include',
           body: JSON.stringify({ docstatus: 1 }),
         });
+
+        if (!submitResponse.ok) {
+          submitResponse = await fetch(`${API_BASE_URL}/POS%20Invoice/${encodeURIComponent(invoiceName)}`, {
+            method: 'PUT',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({ docstatus: 1 }),
+          });
+        }
 
         if (!submitResponse.ok) {
           const errorData = await submitResponse.json();
@@ -5984,7 +6074,7 @@ export default function Return() {
                   Return Requisition
                 </Button>
                 <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
-                  View Sale Bills
+                  View Return Sale Bills
                 </Button>
                 <Button type="secondary-button" size="button-small" onClick={() => setShowPosProfileSelector(true)}>
                   Change POS Profile
@@ -6369,7 +6459,7 @@ export default function Return() {
                   disabled={isSaving}
                   onClick={() => setShowSelectInvoiceModal(true)}
                 >
-                  Return Bill
+                  Sale Bill
                 </Button>
                 <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
                   Closing Entry
@@ -6395,14 +6485,14 @@ export default function Return() {
                         console.error("Network printing failed:", error);
                         showAlert("warning", "Print Warning", "Network printing failed, opened in browser instead.");
                         // Fallback to browser print
-                        securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
+                        securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
                         // Close splash screen after redirecting to print
                         setIsSaving(false);
                       }
                     } else {
                       // Fallback to browser print if network printer not available
                       console.warn('Network printer not available, using browser print');
-                      securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=POS%20Invoice&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
+                      securePrintPdf(`https://gmcerp.quantcloud.in/printview?doctype=Sale%20Bill&name=${encodeURIComponent(loadedInvoiceName)}&format=Pos%20Invoice%20print%20Format&trigger_print=1&no_letterhead=0&_lang=en`, getAuthHeaders, showAlert);
                       // Close splash screen after redirecting to print
                       setIsSaving(false);
                     }
@@ -6425,7 +6515,7 @@ export default function Return() {
                   onClick={() => setShowSelectInvoiceModal(true)}
                   disabled={isReturn}
                 >
-                  Return Bill
+                  Sale Bill
                 </Button>
                 <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
                   Closing Entry

@@ -2367,7 +2367,7 @@ export default function ClientPR({ searchParams }: { searchParams: Promise<Recor
                                   <div className="patient-name">{patient.patientFullName || "N/A"}</div>
                                   <div className="patient-details">
                                     <span>MRN: {patient.mrn || "N/A"}</span>
-                                    <span>Visit Id: {patient.visitID || "N/A"}</span>
+                                    <span>Visit No: {patient.visitNumber || patient.visitNo || patient.patientVisitNo || patient.visit_no || patient.custom_visit_code || patient.visitID || "N/A"}</span>
                                     <span>Visit Date Time: {patient.visitDateTime || "N/A"}</span>
                                     <span>Visit Type: {patient.patientVisitType || "N/A"}</span>
                                   </div>
