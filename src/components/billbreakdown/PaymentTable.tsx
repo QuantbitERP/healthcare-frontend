@@ -108,63 +108,86 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
     const initializePaymentMethods = async () => {
       let methods: PaymentMethod[] = [];
 
-      if (posProfile) {
+      try {
+        // Use the same authentication logic as other functions
+        const authHeaders = getAuthHeaders();
+        // Convert HeadersInit to plain object for fetch compatibility
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+
+        let systemModes: string[] = [];
         try {
-          // Use the same authentication logic as other functions
-          const authHeaders = getAuthHeaders();
-          // Convert HeadersInit to plain object for fetch compatibility
-          const headers = typeof authHeaders === 'string' ? 
-            JSON.parse(authHeaders) : 
-            Array.isArray(authHeaders) ? 
-              Object.fromEntries(authHeaders) : 
-              authHeaders;
-          
-          const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/POS%20Profile/${posProfile}`, {
-            method: 'GET',
-            headers,
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const posProfileData = data.data;
-
-            if (posProfileData.payments && Array.isArray(posProfileData.payments)) {
-              methods = posProfileData.payments.map((payment: any) => ({
-                name: payment.mode_of_payment,
-                mode_of_payment: payment.mode_of_payment,
-              }));
-            } else {
-              methods = [
-                { name: 'Cash', mode_of_payment: 'Cash' },
-                { name: 'Card', mode_of_payment: 'Card' },
-                { name: 'UPI', mode_of_payment: 'UPI' },
-                { name: 'Cheque', mode_of_payment: 'Cheque' },
-              ];
+          const mopResponse = await fetch(
+            `https://gmcerp.quantcloud.in/api/resource/Mode%20of%20Payment?filters=[["enabled","=",1]]&fields=["name"]&limit_page_length=50`,
+            {
+              method: 'GET',
+              headers,
             }
-          } else {
-            console.error('Failed to fetch POS Profile for payment methods');
-            methods = [
-              { name: 'Cash', mode_of_payment: 'Cash' },
-              { name: 'Card', mode_of_payment: 'Card' },
-              { name: 'UPI', mode_of_payment: 'UPI' },
-              { name: 'Cheque', mode_of_payment: 'Cheque' },
-            ];
+          );
+          if (mopResponse.ok) {
+            const mopData = await mopResponse.json();
+            if (mopData?.data && Array.isArray(mopData.data)) {
+              systemModes = mopData.data.map((m: any) => m.name);
+            }
           }
-        } catch (error) {
-          console.error('Error fetching payment methods:', error);
-          methods = [
-            { name: 'Cash', mode_of_payment: 'Cash' },
-            { name: 'Card', mode_of_payment: 'Card' },
-            { name: 'UPI', mode_of_payment: 'UPI' },
-            { name: 'Cheque', mode_of_payment: 'Cheque' },
-          ];
+        } catch (e) {
+          console.error('Failed to fetch Mode of Payment list:', e);
         }
-      } else {
+
+        let posModes: string[] = [];
+        let defaultMode = 'Cash';
+
+        if (posProfile) {
+          try {
+            const response = await fetch(`https://gmcerp.quantcloud.in/api/resource/POS%20Profile/${encodeURIComponent(posProfile)}`, {
+              method: 'GET',
+              headers,
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const posProfileData = data.data;
+
+              if (posProfileData?.payments && Array.isArray(posProfileData.payments)) {
+                posModes = posProfileData.payments.map((payment: any) => payment.mode_of_payment);
+                const defaultPayment = posProfileData.payments.find((payment: any) => payment.default);
+                if (defaultPayment?.mode_of_payment) {
+                  defaultMode = defaultPayment.mode_of_payment;
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Failed to fetch POS Profile for payment methods:', e);
+          }
+        }
+
+        const modeSet = new Set<string>();
+        if (defaultMode) modeSet.add(defaultMode);
+        modeSet.add('Cash');
+        posModes.forEach(m => m && modeSet.add(m));
+        systemModes.forEach(m => m && modeSet.add(m));
+
+        // Fallback if network calls returned nothing
+        if (modeSet.size <= 1) {
+          ['Credit Card', 'Debit Card', 'POS', 'Cheque', 'Bank Transfer', 'Deposit'].forEach(m => modeSet.add(m));
+        }
+
+        methods = Array.from(modeSet).map(mode => ({
+          name: mode,
+          mode_of_payment: mode,
+        }));
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
         methods = [
           { name: 'Cash', mode_of_payment: 'Cash' },
-          { name: 'Card', mode_of_payment: 'Card' },
-          { name: 'UPI', mode_of_payment: 'UPI' },
+          { name: 'Credit Card', mode_of_payment: 'Credit Card' },
+          { name: 'Debit Card', mode_of_payment: 'Debit Card' },
+          { name: 'POS', mode_of_payment: 'POS' },
           { name: 'Cheque', mode_of_payment: 'Cheque' },
+          { name: 'Bank Transfer', mode_of_payment: 'Bank Transfer' },
         ];
       }
 
@@ -353,6 +376,11 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
                         {method.name}
                       </option>
                     ))}
+                    {!paymentMethods.some(m => m.mode_of_payment === payment.paymentMode) && payment.paymentMode && (
+                      <option value={payment.paymentMode}>
+                        {payment.paymentMode}
+                      </option>
+                    )}
                   </select>
                 </td>
                 <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'transactionNo') }}>

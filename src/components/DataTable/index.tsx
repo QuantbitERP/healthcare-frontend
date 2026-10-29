@@ -116,6 +116,8 @@ interface DataTableComponentProps {
   className?: string;
   isSearchFocus?: boolean;
   onRowClick?: (row: any) => void;
+  extraFilterActions?: ReactNode;
+  footerRightActions?: ReactNode;
 }
 
 export default function DataTableComponent({
@@ -149,6 +151,8 @@ export default function DataTableComponent({
   hideShowColumns = false,
   isSearchFocus = false,
   onRowClick,
+  extraFilterActions,
+  footerRightActions,
 }: DataTableComponentProps) {
   const [tableData, setTableData] = useState(data);
   const [sorting, setSorting] = useState(defaultSort || []);
@@ -269,7 +273,8 @@ export default function DataTableComponent({
           }}
         />
       </div>
-      <div className="filters flex space-x-sm py-xs">
+      <div className="filters flex items-center space-x-sm py-xs">
+        {extraFilterActions}
         {!hideMeFilter && (
           <TableUtilToggle
             inputProps={{ checked: meMode, setChecked: toggleMeMode }}
@@ -646,75 +651,89 @@ export default function DataTableComponent({
 
     const pageNumbers = getPageNumbers();
     return (
-      <div>
-        {!loading && table.getRowModel().rows.length > 0 && (
-          <div className="flex justify-between items-center px-6 py-4 flex-shrink-0">
+      <div className="border-t border-gray-100 bg-white">
+        {!loading && table.getRowModel().rows.length > 0 ? (
+          <div className="flex justify-between items-center px-6 py-2.5 flex-shrink-0">
             <div className="text-sm text-muted-foreground">
               Page {currentPage + 1} of {totalPages || totalPage}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="button"
-                type="secondary-button"
-                onClick={() => {
-                  if (paginationMeta && onPageChange) {
-                    onPageChange(currentPage);
-                  } else {
-                    table.previousPage();
-                  }
-                }}
-                disabled={currentPage === 0}
-              >
-                Previous
-              </Button>
-
-              {pageNumbers.map((page, index) =>
-                page === DOTS ? (
-                  <span key={index} className="px-2 text-muted-foreground">
-                    {DOTS}
-                  </span>
-                ) : (
-                  <Button
-                    key={index}
-                    type={"button"}
-                    className={`h-8 w-8 p-0 ${currentPage === page
-                      ? "primary-button"
-                      : "secondary-button"
-                      }`}
-                    onClick={() => {
-                      if (paginationMeta && onPageChange) {
-                        onPageChange((page as number) + 1);
-                      } else {
-                        if (typeof page === "number") {
-                          table.setPageIndex(page);
-                        }
-                      }
-                    }}
-                  >
-                    {typeof page === "number" ? page + 1 : String(page)}
-                  </Button>
-                )
-              )}
-
-              <Button
-                variant="button"
-                type="secondary-button"
-                onClick={() => {
-                  if (paginationMeta && onPageChange) {
-                    onPageChange(currentPage + 2);
-                  } else {
-                    if (table.getCanNextPage()) {
-                      table.nextPage();
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-1.5">
+                <Button
+                  variant="button"
+                  type="secondary-button"
+                  onClick={() => {
+                    if (paginationMeta && onPageChange) {
+                      onPageChange(currentPage);
+                    } else {
+                      table.previousPage();
                     }
-                  }
-                }}
-                disabled={paginationMeta ? currentPage + 1 === totalPages : !table.getCanNextPage()}
-              >
-                Next
-              </Button>
+                  }}
+                  disabled={currentPage === 0}
+                >
+                  Previous
+                </Button>
+
+                {pageNumbers.map((page, index) =>
+                  page === DOTS ? (
+                    <span key={index} className="px-2 text-muted-foreground text-xs">
+                      {DOTS}
+                    </span>
+                  ) : (
+                    <Button
+                      key={index}
+                      type={"button"}
+                      className={`h-8 w-8 p-0 text-xs ${currentPage === page
+                        ? "primary-button"
+                        : "secondary-button"
+                        }`}
+                      onClick={() => {
+                        if (paginationMeta && onPageChange) {
+                          onPageChange((page as number) + 1);
+                        } else {
+                          if (typeof page === "number") {
+                            table.setPageIndex(page);
+                          }
+                        }
+                      }}
+                    >
+                      {typeof page === "number" ? page + 1 : String(page)}
+                    </Button>
+                  )
+                )}
+
+                <Button
+                  variant="button"
+                  type="secondary-button"
+                  onClick={() => {
+                    if (paginationMeta && onPageChange) {
+                      onPageChange(currentPage + 2);
+                    } else {
+                      if (table.getCanNextPage()) {
+                        table.nextPage();
+                      }
+                    }
+                  }}
+                  disabled={paginationMeta ? currentPage + 1 === totalPages : !table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+
+              {footerRightActions && (
+                <div className="flex items-center pl-4 border-l border-gray-200">
+                  {footerRightActions}
+                </div>
+              )}
             </div>
           </div>
+        ) : (
+          footerRightActions && (
+            <div className="flex justify-end items-center px-6 py-2.5 flex-shrink-0">
+              {footerRightActions}
+            </div>
+          )
         )}
       </div>
     );

@@ -1013,13 +1013,18 @@ const calculateItemTaxAndTotals = (item: Item, includedInPrintRate: boolean = fa
     const isPreAuthReq = Boolean(item.preAuthRequired) || (item as any).pre_auth_req === 'Yes' || (item as any).pre_auth_req === 1;
     const preAuthApproved = item.preAuthStatus === 'Approved' || item.preAuthStatus === 'Partially Approved';
     const preAuthOk = !isPreAuthReq || preAuthApproved;
-    const copayApplies = item.covered && preAuthOk;
-    let coPayPercent = copayApplies ? (item.coPayPercentage ?? 0) : 0;
-    if (!item.covered) {
-      coPayPercent = 0;
+    const isCovered = Boolean(item.covered && preAuthOk);
+
+    if (!isCovered) {
+      // Not covered -> Patient pays 100%, Payer pays 0
+      patientAmount = totalAmount;
+      payerAmount = 0;
+    } else {
+      // Covered -> Patient pays Co-Pay %, Payer pays remaining balance
+      const coPayPercent = Math.min(100, Math.max(0, item.coPayPercentage ?? 0));
+      patientAmount = totalAmount * (coPayPercent / 100);
+      payerAmount = Math.max(0, totalAmount - patientAmount);
     }
-    payerAmount = totalAmount * (coPayPercent / 100);
-    patientAmount = totalAmount - payerAmount;
   }
 
   return {
@@ -1777,6 +1782,7 @@ export default function IPDBill() {
   }, [barcode]);
   const [selectedKit, setSelectedKit] = useState('');
   const [selectedSaleType, setSelectedSaleType] = useState('');
+  const [selectedClassification, setSelectedClassification] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
   const [isStat, setIsStat] = useState(false);
   const [isDischarge, setIsDischarge] = useState(false);
@@ -2547,6 +2553,7 @@ export default function IPDBill() {
     setIsReqIdReadonly(false);
     setSelectedKit('');
     setSelectedSaleType('');
+    setSelectedClassification('');
     setIsRoutine(false);
     setIsStat(false);
     setIsDischarge(false);
@@ -3396,10 +3403,10 @@ export default function IPDBill() {
 
   const handleClassificationChange = (value: string) => {
     if (value === "CLEAR") {
-      setSelectedSaleType("");
+      setSelectedClassification("");
       return;
     }
-    setSelectedSaleType(value);
+    setSelectedClassification(value);
   };
 
   const handleSelectKit = async (kitName: string) => {
@@ -6982,12 +6989,16 @@ export default function IPDBill() {
             warehouse={selectedWarehouse || undefined}
             rightButtons={
               <div className="flex flex-row space-x-2">
-                <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
-                  Patient Requisition
-                </Button>
-                <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
-                  Prescription
-                </Button>
+                {!isReturn && (
+                  <>
+                    <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
+                      Patient Requisition
+                    </Button>
+                    <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
+                      Prescription
+                    </Button>
+                  </>
+                )}
                 <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
                   View Sale Bills
                 </Button>
@@ -7232,7 +7243,7 @@ export default function IPDBill() {
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1.5fr_auto_1fr] gap-4 items-center">
                     <RenderFormElement
                       inputType="select"
-                      value={selectedSaleType}
+                      value={selectedClassification}
                       onChange={handleClassificationChange}
                       data={[{ label: "", value: "CLEAR" }, ...classificationTypeOptions]}
                       placeholder="Select Classification"
@@ -7249,9 +7260,9 @@ export default function IPDBill() {
                       selectedCompany={selectedCompany}
                       selectedCustomer={selectedCustomer}
                       applyPricingRules={applyPricingRules}
-                      selectedClassification={selectedSaleType}
+                      selectedClassification={selectedClassification}
                       isGeneric={isGeneric}
-                      isDisabled={_isItemsLoadedFromRequisitionOrPrescription}
+                      isDisabled={false}
                       criticalCategoryDialog={criticalCategoryDialog}
                       setCriticalCategoryDialog={setCriticalCategoryDialog}
                     />

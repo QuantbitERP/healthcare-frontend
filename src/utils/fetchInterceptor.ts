@@ -7,7 +7,7 @@ import axios from 'axios';
  * This is a systemic fix for 401 Unauthorized issues in legacy code.RIES.
  */
 // Utility function to show the auth error popup and redirect
-const showAuthErrorPopupAndRedirect = (isAnotherDevice: boolean = false) => {
+const showAuthErrorPopupAndRedirect = () => {
     if (typeof document === 'undefined') return;
     if (document.getElementById('auth-error-popup')) return;
 
@@ -47,9 +47,7 @@ const showAuthErrorPopupAndRedirect = (isAnotherDevice: boolean = false) => {
     title.style.fontWeight = 'bold';
     
     const message = document.createElement('p');
-    message.innerText = isAnotherDevice 
-        ? 'Your account has been used by another device. You are being redirected to the login page...'
-        : 'Your session has expired. You are being redirected to the login page...';
+    message.innerText = 'Your session has expired. You are being redirected to the login page...';
     message.style.color = '#4b5563';
     message.style.fontSize = '16px';
     message.style.lineHeight = '1.6';
@@ -67,7 +65,7 @@ const showAuthErrorPopupAndRedirect = (isAnotherDevice: boolean = false) => {
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    let secondsLeft = 5;
+    let secondsLeft = 3;
     timerText.innerText = `Redirecting in ${secondsLeft}s`;
 
     const interval = setInterval(() => {
@@ -81,10 +79,11 @@ const showAuthErrorPopupAndRedirect = (isAnotherDevice: boolean = false) => {
             document.cookie.split(";").forEach((c) => {
                 document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
             });
+            const loginUrl = window.location.origin + '/pos/login';
             if (window.top) {
-                window.top.location.href = 'https://hmis.gardeniamedical.net/';
+                window.top.location.href = loginUrl;
             } else {
-                window.location.href = 'https://hmis.gardeniamedical.net/';
+                window.location.href = loginUrl;
             }
         }
     }, 1000);
@@ -127,7 +126,7 @@ export const setupFetchInterceptor = () => {
                 const apiKey = localStorage.getItem('apiKey');
                 const apiSecret = localStorage.getItem('apiSecret');
                 const useSessionAuth = localStorage.getItem('useSessionAuth');
-                const isMasked = (secret: string | null) => secret && secret.includes('***');
+                const isMasked = (secret: string | null) => secret ? secret.includes('***') : false;
 
                 // Only add token auth if not using session auth and keys are valid
                 if (!useSessionAuth && apiKey && apiSecret && !isMasked(apiSecret)) {
@@ -151,10 +150,30 @@ export const setupFetchInterceptor = () => {
                 const response = await originalFetch(input, newInit);
                 // Handle 401 Unauthorized directly (DO NOT catch 403 as that may just be a permission error)
                 if (response.status === 401) {
-                    if (window.location.pathname !== '/login') {
+                    if (!window.location.pathname.endsWith('/login')) {
+                        // If token auth was attached, it might be that the token is invalid/expired while cookie session is still alive.
+                        // Try clearing token and retrying with cookie session before failing completely!
+                        if (headers.has('Authorization')) {
+                            console.warn("[FetchInterceptor] Token auth returned 401, trying fallback to session cookies...");
+                            localStorage.removeItem('apiKey');
+                            localStorage.removeItem('apiSecret');
+                            localStorage.setItem('useSessionAuth', 'true');
+
+                            const retryHeaders = new Headers(newInit.headers || {});
+                            retryHeaders.delete('Authorization');
+                            newInit.headers = retryHeaders;
+                            try {
+                                const retryResponse = await originalFetch(input, newInit);
+                                if (retryResponse.status !== 401) {
+                                    return retryResponse;
+                                }
+                            } catch (e) {
+                                // proceed to popup
+                            }
+                        }
+
                         console.log("[FetchInterceptor] Unauthorized response, showing popup and logging out...");
-                        const hasToken = headers.has('Authorization');
-                        showAuthErrorPopupAndRedirect(hasToken);
+                        showAuthErrorPopupAndRedirect();
                         // Return a never-resolving promise to prevent components from catching the error
                         // and showing their own red box alerts while the popup counts down.
                         return new Promise(() => {}) as unknown as Promise<Response>;
@@ -177,11 +196,9 @@ export const setupFetchInterceptor = () => {
                 (response: any) => response,
                 (error: any) => {
                     if (error.response && error.response.status === 401) {
-                        if (window.location.pathname !== '/login') {
+                        if (!window.location.pathname.endsWith('/login')) {
                             console.log("[AxiosInterceptor] Unauthorized response, showing popup and logging out...");
-                            const configHeaders = error.config?.headers;
-                            const hasToken = !!(configHeaders && (configHeaders['Authorization'] || configHeaders['authorization'] || (typeof configHeaders.get === 'function' && configHeaders.get('Authorization'))));
-                            showAuthErrorPopupAndRedirect(hasToken);
+                            showAuthErrorPopupAndRedirect();
                             // Return a never-resolving promise to block the component from showing an alert
                             return new Promise(() => {});
                         }

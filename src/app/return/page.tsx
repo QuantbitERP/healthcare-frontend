@@ -2331,28 +2331,23 @@ export default function Return() {
     if (isReturn) {
       const newTotalBillAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + (item.totalAmt * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.totalAmt || 0) : sum;
       }, 0);
       const newTotalDiscountAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + (item.discountAmt * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.discountAmt || 0) : sum;
       }, 0);
       const newTotalCgstAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + (item.cgstAmt * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.cgstAmt || 0) : sum;
       }, 0);
       const newTotalSgstAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + (item.sgstAmt * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.sgstAmt || 0) : sum;
       }, 0);
       const newTotalIgstAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + (item.igstAmt * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.igstAmt || 0) : sum;
       }, 0);
 
       setTotalBillAmount(newTotalBillAmount);
@@ -2362,13 +2357,11 @@ export default function Return() {
       setTotalIgstAmount(newTotalIgstAmount);
       const newTotalPayerAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + ((item.payerAmount || 0) * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.payerAmount || 0) : sum;
       }, 0);
       const newTotalPatientAmount = calculatedItems.reduce((sum, item) => {
         const returnQty = item.returnQty || 0;
-        const saleQty = item.saleQty || 1;
-        return sum + ((item.patientAmount || 0) * returnQty / saleQty);
+        return returnQty > 0 ? sum + (item.patientAmount || 0) : sum;
       }, 0);
       setTotalPayerAmount(newTotalPayerAmount);
       setTotalPatientAmount(newTotalPatientAmount);
@@ -5056,7 +5049,11 @@ export default function Return() {
       setTotalIgstAmount(igstTotal);
 
       // Load payments
-      if (fullInvoice.payments && Array.isArray(fullInvoice.payments)) {
+      const isCreditInvoice = fullInvoice.is_credit_bill === 1 
+        || String(fullInvoice.custom_transaction_type || '').toLowerCase() === 'credit'
+        || fullInvoice.paid_amount === 0;
+
+      if (!isCreditInvoice && fullInvoice.payments && Array.isArray(fullInvoice.payments) && fullInvoice.payments.length > 0) {
         const loadedPayments = fullInvoice.payments.map((payment: any, index: number) => ({
           id: index + 1,
           name: payment.name, // Preserve Frappe child table row identifier
@@ -5072,6 +5069,17 @@ export default function Return() {
           custom_transaction_no: payment.custom_transaction_no || "",
         }));
         setRecordedPayments(loadedPayments);
+      } else {
+        setRecordedPayments([{
+          id: 1,
+          paymentMode: "Cash",
+          transactionNo: "",
+          bankName: "",
+          branchName: "",
+          paidAmount: "0",
+          paymentDate: fullInvoice.posting_date || new Date().toISOString().split('T')[0],
+          approvalNo: "",
+        }]);
       }
 
       // Reset flag after all data is loaded
@@ -5226,12 +5234,23 @@ export default function Return() {
                   pre_auth_status: item.preAuthStatus || "",
                 };
               });
-              const refundMode = 'Cash';
+              const totalPaid = recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+              const paymentsPayload = recordedPayments.map(p => ({
+                mode_of_payment: p.paymentMode || 'Cash',
+                amount: parseFloat(p.paidAmount) || 0,
+                base_amount: parseFloat(p.paidAmount) || 0,
+                transaction_no: p.transactionNo || '',
+                bank_name: p.bankName || '',
+                branch_name: p.branchName || '',
+              }));
+              const refundMode = recordedPayments[0]?.paymentMode || 'Cash';
 
               const payload = {
                 original_invoice: '', // Empty for direct return
                 return_items: returnItems,
                 refund_mode: refundMode,
+                payments: paymentsPayload,
+                paid_amount: totalPaid,
                 // Additional fields for complete invoice creation
                 included_in_print_rate: 1, // GST included in MRP - set at invoice level
                 customer: selectedCustomer || '',
@@ -5379,12 +5398,23 @@ export default function Return() {
                 pre_auth_status: item.preAuthStatus || "",
               };
             });
-            const refundMode = 'Cash';
+            const totalPaid = recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
+            const paymentsPayload = recordedPayments.map(p => ({
+              mode_of_payment: p.paymentMode || 'Cash',
+              amount: parseFloat(p.paidAmount) || 0,
+              base_amount: parseFloat(p.paidAmount) || 0,
+              transaction_no: p.transactionNo || '',
+              bank_name: p.bankName || '',
+              branch_name: p.branchName || '',
+            }));
+            const refundMode = recordedPayments[0]?.paymentMode || 'Cash';
 
             const payload = {
               original_invoice: originalInvoice,
               return_items: returnItems,
               refund_mode: refundMode,
+              payments: paymentsPayload,
+              paid_amount: totalPaid,
               // Additional fields for complete invoice creation
               included_in_print_rate: 1, // GST included in MRP - set at invoice level
               customer: selectedCustomer || '',
@@ -6064,17 +6094,14 @@ export default function Return() {
             warehouse={selectedWarehouse || undefined}
             rightButtons={
               <div className="flex flex-row space-x-2">
-                <Button type="primary-button" size="button-small" onClick={() => setShowPatientRequisitionList(true)}>
-                  Patient Requisition
-                </Button>
-                <Button type="primary-button" size="button-small" onClick={() => setShowPrescriptionList(true)}>
-                  Prescription
-                </Button>
                 <Button type="primary-button" size="button-small" onClick={() => setShowPatientReturnRequisitionList(true)}>
                   Return Requisition
                 </Button>
                 <Button type="secondary-button" size="button-small" onClick={() => setShowViewPosInvoicesModal(true)}>
                   View Return Sale Bills
+                </Button>
+                <Button type="secondary-button" size="button-small" onClick={() => { window.location.href = "https://gmcerp.quantcloud.in/app/home"; }}>
+                  Home
                 </Button>
                 <Button type="secondary-button" size="button-small" onClick={() => setShowPosProfileSelector(true)}>
                   Change POS Profile

@@ -4,6 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User, Loader2 } from "lucide-react";
 
+import { FRAPPE_CONFIG } from "@/config/frappe";
+
 const Login: React.FC = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -19,24 +21,25 @@ const Login: React.FC = () => {
     setError("");
 
     try {
+      const loginUrl = `${FRAPPE_CONFIG.BASE_URL}/api/method/quantbit_hims_integration.quantbit_hims_integration.api.login`;
       const response = await fetch(
-        "https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.login",
+        loginUrl,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ usr: username, pwd: password }),
+          credentials: "include",
+          body: JSON.stringify({ usr: username.trim(), pwd: password }),
         }
       );
 
       const data = await response.json();
 
       if (response.ok && data.message === "Logged In") {
-        const { api_key, api_secret } = data.key_details;
-        // console.log("API Key:", api_key);
-        // console.log("API Secret:", api_secret);
-        login(api_key, api_secret);
+        const { api_key, api_secret } = data.key_details || {};
+        const loggedUser = data.user || username.trim();
+        login(api_key, api_secret, loggedUser);
         router.push("/pos");
       } else {
         setError(data.message || "Login failed");

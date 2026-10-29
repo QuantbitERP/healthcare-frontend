@@ -26,6 +26,10 @@ interface Item {
   itemCode: string;
   itemName: string;
   uom: string;
+  conversion_factor?: number;
+  uomOptions?: { uom: string; conversion_factor: number }[];
+  baseUnitRate?: number;
+  baseMrp?: number;
   stockQty: number;
   orderedQty: number;
   saleQty: number;
@@ -242,6 +246,133 @@ const Button = ({
     >
       {children}
     </button>
+  );
+};
+
+export interface UomOption {
+  uom: string;
+  conversion_factor: number;
+}
+
+export const uomCache: Record<string, UomOption[]> = {};
+
+const UomDropdownCell = ({
+  row,
+  column,
+  table,
+  disabled = false,
+}: {
+  row: any;
+  column: any;
+  table: any;
+  disabled?: boolean;
+}) => {
+  const item = row.original as Item;
+  const currentUom = item.uom || "";
+  const [options, setOptions] = useState<UomOption[]>(() => {
+    if (item.uomOptions && item.uomOptions.length > 0) {
+      return item.uomOptions;
+    }
+    if (item.itemCode && uomCache[item.itemCode]) {
+      return uomCache[item.itemCode];
+    }
+    return currentUom ? [{ uom: currentUom, conversion_factor: item.conversion_factor || 1 }] : [];
+  });
+
+  const fetchUoms = async (itemCode: string) => {
+    if (!itemCode) return;
+    try {
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(typeof authHeaders === "string"
+          ? JSON.parse(authHeaders)
+          : Array.isArray(authHeaders)
+          ? Object.fromEntries(authHeaders)
+          : authHeaders || {}),
+      };
+
+      const res = await fetch(
+        `https://gmcerp.quantcloud.in/api/method/quantbit_hims_integration.quantbit_hims_integration.api.get_item_uoms?item_code=${encodeURIComponent(
+          itemCode
+        )}`,
+        {
+          method: "GET",
+          headers,
+          credentials: "include",
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const fetched: UomOption[] = Array.isArray(data.message) ? data.message : [];
+        const merged: UomOption[] = [...fetched];
+        if (currentUom && !merged.some((o) => o.uom === currentUom)) {
+          merged.unshift({ uom: currentUom, conversion_factor: item.conversion_factor || 1 });
+        }
+        if (merged.length > 0) {
+          uomCache[itemCode] = merged;
+          setOptions(merged);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching UOMs for item:", itemCode, err);
+    }
+  };
+
+  useEffect(() => {
+    if (!item.itemCode) return;
+    if (uomCache[item.itemCode]) {
+      setOptions(uomCache[item.itemCode]);
+      return;
+    }
+    fetchUoms(item.itemCode);
+  }, [item.itemCode, currentUom]);
+
+  const displayOptions =
+    options.length > 0
+      ? options
+      : currentUom
+      ? [{ uom: currentUom, conversion_factor: item.conversion_factor || 1 }]
+      : [];
+
+  if (disabled) {
+    return (
+      <div className="px-2 py-1 min-h-[32px] flex items-center font-medium text-gray-900">
+        {currentUom || "-"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-1 py-1 min-h-[32px] flex items-center min-w-[95px] w-full">
+      <Select
+        value={currentUom || undefined}
+        onOpenChange={(open) => {
+          if (open && item.itemCode && (!uomCache[item.itemCode] || uomCache[item.itemCode].length <= 1)) {
+            fetchUoms(item.itemCode);
+          }
+        }}
+        onValueChange={(selectedUom) => {
+          const selectedOption = displayOptions.find((o) => o.uom === selectedUom);
+          table.options.meta?.updateCell(row.index, column.id, selectedUom, selectedOption);
+        }}
+      >
+        <SelectTrigger className="h-8 w-full text-xs font-normal bg-white border border-gray-300 hover:border-gray-400 focus:ring-1 focus:ring-blue-500 rounded px-2">
+          <SelectValue placeholder="Select UOM">
+            {currentUom || "Select"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="max-h-60 z-50 bg-white shadow-lg border rounded-md">
+          {displayOptions
+            .filter((opt) => Boolean(opt.uom))
+            .map((opt) => (
+              <SelectItem key={opt.uom} value={opt.uom} className="text-xs cursor-pointer">
+                {opt.uom}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
@@ -614,7 +745,7 @@ const EditableTable = ({
     });
   };
 
-  const updateCell = (rowIndex: number, columnId: string, value: any) => {
+  const updateCell = (rowIndex: number, columnId: string, value: any, extra?: any) => {
     setItems(old => {
       const updated = old.map((row, index) => {
         if (index === rowIndex) {
@@ -729,6 +860,41 @@ const EditableTable = ({
             [columnId]: parsedValue,
           };
 
+          if (columnId === 'batchNo') {
+            delete updatedRow.baseUnitRate;
+            delete updatedRow.baseMrp;
+          }
+
+          if (columnId === 'rate') {
+            const currentFactor = row.conversion_factor || 1;
+            updatedRow.baseUnitRate = (parsedValue || 0) / currentFactor;
+          }
+
+          if (columnId === 'mrp') {
+            const currentFactor = row.conversion_factor || 1;
+            updatedRow.baseMrp = (parsedValue || 0) / currentFactor;
+          }
+
+          if (columnId === 'uom') {
+            const cached = (row.uomOptions && row.uomOptions.length > 0) ? row.uomOptions : uomCache[row.itemCode];
+            const option = extra || cached?.find((o: any) => o.uom === parsedValue);
+            const newFactor = (option && option.conversion_factor) ? Number(option.conversion_factor) : 1;
+            const oldFactor = row.conversion_factor || 1;
+
+            const baseRate = row.baseUnitRate !== undefined
+              ? row.baseUnitRate
+              : ((row.rate !== null && row.rate !== undefined ? row.rate : 0) / oldFactor);
+            const baseMrp = row.baseMrp !== undefined
+              ? row.baseMrp
+              : ((row.mrp !== null && row.mrp !== undefined ? row.mrp : 0) / oldFactor);
+
+            updatedRow.baseUnitRate = baseRate;
+            updatedRow.baseMrp = baseMrp;
+            updatedRow.conversion_factor = newFactor;
+            updatedRow.rate = Math.round(baseRate * newFactor * 100) / 100;
+            updatedRow.mrp = Math.round(baseMrp * newFactor * 100) / 100;
+          }
+
           if (columnId === 'covered' && !parsedValue) {
             updatedRow.preAuthStatus = 'Pending';
           }
@@ -743,7 +909,7 @@ const EditableTable = ({
             updatedRow.patientAmount = userPatientAmt;
             updatedRow.payerAmount = Math.max(0, totalAmt - userPatientAmt);
             if (totalAmt > 0) {
-              updatedRow.coPayPercentage = Math.round(Math.min(100, Math.max(0, (updatedRow.payerAmount / totalAmt) * 100)) * 100) / 100;
+              updatedRow.coPayPercentage = Math.round(Math.min(100, Math.max(0, (userPatientAmt / totalAmt) * 100)) * 100) / 100;
             }
             updatedRow.isManualPatientAmount = true;
           }
@@ -817,7 +983,7 @@ const EditableTable = ({
           }
 
           if (['rate', 'orderedQty', 'saleQty', 'returnQty', 'discountPercent', 'discountAmt',
-            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'covered', 'preAuthStatus', 'preAuthRequired', 'preAuthNo', 'preAuthDateTime'].includes(columnId)) {
+            'cgstPercent', 'cgstAmt', 'sgstPercent', 'sgstAmt', 'igstPercent', 'igstAmt', 'totalAmt', 'totalPckgAmt', 'coPayPercentage', 'patientAmount', 'payerAmount', 'covered', 'preAuthStatus', 'preAuthRequired', 'preAuthNo', 'preAuthDateTime', 'uom'].includes(columnId)) {
             if (calculateItemTaxAndTotals) {
               return calculateItemTaxAndTotals(updatedRow, true);
             }
@@ -1503,12 +1669,14 @@ const EditableTable = ({
     {
       accessorKey: "uom",
       header: "UOM",
-      cell: ({ row }) => {
-        const item = row.original as Item;
+      cell: ({ row, column, table }) => {
         return (
-          <div className="px-2 py-1 min-h-[32px] flex items-center">
-            {item.uom}
-          </div>
+          <UomDropdownCell
+            row={row}
+            column={column}
+            table={table}
+            disabled={isReturnInvoice}
+          />
         );
       },
     },

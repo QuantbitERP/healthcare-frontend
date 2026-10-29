@@ -112,69 +112,28 @@ export async function checkFrappeSession(): Promise<SessionUser | null> {
  */
 export async function getApiKeys(user: string): Promise<{ api_key: string; api_secret: string } | null> {
     try {
-        // Check if we already have valid, unmasked API keys in localStorage for this user
+        // Check if we already have valid, unmasked API keys in localStorage
         if (typeof window !== "undefined") {
-            const storedUser = window.localStorage.getItem("currentUser");
             const storedKey = window.localStorage.getItem("apiKey");
             const storedSecret = window.localStorage.getItem("apiSecret");
-            const isMasked = (secret: string | null) => secret && secret.includes('***');
+            const isMasked = (secret: string | null) => secret ? secret.includes('***') : false;
             
-            if (storedUser === user && storedKey && storedSecret && !isMasked(storedSecret)) {
+            if (storedKey && storedSecret && !isMasked(storedSecret)) {
                 console.log("Using valid API keys already stored in localStorage");
                 return { api_key: storedKey, api_secret: storedSecret };
             }
         }
 
-        console.log("Attempting to fetch API keys for user from server:", user);
-
-        // Try to fetch existing API keys
-        const response = await fetch(
-            `${FRAPPE_BASE_URL}/api/resource/User/${user}?fields=["api_key","api_secret"]`,
-            {
-                method: "GET",
-                credentials: "include",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-
-        if (!response.ok) {
-            console.log("Could not fetch API keys, status:", response.status, "- attempting to generate...");
-            // Try to generate keys even if fetch failed
-            return await generateApiKeys(user);
-        }
-
-        const data = await response.json();
-        const apiKey = data.data?.api_key;
-        const apiSecret = data.data?.api_secret;
-
-        // Frappe masks the secret with '*' characters in API responses.
-        // If we see a masked secret, we must generate new keys because masked ones are useless for authentication.
-        const isMasked = (secret: string) => secret && secret.includes('***');
-
-        if (apiKey && apiSecret && !isMasked(apiSecret)) {
-            console.log("Successfully retrieved existing API keys");
-            return { api_key: apiKey, api_secret: apiSecret };
-        }
-
-        if (isMasked(apiSecret)) {
-            console.warn("Retrieved API secret is masked. Generating new keys...");
-        }
-
-        console.log("No valid API keys found in user record, attempting to generate...");
-        // If no API keys exist or they're masked, try to generate them
-        return await generateApiKeys(user);
+        // Do not attempt to query or regenerate API keys on the server during session check.
+        // Frappe masks secrets (Password field) in REST responses, and calling generate_keys
+        // requires System Manager permissions and invalidates active sessions on other devices/tabs.
+        // Instead, fallback cleanly to Frappe's native session cookie authentication.
+        setSessionAuthPreference(true);
+        return null;
     } catch (error) {
         console.error("Error getting API keys:", error);
-        // Still try to generate as a last resort
-        try {
-            return await generateApiKeys(user);
-        } catch (genError) {
-            console.error("Failed to generate API keys as fallback:", genError);
-            return null;
-        }
+        setSessionAuthPreference(true);
+        return null;
     }
 }
 
@@ -417,21 +376,20 @@ export function getAuthHeaders(): HeadersInit {
     const apiKey = localStorage.getItem("apiKey");
     const apiSecret = localStorage.getItem("apiSecret");
     const useSessionAuth = getSessionAuthPreference();
+    const isMasked = (secret: string | null) => secret ? secret.includes('***') : false;
     
     const headers: HeadersInit = {
         "Accept": "application/json",
         "Content-Type": "application/json",
     };
     
-    // If session auth is enabled, don't add Authorization header
-    if (useSessionAuth) {
+    // If session auth is enabled or keys are missing/masked, don't add Authorization header
+    if (useSessionAuth || !apiKey || !apiSecret || isMasked(apiSecret)) {
         return headers;
     }
     
     // Otherwise use token-based auth if available
-    if (apiKey && apiSecret) {
-        headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
-    }
+    headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
     
     return headers;
 }

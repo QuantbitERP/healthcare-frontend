@@ -10,7 +10,7 @@ interface AuthContextType {
   posProfile: string | null;
   currentUser: string | null;
   setPosProfile: (profile: string) => void;
-  login: (apiKey: string, apiSecret: string) => void;
+  login: (apiKey: string, apiSecret: string, user?: string) => void;
   loginWithSession: (user: string, apiKey?: string, apiSecret?: string) => void;
   logout: () => void;
   checkOpenPOS: (posProfile: string, user: string) => Promise<boolean>;
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.removeItem("posProfile");
           }
 
-          // If session is found, try to get API keys
+          // If session is found, check if we have valid API keys
           if (sessionUser.api_key && sessionUser.api_secret && !isMasked(sessionUser.api_secret)) {
             console.log("AuthContext: Session found with valid API keys!");
             setApiKey(sessionUser.api_key);
@@ -96,36 +96,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("apiSecret", sessionUser.api_secret);
             localStorage.setItem("currentUser", sessionUser.user);
             setSessionAuthPreference(false);
-          } else {
-            console.log("AuthContext: Session found but API keys are missing or masked, attempting to generate...");
+          } else if (storedApiKey && storedApiSecret && !isMasked(storedApiSecret)) {
+            console.log("AuthContext: Retaining existing unmasked API keys from localStorage");
+            setApiKey(storedApiKey);
+            setApiSecret(storedApiSecret);
             setCurrentUser(sessionUser.user);
             setIsAuthenticated(true);
             localStorage.setItem("currentUser", sessionUser.user);
-
-            // Clear any invalid or masked secrets from localStorage
-            localStorage.removeItem("apiKey");
-            localStorage.removeItem("apiSecret");
-            setApiKey(null);
-            setApiSecret(null);
-
-            // Try to generate new API keys for the user
-            try {
-              const { getApiKeys } = await import("@/utils/sessionAuth");
-              const newKeys = await getApiKeys(sessionUser.user);
-              if (newKeys && newKeys.api_key && newKeys.api_secret && !isMasked(newKeys.api_secret)) {
-                console.log("AuthContext: Successfully generated new API keys!");
-                setApiKey(newKeys.api_key);
-                setApiSecret(newKeys.api_secret);
-                localStorage.setItem("apiKey", newKeys.api_key);
-                localStorage.setItem("apiSecret", newKeys.api_secret);
-                setSessionAuthPreference(false);
-              } else {
-                setSessionAuthPreference(true);
-              }
-            } catch (error) {
-              console.error("AuthContext: Failed to generate API keys", error);
-              setSessionAuthPreference(true);
-            }
+            setSessionAuthPreference(false);
+          } else {
+            console.log("AuthContext: Using session-based authentication for user:", sessionUser.user);
+            setCurrentUser(sessionUser.user);
+            setIsAuthenticated(true);
+            localStorage.setItem("currentUser", sessionUser.user);
+            setSessionAuthPreference(true);
 
             // Refresh CSRF token
             const { getFrappeCSRFToken } = await import("@/utils/sessionAuth");
@@ -137,7 +121,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           console.log("AuthContext: No active Frappe session found.");
-          if (storedUser) {
+          // Fall back to localStorage credentials if available
+          if (storedApiKey && storedApiSecret && !isMasked(storedApiSecret)) {
+            console.log("AuthContext: Using stored API keys from localStorage");
+            setApiKey(storedApiKey);
+            setApiSecret(storedApiSecret);
+            setIsAuthenticated(true);
+
+            // Refresh current user if needed
+            if (!storedUser) {
+              const user = await getCurrentUser(storedApiKey, storedApiSecret);
+              if (user) {
+                setCurrentUser(user);
+                localStorage.setItem("currentUser", user);
+              }
+            }
+          } else if (storedUser) {
             console.log("Frappe is logged out. Next.js was logged in. Performing full logout...");
 
             // Clear all storage as requested
@@ -147,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
             });
 
-            window.location.href = "/login";
+            window.location.href = "/pos/login";
             return;
           }
 
@@ -324,7 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  const login = useCallback((apiKey: string, apiSecret: string) => {
+  const login = useCallback((apiKey: string, apiSecret: string, user?: string) => {
     setApiKey(apiKey);
     setApiSecret(apiSecret);
     setIsAuthenticated(true);
@@ -332,13 +331,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("apiSecret", apiSecret);
     setSessionAuthPreference(false); // Clear session auth flag when using API keys
 
-    // Fetch current user after login
-    getCurrentUser(apiKey, apiSecret).then((user) => {
-      if (user) {
-        setCurrentUser(user);
-        localStorage.setItem("currentUser", user);
-      }
-    });
+    if (user) {
+      setCurrentUser(user);
+      localStorage.setItem("currentUser", user);
+    } else {
+      // Fetch current user after login
+      getCurrentUser(apiKey, apiSecret).then((fetchedUser) => {
+        if (fetchedUser) {
+          setCurrentUser(fetchedUser);
+          localStorage.setItem("currentUser", fetchedUser);
+        }
+      });
+    }
 
     // Also refresh the CSRF token so write requests made right after login
     // (before any session-based flow has run) have a valid token available.

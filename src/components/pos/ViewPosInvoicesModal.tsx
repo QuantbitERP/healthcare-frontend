@@ -91,8 +91,10 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const [loading, setLoading] = useState(true);
   const [invoiceNumberSearchTerm, setInvoiceNumberSearchTerm] = useState('');
   const [patientNameSearchTerm, setPatientNameSearchTerm] = useState('');
+  const [selectedProfile, setSelectedProfile] = useState<string>(posProfile || '');
+  const [posProfilesList, setPosProfilesList] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<{ from: Date | undefined, to: Date | undefined }>(() => ({
-    from: new Date(Date.now() - (showOnlyReturns ? 30 : 1) * 24 * 60 * 60 * 1000),
+    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     to: new Date()
   }));
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -105,21 +107,54 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchedParamsRef = useRef<string>('');
 
-  const fetchInvoices = async (invoiceNumber: string, patientName: string, dates: { from: Date | undefined, to: Date | undefined }) => {
-    // Skip POS profile validation when showing only returns
-    if (!posProfile && !showOnlyReturns) {
-      showAlert("danger", "Error", "POS Profile is missing.");
-      setLoading(false);
-      return;
+  useEffect(() => {
+    if (posProfile) {
+      setSelectedProfile(posProfile);
     }
+  }, [posProfile]);
 
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        const authHeaders = getAuthHeaders();
+        const headers = typeof authHeaders === 'string' ? 
+          JSON.parse(authHeaders) : 
+          Array.isArray(authHeaders) ? 
+            Object.fromEntries(authHeaders) : 
+            authHeaders;
+        const res = await fetch(`${API_BASE_URL}/POS%20Profile?fields=["name"]&limit_page_length=100`, { 
+          headers, 
+          credentials: 'include' 
+        });
+        if (res.ok) {
+          const pData = await res.json();
+          if (pData.data) {
+            setPosProfilesList(pData.data.map((p: any) => p.name));
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching POS Profiles:', e);
+      }
+    };
+    if (isOpen && !showOnlyReturns) {
+      fetchProfiles();
+    }
+  }, [isOpen, showOnlyReturns]);
+
+  const fetchInvoices = async (
+    invoiceNumber: string, 
+    patientName: string, 
+    dates: { from: Date | undefined, to: Date | undefined },
+    profileToFilter?: string
+  ) => {
     setLoading(true);
     try {
       const filters: any[] = [];
 
-      // Add POS profile filter only if not showing returns
-      if (!showOnlyReturns) {
-        filters.push(['pos_profile', '=', posProfile]);
+      // Add POS profile filter only if not showing returns and a profile is chosen
+      const activeProfile = profileToFilter !== undefined ? profileToFilter : selectedProfile;
+      if (!showOnlyReturns && activeProfile && activeProfile !== 'ALL') {
+        filters.push(['pos_profile', '=', activeProfile]);
       }
 
       // Add IPD filter only if this is for IPD page
@@ -132,10 +167,14 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         filters.push(['custom_is_ipd_invoice', '!=', 1]);
       }
 
-      // Show only return invoices if showOnlyReturns is true
+      // Exclude cancelled invoices
+      filters.push(['docstatus', '!=', 2]);
+
+      // Show only return invoices if showOnlyReturns is true, otherwise exclude returned bills
       if (showOnlyReturns) {
         filters.push(['is_return', '=', 1]);
-        filters.push(['docstatus', '!=', 2]);
+      } else {
+        filters.push(['is_return', '!=', 1]);
       }
 
       if (invoiceNumber) {
@@ -184,7 +223,11 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched invoices:', data.data); // Debug log
-        setInvoices(data.data || []);
+        const rawList = data.data || [];
+        const filteredList = showOnlyReturns
+          ? rawList.filter((inv: any) => inv.is_return === 1 || inv.status === 'Return')
+          : rawList.filter((inv: any) => inv.is_return !== 1 && inv.status !== 'Return');
+        setInvoices(filteredList);
       } else {
         console.error('Failed to fetch invoices:', response.status, response.statusText);
         showAlert("danger", "Error", "Failed to fetch invoices.");
@@ -202,11 +245,14 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   useEffect(() => {
     if (isOpen) {
       setDateRange({
-        from: new Date(Date.now() - (showOnlyReturns ? 30 : 1) * 24 * 60 * 60 * 1000),
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         to: new Date()
       });
+      if (posProfile) {
+        setSelectedProfile(posProfile);
+      }
     }
-  }, [isOpen, showOnlyReturns]);
+  }, [isOpen, posProfile]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -219,7 +265,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     const toStr = dateRange.to ? formatDateToYMD(dateRange.to) : '';
 
     const paramsKey = JSON.stringify({
-      isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns,
+      isOpen, selectedProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns,
       invoiceNumberSearchTerm, patientNameSearchTerm,
       from: fromStr,
       to: toStr
@@ -238,11 +284,11 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
     if (isInitialLoad) {
       // Execute immediate fetch on initial modal open for stable loading skeletons
-      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
+      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange, selectedProfile);
     } else {
       // Debounce user typing search changes
       searchTimeoutRef.current = setTimeout(() => {
-        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
+        fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange, selectedProfile);
       }, 300);
     }
 
@@ -251,7 +297,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [isOpen, posProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns, invoiceNumberSearchTerm, patientNameSearchTerm, dateRange]);
+  }, [isOpen, selectedProfile, isIPDPage, excludeIPDInvoices, showOnlyReturns, invoiceNumberSearchTerm, patientNameSearchTerm, dateRange]);
 
   const handleViewDetails = async (invoice: Invoice) => {
     console.log('Selected invoice details:', invoice); // Debug log
@@ -338,7 +384,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
       showAlert("success", "Success", `Invoice ${invoice.name} submitted successfully!`);
 
       // Refresh the invoice list
-      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange);
+      fetchInvoices(invoiceNumberSearchTerm, patientNameSearchTerm, dateRange, selectedProfile);
 
       // Close the details modal
       setShowDetailsModal(false);
@@ -365,7 +411,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
 
         {/* Search Inputs */}
         <div className="px-6 py-4 border-b border-gray-200 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${showOnlyReturns ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-4 items-end`}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search by Invoice No</label>
               <input
@@ -386,6 +432,21 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 onChange={(e) => setPatientNameSearchTerm(e.target.value)}
               />
             </div>
+            {!showOnlyReturns && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">POS Profile</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                  value={selectedProfile}
+                  onChange={(e) => setSelectedProfile(e.target.value)}
+                >
+                  <option value="">All POS Profiles</option>
+                  {posProfilesList.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
               <input
@@ -506,7 +567,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             hideFilters={true}
             hideMeFilter={true}
             onFilterClick={() => {}}
-            hideDatePicker={false}
+            hideDatePicker={true}
             onDataChange={(dates) => setDateRange({ from: dates?.from || undefined, to: dates?.to || undefined })}
             hideShowColumns={true}
             autoSize={true}

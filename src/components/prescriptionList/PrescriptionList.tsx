@@ -111,6 +111,7 @@ interface Prescription {
   invoiced_qty?: number;
   mobile_number?: string;
   aadhar_no?: string;
+  company?: string;
 }
 
 interface PrescriptionListProps {
@@ -134,7 +135,6 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showCompleted, setShowCompleted] = useState(false);
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(true); // Default collapsed
-  const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Default open
 
   const API_BASE_URL = 'https://gmcerp.quantcloud.in/api/resource';
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -172,7 +172,10 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
           ["patient_id", "like", `%${search.trim()}%`],
           ["mobile_number", "like", `%${search.trim()}%`],
           ["aadhar_no", "like", `%${search.trim()}%`],
-          ["prescription_no", "like", `%${search.trim()}%`]
+          ["prescription_no", "like", `%${search.trim()}%`],
+          ["patient_category", "like", `%${search.trim()}%`],
+          ["patient_company", "like", `%${search.trim()}%`],
+          ["company", "like", `%${search.trim()}%`]
         ]);
       }
 
@@ -249,6 +252,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         prescription_status: isRecordCompleted(item) ? "Completed" : "Pending",
         mobile_number: item.mobile_number || "",
         aadhar_no: item.aadhar_no || "",
+        company: item.patient_category || item.patient_company || item.company || "",
       }));
 
       // Filter out completed prescriptions if showCompleted is false
@@ -275,6 +279,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         prescription_status: isRecordCompleted(item) ? "Completed" : "Pending",
         mobile_number: item.mobile_number || "",
         aadhar_no: item.aadhar_no || "",
+        company: item.patient_category || item.patient_company || item.company || "",
       }));
 
       setAllPrescriptions(allTransformedData);
@@ -396,6 +401,14 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
       header: "Patient ID",
     },
     {
+      accessorKey: "company",
+      header: "Company",
+      cell: ({ getValue }: any) => {
+        const val = getValue();
+        return val ? <span className="font-medium text-gray-700">{val}</span> : <span>-</span>;
+      },
+    },
+    {
       accessorKey: "mobile_number",
       header: "Mobile Number",
     },
@@ -417,7 +430,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         const status = getValue();
         return (
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status === "Completed"
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${status === "Completed"
               ? "bg-green-100 text-green-800"
               : "bg-yellow-100 text-yellow-800"
               }`}>
@@ -426,19 +439,6 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
           </div>
         );
       },
-    },
-    {
-      id: "select",
-      header: "Select",
-      cell: ({ row }: any) => (
-        <Button
-          onClick={() => onSelectPrescription(row.original)}
-          size="button-small"
-          type="primary-button"
-        >
-          Select
-        </Button>
-      ),
     },
   ];
 
@@ -450,40 +450,71 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     department: "Department",
     patient_name: "Patient Name",
     patient_id: "Patient ID",
+    company: "Company",
     mobile_number: "Mobile Number",
     aadhar_no: "Aadhar No",
     doctor_id: "Doctor Name",
     prescription_status: "Status",
   };
 
+  const extraFilterActions = (
+    <div
+      className="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100/80 border border-gray-200 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none"
+      onClick={() => setShowCompleted(!showCompleted)}
+    >
+      <Checkbox
+        id="showCompletedPrescription"
+        checked={showCompleted}
+        onCheckedChange={(checked) => setShowCompleted(checked === true)}
+      />
+      <Label htmlFor="showCompletedPrescription" className="text-xs font-medium text-gray-700 cursor-pointer">
+        Show Completed
+      </Label>
+    </div>
+  );
+
+  const footerRightActions = (
+    <Button
+      type="secondary-button"
+      size="button-small"
+      onClick={onClose}
+      className="px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 border border-gray-300 rounded-md transition-colors"
+    >
+      Cancel
+    </Button>
+  );
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <Card className="w-[95vw] max-w-6xl max-h-[calc(100vh-5rem)] flex flex-col my-auto shadow-2xl">
-        <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
-          <CardTitle className="text-lg font-semibold">Prescription Details</CardTitle>
-          <UIButton onClick={onClose} variant="ghost" size="icon" className="p-0">
-            <X className="h-5 w-5" />
+    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-2 sm:px-4 sm:py-3 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <Card className="w-[99vw] max-w-[1750px] max-h-[calc(100vh-4.5rem)] flex flex-col my-auto shadow-2xl rounded-xl border border-gray-200 overflow-hidden bg-white">
+        <CardHeader className="flex flex-row items-center justify-between px-6 py-3.5 border-b bg-gray-50/70">
+          <div>
+            <CardTitle className="text-lg font-semibold text-gray-800">Prescription Details</CardTitle>
+            <p className="text-xs text-gray-500 mt-0.5">Click any row to select prescription</p>
+          </div>
+          <UIButton onClick={onClose} variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-gray-200/70 text-gray-500 hover:text-gray-700">
+            <X className="h-4 w-4" />
           </UIButton>
         </CardHeader>
 
         <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
           {/* Collapsible Summary Cards */}
           <div className="bg-white border-b">
-            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50" onClick={() => setIsSummaryCollapsed(!isSummaryCollapsed)}>
-              <h3 className="text-sm font-semibold text-gray-700">Summary Overview</h3>
+            <div className="flex items-center justify-between px-6 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setIsSummaryCollapsed(!isSummaryCollapsed)}>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Summary Overview</h3>
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-gray-500">
                   <PrescriptionStatusTooltip status="Completed" prescriptions={allPrescriptions}>
-                    <span className="hover:text-green-600 cursor-pointer transition-colors">{summaryCounts.completed} Completed</span>
+                    <span className="hover:text-green-600 font-medium cursor-pointer transition-colors">{summaryCounts.completed} Completed</span>
                   </PrescriptionStatusTooltip>
                   {" • "}
                   <PrescriptionStatusTooltip status="Pending" prescriptions={allPrescriptions}>
-                    <span className="hover:text-yellow-600 cursor-pointer transition-colors">{summaryCounts.pending} Pending</span>
+                    <span className="hover:text-yellow-600 font-medium cursor-pointer transition-colors">{summaryCounts.pending} Pending</span>
                   </PrescriptionStatusTooltip>
                   {" • "}
-                  <span className="text-gray-500">{summaryCounts.total} Total</span>
+                  <span className="text-gray-600 font-medium">{summaryCounts.total} Total</span>
                 </span>
                 {isSummaryCollapsed ? (
                   <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -494,78 +525,46 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
             </div>
 
             {!isSummaryCollapsed && (
-              <div className="px-4 pb-4">
+              <div className="px-6 pb-4 pt-1">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50/70 border border-blue-200/80 rounded-lg p-3.5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-600 text-sm font-medium">Total Prescriptions</p>
-                        <p className="text-2xl font-bold text-blue-900">{summaryCounts.total}</p>
+                        <p className="text-blue-600 text-xs font-medium">Total Prescriptions</p>
+                        <p className="text-xl font-bold text-blue-900 mt-0.5">{summaryCounts.total}</p>
                       </div>
                       <div className="bg-blue-100 rounded-full p-2">
-                        <Clock className="w-6 h-6 text-blue-600" />
+                        <Clock className="w-5 h-5 text-blue-600" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="bg-green-50/70 border border-green-200/80 rounded-lg p-3.5">
                     <PrescriptionStatusTooltip status="Completed" prescriptions={allPrescriptions}>
-                      <div className="flex items-center justify-between cursor-pointer hover:bg-green-100 rounded-lg transition-colors">
+                      <div className="flex items-center justify-between cursor-pointer hover:bg-green-100/60 rounded-lg transition-colors">
                         <div>
-                          <p className="text-green-600 text-sm font-medium">Completed</p>
-                          <p className="text-2xl font-bold text-green-900">{summaryCounts.completed}</p>
+                          <p className="text-green-600 text-xs font-medium">Completed</p>
+                          <p className="text-xl font-bold text-green-900 mt-0.5">{summaryCounts.completed}</p>
                         </div>
                         <div className="bg-green-100 rounded-full p-2">
-                          <CheckCircle className="w-6 h-6 text-green-600" />
+                          <CheckCircle className="w-5 h-5 text-green-600" />
                         </div>
                       </div>
                     </PrescriptionStatusTooltip>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="bg-yellow-50/70 border border-yellow-200/80 rounded-lg p-3.5">
                     <PrescriptionStatusTooltip status="Pending" prescriptions={allPrescriptions}>
-                      <div className="flex items-center justify-between cursor-pointer hover:bg-yellow-100 rounded-lg transition-colors">
+                      <div className="flex items-center justify-between cursor-pointer hover:bg-yellow-100/60 rounded-lg transition-colors">
                         <div>
-                          <p className="text-yellow-600 text-sm font-medium">Pending</p>
-                          <p className="text-2xl font-bold text-yellow-900">{summaryCounts.pending}</p>
+                          <p className="text-yellow-600 text-xs font-medium">Pending</p>
+                          <p className="text-xl font-bold text-yellow-900 mt-0.5">{summaryCounts.pending}</p>
                         </div>
                         <div className="bg-yellow-100 rounded-full p-2">
-                          <Clock className="w-6 h-6 text-yellow-600" />
+                          <Clock className="w-5 h-5 text-yellow-600" />
                         </div>
                       </div>
                     </PrescriptionStatusTooltip>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Collapsible Filters Section */}
-          <div className="flex-shrink-0 bg-white border-b">
-            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50" onClick={() => setIsFiltersCollapsed(!isFiltersCollapsed)}>
-              <h3 className="text-sm font-semibold text-gray-700">Filters</h3>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-500">
-                  {filterCount > 0 ? `${filterCount} active` : 'No filters applied'}
-                </span>
-                {isFiltersCollapsed ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                )}
-              </div>
-            </div>
-
-            {!isFiltersCollapsed && (
-              <div className="px-4 pb-4">
-                <div className="bg-gray-50 p-3 rounded">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="showCompletedPrescription"
-                      checked={showCompleted}
-                      onCheckedChange={(checked) => setShowCompleted(checked === true)}
-                    />
-                    <Label htmlFor="showCompletedPrescription" className="text-xs">Show Completed</Label>
                   </div>
                 </div>
               </div>
@@ -574,7 +573,6 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
 
           {/* Scrollable DataTable Section */}
           <div className="flex-1 overflow-hidden p-4 min-h-0 flex flex-col">
-            {/* DataTableComponent with built-in search and date filters */}
             <DataTableComponent
               pageName="Prescription"
               isRowSelectable={false}
@@ -594,16 +592,12 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
               hideMeFilter={true}
               hideShowColumns={true}
               autoSize={true}
+              extraFilterActions={extraFilterActions}
+              footerRightActions={footerRightActions}
               className="h-full"
             />
           </div>
         </CardContent>
-
-        <div className="p-4 border-t flex justify-end space-x-2">
-          <Button type="secondary-button" size="button-medium" onClick={onClose}>
-            Cancel
-          </Button>
-        </div>
       </Card>
     </div>
   );

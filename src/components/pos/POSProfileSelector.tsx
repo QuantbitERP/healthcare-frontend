@@ -17,16 +17,22 @@ import { useRouter } from "next/navigation";
 interface POSProfile {
   name: string;
   warehouse?: string;
+  status?: string;
+  is_open?: boolean;
+  opened_by?: string;
+  opening_entry?: string;
 }
 
 interface POSProfileSelectorProps {
   isOpen: boolean;
   onSelect: (profile: string) => void;
+  onClose?: () => void;
 }
 
 const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
   isOpen,
   onSelect,
+  onClose,
 }) => {
   const [posProfiles, setPosProfiles] = useState<POSProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
@@ -75,6 +81,44 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
 
           if (response.ok) {
             const profiles: POSProfile[] = responseData.message || [];
+
+            // Check if status is provided by API or fetch as fallback
+            const hasStatus = profiles.some((p) => p.status !== undefined || p.is_open !== undefined);
+            if (!hasStatus && profiles.length > 0) {
+              try {
+                const openResp = await fetch(
+                  `https://gmcerp.quantcloud.in/api/resource/Opening%20Entry?filters=[["status","=","Open"],["docstatus","=","1"]]&fields=["name","pos_profile","user"]&limit_page_length=100`,
+                  {
+                    method: "GET",
+                    headers,
+                    credentials: "include",
+                  }
+                );
+                if (openResp.ok) {
+                  const openData = await openResp.json();
+                  const openEntries = openData?.data || [];
+                  const openMap = new Map<string, any>();
+                  openEntries.forEach((entry: any) => {
+                    if (entry.pos_profile) openMap.set(entry.pos_profile, entry);
+                  });
+                  profiles.forEach((p) => {
+                    const entry = openMap.get(p.name);
+                    if (entry) {
+                      p.status = 'Open';
+                      p.is_open = true;
+                      p.opened_by = entry.user;
+                      p.opening_entry = entry.name;
+                    } else {
+                      p.status = 'Closed';
+                      p.is_open = false;
+                    }
+                  });
+                }
+              } catch (e) {
+                console.error("Failed to fetch fallback open entries:", e);
+              }
+            }
+
             setPosProfiles(profiles);
             setError(
               profiles.length === 0
@@ -150,11 +194,13 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
             console.log("Conflict detected:", conflictData);
 
             if (conflictData.conflict_type === "own_entry") {
-              // User has their own open entry - redirect to POS page
-              console.log("User has own open entry, redirecting to POS");
+              // User has their own open entry - proceed with profile
+              console.log("User has own open entry, proceeding with profile");
               setPosProfile(selectedProfile);
               onSelect(selectedProfile);
-              router.push("/pos");
+              if (typeof window !== "undefined" && (window.location.pathname === "/" || window.location.pathname.startsWith("/pos"))) {
+                router.push("/pos");
+              }
               return;
             } else if (conflictData.conflict_type === "other_user_entry") {
               // Another user has an open entry - show dialog
@@ -178,11 +224,13 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
         return;
       }
 
-      // No conflicts, proceed to opening page
-      console.log("No conflicts found, proceeding to opening page");
+      // No conflicts, proceed
+      console.log("No conflicts found, proceeding");
       setPosProfile(selectedProfile);
       onSelect(selectedProfile);
-      router.push("/pos/opening");
+      if (typeof window !== "undefined" && (window.location.pathname === "/" || window.location.pathname.startsWith("/pos"))) {
+        router.push("/pos/opening");
+      }
     } else if (!currentUser) {
       setError("User information not available. Please log in again.");
       router.push("/login");
@@ -222,38 +270,103 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
       </Dialog>
 
       {/* Profile Selection Dialog */}
-      <Dialog open={isOpen && !showConflictDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog
+        open={isOpen && !showConflictDialog}
+        onOpenChange={(open) => {
+          if (!open && onClose) onClose();
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Select POS Profile</DialogTitle>
             <DialogDescription>
               Please select a POS profile to continue.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 py-3 max-h-[60vh] overflow-y-auto pr-1">
             {error ? (
-              <p className="text-red-500">{error}</p>
+              <p className="text-red-500 text-sm">{error}</p>
             ) : posProfiles.length > 0 ? (
               <RadioGroup
                 onValueChange={setSelectedProfile}
                 value={selectedProfile || ""}
+                className="space-y-2.5"
               >
-                {posProfiles.map((profile) => (
-                  <div key={profile.name} className="flex items-center space-x-2">
-                    <RadioGroupItem value={profile.name} id={profile.name} />
-                    <Label htmlFor={profile.name}>
-                      {profile.name}
-                      {profile.warehouse ? ` (${profile.warehouse})` : ""}
-                    </Label>
-                  </div>
-                ))}
+                {posProfiles.map((profile) => {
+                  const isOpen = profile.status === "Open" || profile.is_open === true;
+                  const isCurrentUsers =
+                    profile.opened_by &&
+                    currentUser &&
+                    profile.opened_by.toLowerCase() === currentUser.toLowerCase();
+
+                  return (
+                    <label
+                      key={profile.name}
+                      htmlFor={profile.name}
+                      className={`flex items-start justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                        selectedProfile === profile.name
+                          ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500/20"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <RadioGroupItem
+                          value={profile.name}
+                          id={profile.name}
+                          className="mt-0.5"
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm text-gray-900 leading-tight">
+                            {profile.name}
+                          </span>
+                          {profile.warehouse && (
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {profile.warehouse}
+                            </span>
+                          )}
+                          {isOpen && profile.opened_by && (
+                            <span className="text-[11px] text-gray-500 mt-1">
+                              Opened by:{" "}
+                              <span className="font-medium text-gray-700">
+                                {profile.opened_by}
+                              </span>
+                              {isCurrentUsers && (
+                                <span className="ml-1 text-emerald-700 font-semibold">
+                                  (You)
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="ml-2 flex-shrink-0">
+                        {isOpen ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            Open
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                            <span className="w-1.5 h-1.5 mr-1.5 bg-gray-400 rounded-full"></span>
+                            Closed
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
               </RadioGroup>
             ) : (
-              <p>No POS profiles found.</p>
+              <p className="text-sm text-gray-500">No POS profiles found.</p>
             )}
           </div>
           <DialogFooter>
-            <Button onClick={handleSelect} disabled={!selectedProfile || !currentUser}>
+            <Button
+              onClick={handleSelect}
+              disabled={!selectedProfile || !currentUser}
+              className="px-6"
+            >
               Select
             </Button>
           </DialogFooter>
