@@ -11,11 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Button from "@/components/buttons/Button";
 import DataTableComponent, { TableCellComponents } from "@/components/DataTable";
 import { Button as UIButton } from "@/components/ui/button";
-import { X, CheckCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useAuth } from "@/context/AuthContext";
 import { getAuthHeaders } from "@/utils/sessionAuth";
+import { securePrintPdf } from "@/utils/printHelper";
+import { useAlert } from "@/components/AlertContext/AlertContext";
 
 // Tooltip component
 const PrescriptionStatusTooltip: React.FC<{
@@ -96,6 +98,7 @@ const PrescriptionStatusTooltip: React.FC<{
 
 interface Prescription {
   id: number;
+  name?: string;
   prescription_number: string;
   prescription_date: string;
   patient_name: string;
@@ -128,6 +131,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
   isIPDPage = false,
 }) => {
   const { apiKey, apiSecret } = useAuth();
+  const { showAlert } = useAlert();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [allPrescriptions, setAllPrescriptions] = useState<Prescription[]>([]); // Store unfiltered data for summary
   const [loading, setLoading] = useState(false);
@@ -353,6 +357,18 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     return count;
   }, [searchTerm, dateRange, showCompleted]);
 
+  const handlePrintPrescription = (prescription: Prescription) => {
+    const docName = prescription.name || prescription.prescription_number;
+    if (!docName) {
+      showAlert("warning", "Print Error", "Prescription document ID is missing.");
+      return;
+    }
+    const printUrl = `https://gmcerp.quantcloud.in/printview?doctype=Patient%20Requisition&name=${encodeURIComponent(
+      docName
+    )}&format=${encodeURIComponent("Patient  Prescription")}&trigger_print=1&no_letterhead=0&_lang=en`;
+    securePrintPdf(printUrl, getAuthHeaders, showAlert);
+  };
+
   // Define columns for DataTableComponent
   const columns = [
     {
@@ -440,6 +456,29 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
         );
       },
     },
+    {
+      id: "print",
+      header: "Print",
+      enableSorting: false,
+      cell: ({ row }: any) => {
+        const item = row.original as Prescription;
+        return (
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              title="Print Prescription"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrintPrescription(item);
+              }}
+              className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors flex items-center justify-center cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      },
+    },
   ];
 
   const columnNames = {
@@ -455,6 +494,7 @@ const PrescriptionList: React.FC<PrescriptionListProps> = ({
     aadhar_no: "Aadhar No",
     doctor_id: "Doctor Name",
     prescription_status: "Status",
+    print: "Print",
   };
 
   const extraFilterActions = (
