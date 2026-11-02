@@ -5,12 +5,14 @@ import { getAuthHeaders } from '@/utils/sessionAuth';
 interface PaymentMethod {
   name: string;
   mode_of_payment: string;
+  type?: string;
 }
 
 interface Payment {
   id: number;
   paymentMode: string;
   transactionNo: string;
+  transactionDate?: string;
   bankName: string;
   branchName: string;
   paidAmount: string;
@@ -19,6 +21,7 @@ interface Payment {
   custom_bank_name?: string;
   custom_branch_name?: string;
   custom_transaction_no?: string;
+  custom_transaction_date?: string;
 }
 
 interface PaymentTableProps {
@@ -34,6 +37,7 @@ interface PaymentTableProps {
   totalPatientAmount?: number;
   totalPayerAmount?: number;
   coPay?: number;
+  modeOfPaymentTypes?: Record<string, string>;
   showAlert?: (variant: any, heading: string, content: string) => void;
 }
 
@@ -50,16 +54,34 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
   totalPatientAmount,
   totalPayerAmount,
   coPay,
+  modeOfPaymentTypes,
   showAlert,
 }) => {
   const [expandedCells, setExpandedCells] = useState<{ [key: string]: boolean }>({});
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [manuallyEdited, setManuallyEdited] = useState<boolean>(false);
+  const [localModeTypes, setLocalModeTypes] = useState<Record<string, string>>({});
+
+  const activeModeTypes = modeOfPaymentTypes && Object.keys(modeOfPaymentTypes).length > 0
+    ? modeOfPaymentTypes
+    : localModeTypes;
+
+  const isBankMode = (mode: string) => {
+    const type = (activeModeTypes[mode] || localModeTypes[mode] || '').toLowerCase();
+    if (type === 'bank') return true;
+    const lower = (mode || '').toLowerCase();
+    return ['bank draft', 'cheque', 'pos', 'credit card', 'wire transfer'].includes(lower);
+  };
 
   const isCredit = transactionType === 'credit';
   const hasCustomerAmount = (Number(totalPayerAmount || 0) > 0);
   const isCashWithCustomer = transactionType === 'cash' && hasCustomerAmount;
   const isCappedAtPatientAmount = isCredit || isCashWithCustomer;
+
+  // Reset manuallyEdited when transactionType or coPay changes
+  useEffect(() => {
+    setManuallyEdited(false);
+  }, [transactionType, coPay]);
 
   // Clamp payments if totalPatientAmount decreases below current total paid on credit bills or cash bills with customer amount > 0
   useEffect(() => {
@@ -90,11 +112,15 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
     }
 
     if (transactionType === 'credit') {
-      // For credit transactions, set paid amount to 0
+      // If transaction type is credit and copay < 100, Paid amount = Patient amount autopopulate
+      const isUnder100 = Number(coPay ?? 0) < 100;
+      const creditPaid = isUnder100
+        ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2)
+        : '0';
       setPayments(prev =>
-        prev.map(payment => ({
+        prev.map((payment, idx) => ({
           ...payment,
-          paidAmount: '0'
+          paidAmount: idx === 0 ? creditPaid : '0'
         }))
       );
     } else if (transactionType === 'cash') {
@@ -109,7 +135,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         }))
       );
     }
-  }, [transactionType, roundedGrandTotal, totalBillAmount, isCashWithCustomer, totalPatientAmount, setPayments, isLoadedInvoice]);
+  }, [transactionType, roundedGrandTotal, totalBillAmount, isCashWithCustomer, totalPatientAmount, setPayments, isLoadedInvoice, coPay]);
 
   useEffect(() => {
     const initializePaymentMethods = async () => {
@@ -128,7 +154,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         let systemModes: string[] = [];
         try {
           const mopResponse = await fetch(
-            `https://gmcerp.quantcloud.in/api/resource/Mode%20of%20Payment?filters=[["enabled","=",1]]&fields=["name"]&limit_page_length=50`,
+            `https://gmcerp.quantcloud.in/api/resource/Mode%20of%20Payment?filters=[["enabled","=",1]]&fields=["name","type"]&limit_page_length=50`,
             {
               method: 'GET',
               headers,
@@ -138,6 +164,11 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
             const mopData = await mopResponse.json();
             if (mopData?.data && Array.isArray(mopData.data)) {
               systemModes = mopData.data.map((m: any) => m.name);
+              const typesMap: Record<string, string> = {};
+              mopData.data.forEach((m: any) => {
+                if (m.name) typesMap[m.name] = m.type || '';
+              });
+              setLocalModeTypes(typesMap);
             }
           }
         } catch (e) {
@@ -203,7 +234,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
       // Automatically add first payment row if payments array is empty
       if (payments.length === 0 && methods.length > 0) {
         const initialPaid = transactionType === 'credit'
-          ? '0'
+          ? (Number(coPay ?? 0) < 100 ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2) : '0')
           : isCashWithCustomer
             ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2)
             : Number(totalBillAmount || 0).toFixed(2);
@@ -211,6 +242,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
           id: Date.now(),
           paymentMode: methods[0].mode_of_payment,
           transactionNo: '',
+          transactionDate: '',
           bankName: '',
           branchName: '',
           paidAmount: initialPaid,
@@ -218,21 +250,38 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
           approvalNo: '',
           custom_bank_name: '',
           custom_branch_name: '',
-          custom_transaction_no: ''
+          custom_transaction_no: '',
+          custom_transaction_date: '',
         }]);
       }
     };
 
     initializePaymentMethods();
-  }, [posProfile, apiKey, apiSecret]);
+  }, [posProfile, apiKey, apiSecret, transactionType, coPay, totalPatientAmount, totalBillAmount, isCashWithCustomer]);
 
   useEffect(() => {
     // Only auto-update payment amount if:
     // 1. Invoice is NOT loaded from draft (isLoadedInvoice is false/undefined)
     // 2. User has NOT manually edited the payment amount
-    // 3. Transaction type is cash (do not overwrite credit bills with totalBillAmount!)
-    if (isLoadedInvoice || manuallyEdited || transactionType === 'credit') {
-      return; // Skip auto-update for loaded invoices, manually edited, or credit bills
+    if (isLoadedInvoice || manuallyEdited) {
+      return;
+    }
+
+    if (transactionType === 'credit') {
+      const targetAmount = Number(coPay ?? 0) < 100
+        ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2)
+        : '0';
+      if (payments.length > 0) {
+        setPayments(prevPayments => {
+          const updatedPayments = [...prevPayments];
+          updatedPayments[0] = {
+            ...updatedPayments[0],
+            paidAmount: targetAmount,
+          };
+          return updatedPayments;
+        });
+      }
+      return;
     }
 
     const targetAmount = isCashWithCustomer
@@ -256,6 +305,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         id: Date.now(),
         paymentMode: paymentMethods[0].mode_of_payment,
         transactionNo: '',
+        transactionDate: '',
         bankName: '',
         branchName: '',
         paidAmount: targetAmount,
@@ -263,10 +313,11 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         approvalNo: '',
         custom_bank_name: '',
         custom_branch_name: '',
-        custom_transaction_no: ''
+        custom_transaction_no: '',
+        custom_transaction_date: '',
       }]);
     }
-  }, [totalBillAmount, totalPatientAmount, isCashWithCustomer, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited, transactionType]);
+  }, [totalBillAmount, totalPatientAmount, isCashWithCustomer, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited, transactionType, coPay]);
 
   const handleCellClick = (paymentId: number, field: string) => {
     setExpandedCells(prev => ({ ...prev, [`${paymentId}-${field}`]: !prev[`${paymentId}-${field}`] }));
@@ -285,6 +336,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
       id: Date.now(),
       paymentMode: defaultPaymentMode,
       transactionNo: '',
+      transactionDate: '',
       bankName: '',
       branchName: '',
       paidAmount: initialAmount,
@@ -292,7 +344,8 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
       approvalNo: '',
       custom_bank_name: '',
       custom_branch_name: '',
-      custom_transaction_no: ''
+      custom_transaction_no: '',
+      custom_transaction_date: '',
     }]);
   };
 
@@ -357,8 +410,9 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
               </th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[120px]">Payment Mode</th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[180px]">Card/Cheque/Trans. No.</th>
+              <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Cheque/Card/Trans Date</th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Bank Name</th>
-              <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Branch Name</th>
+              <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Bank Branch Name</th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[120px]">Paid Amount</th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[140px]">Payment Date</th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-500 min-w-[120px]">Approval No</th>
@@ -366,7 +420,12 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {payments.map((payment) => (
+            {payments.map((payment) => {
+              const isBank = isBankMode(payment.paymentMode);
+              const transNoMissing = isBank && !(payment.custom_transaction_no || payment.transactionNo);
+              const transDateMissing = isBank && !(payment.transactionDate || payment.custom_transaction_date);
+
+              return (
               <tr key={payment.id} className="border-t border-gray-200">
                 <td className="p-3">
                   <input
@@ -402,16 +461,40 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
                 <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'transactionNo') }}>
                   <input
                     type="text"
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all duration-200"
+                    className={`w-full px-2 py-1 border rounded text-sm focus:ring-1 focus:outline-none transition-all duration-200 ${
+                      transNoMissing
+                        ? 'border-red-400 bg-red-50/20 focus:ring-red-400 focus:border-red-400'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                     style={{
                       minWidth: expandedCells[`${payment.id}-transactionNo`] ? '320px' : '180px',
                       width: expandedCells[`${payment.id}-transactionNo`] ? '320px' : '100%'
                     }}
-                    placeholder="Transaction No"
+                    placeholder={isBank ? "Transaction No *" : "Transaction No"}
+                    title={isBank ? "Mandatory for Bank payment mode" : undefined}
                     value={payment.custom_transaction_no || payment.transactionNo}
                     onChange={(e) => handlePaymentChange(payment.id, 'custom_transaction_no', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'transactionNo')}
                     onBlur={() => handleCellClick(payment.id, 'transactionNo')}
+                  />
+                </td>
+                <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'transactionDate') }}>
+                  <input
+                    type="date"
+                    className={`w-full px-2 py-1 border rounded text-sm focus:ring-1 focus:outline-none transition-all duration-200 ${
+                      transDateMissing
+                        ? 'border-red-400 bg-red-50/20 focus:ring-red-400 focus:border-red-400'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    style={{
+                      minWidth: expandedCells[`${payment.id}-transactionDate`] ? '320px' : '140px',
+                      width: expandedCells[`${payment.id}-transactionDate`] ? '320px' : '100%'
+                    }}
+                    title={isBank ? "Mandatory for Bank payment mode" : undefined}
+                    value={payment.transactionDate || payment.custom_transaction_date || ''}
+                    onChange={(e) => handlePaymentChange(payment.id, 'transactionDate', e.target.value)}
+                    onFocus={() => handleCellClick(payment.id, 'transactionDate')}
+                    onBlur={() => handleCellClick(payment.id, 'transactionDate')}
                   />
                 </td>
                 <td className="px-3 py-2" style={{ width: getInputWidth(payment.id, 'bankName') }}>
@@ -437,7 +520,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
                       minWidth: expandedCells[`${payment.id}-branchName`] ? '320px' : '140px',
                       width: expandedCells[`${payment.id}-branchName`] ? '320px' : '100%'
                     }}
-                    placeholder="Branch Name"
+                    placeholder="Bank Branch Name"
                     value={payment.custom_branch_name || payment.branchName}
                     onChange={(e) => handlePaymentChange(payment.id, 'custom_branch_name', e.target.value)}
                     onFocus={() => handleCellClick(payment.id, 'branchName')}
@@ -499,7 +582,8 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

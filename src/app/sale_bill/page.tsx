@@ -1911,6 +1911,7 @@ export default function IPDBill() {
     name?: string; // Frappe child table row identifier
     paymentMode: string;
     transactionNo: string;
+    transactionDate?: string;
     bankName: string;
     branchName: string;
     paidAmount: string;
@@ -1919,10 +1920,37 @@ export default function IPDBill() {
     custom_bank_name?: string;
     custom_branch_name?: string;
     custom_transaction_no?: string;
+    custom_transaction_date?: string;
   }>>([]);
 
   // Permission state for rate changes
   const [canChangeRate, setCanChangeRate] = useState(false);
+  const [modeOfPaymentTypes, setModeOfPaymentTypes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchModeOfPaymentTypes = async () => {
+      try {
+        const authHeaders = getAuthHeaders();
+        const headers = typeof authHeaders === 'string' ? JSON.parse(authHeaders) : Array.isArray(authHeaders) ? Object.fromEntries(authHeaders) : authHeaders;
+        const res = await fetch('https://gmcerp.quantcloud.in/api/resource/Mode%20of%20Payment?filters=[["enabled","=",1]]&fields=["name","type"]&limit_page_length=50', {
+          headers,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data && Array.isArray(data.data)) {
+            const typesMap: Record<string, string> = {};
+            data.data.forEach((m: any) => {
+              if (m.name) typesMap[m.name] = m.type || '';
+            });
+            setModeOfPaymentTypes(typesMap);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch mode of payment types:', err);
+      }
+    };
+    fetchModeOfPaymentTypes();
+  }, []);
 
   // Loading state for save/submit operations
   const [isSaving, setIsSaving] = useState(false);
@@ -3755,6 +3783,27 @@ export default function IPDBill() {
       }
     }
 
+    // Validate mandatory fields for Bank payment mode
+    for (const p of recordedPayments) {
+      const amt = parseFloat(p.paidAmount || '0') || 0;
+      const mode = p.paymentMode || '';
+      const modeType = modeOfPaymentTypes[mode]?.toLowerCase() || '';
+      const isBank = modeType === 'bank' || ['bank draft', 'cheque', 'pos', 'credit card', 'wire transfer'].includes(mode.toLowerCase());
+
+      if (isBank && (amt > 0 || (transactionType === 'credit' && Number(globalCoPayPercent) < 100 && recordedPayments.length === 1))) {
+        const transNo = (p.custom_transaction_no || p.transactionNo || '').trim();
+        const transDate = (p.transactionDate || p.custom_transaction_date || '').trim();
+        if (!transNo) {
+          showAlert("danger", "Validation Error", `Card/Cheque/Trans. No. is mandatory for Bank payment mode (${mode}).`);
+          return;
+        }
+        if (!transDate) {
+          showAlert("danger", "Validation Error", `Cheque/Card/Trans Date is mandatory for Bank payment mode (${mode}).`);
+          return;
+        }
+      }
+    }
+
     // Restrict saving if any covered item has pre-auth status as Pending or Initiated (or not set, defaulting to Pending)
     const pendingOrInitiatedItems = items.filter(item => item.covered && (item.preAuthStatus === 'Pending' || item.preAuthStatus === 'Initiated' || !item.preAuthStatus));
     if (pendingOrInitiatedItems.length > 0) {
@@ -3977,6 +4026,7 @@ export default function IPDBill() {
         custom_bank_name: p.custom_bank_name || p.bankName || "",
         custom_branch_name: p.custom_branch_name || p.branchName || "",
         custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
+        clearance_date: p.transactionDate || p.custom_transaction_date || p.paymentDate || "",
       })),
       // Add Pricing Rule Detail child table if any pricing rules were applied
       pricing_rule_details: items
@@ -6145,8 +6195,10 @@ export default function IPDBill() {
           branchName: payment.branch || "",
           paidAmount: Math.abs(payment.base_amount || payment.amount || 0).toString(), // Set individual payment amount
           paymentDate: payment.posting_date || "",
+          transactionDate: payment.clearance_date || payment.custom_transaction_date || "",
           approvalNo: payment.approval_no || "",
           custom_transaction_no: payment.custom_transaction_no || "",
+          custom_transaction_date: payment.clearance_date || payment.custom_transaction_date || "",
         }));
 
         setRecordedPayments(loadedPayments);
@@ -6162,6 +6214,7 @@ export default function IPDBill() {
           name: '',
           paymentMode: 'Cash',
           transactionNo: '',
+          transactionDate: '',
           bankName: '',
           branchName: '',
           paidAmount: '0',
@@ -6169,7 +6222,8 @@ export default function IPDBill() {
           approvalNo: '',
           custom_bank_name: '',
           custom_branch_name: '',
-          custom_transaction_no: ''
+          custom_transaction_no: '',
+          custom_transaction_date: '',
         }]);
         console.log('No payments found in loaded invoice, set to 0');
       }
@@ -6198,6 +6252,27 @@ export default function IPDBill() {
       if (totalPaid > maxAllowed + 0.01) {
         showAlert("danger", "Validation Error", `Paid amount (${totalPaid.toFixed(2)}) cannot exceed patient bill amount (${maxAllowed.toFixed(2)}).`);
         return;
+      }
+    }
+
+    // Validate mandatory fields for Bank payment mode
+    for (const p of recordedPayments) {
+      const amt = parseFloat(p.paidAmount || '0') || 0;
+      const mode = p.paymentMode || '';
+      const modeType = modeOfPaymentTypes[mode]?.toLowerCase() || '';
+      const isBank = modeType === 'bank' || ['bank draft', 'cheque', 'pos', 'credit card', 'wire transfer'].includes(mode.toLowerCase());
+
+      if (isBank && (amt > 0 || (transactionType === 'credit' && Number(globalCoPayPercent) < 100 && recordedPayments.length === 1))) {
+        const transNo = (p.custom_transaction_no || p.transactionNo || '').trim();
+        const transDate = (p.transactionDate || p.custom_transaction_date || '').trim();
+        if (!transNo) {
+          showAlert("danger", "Validation Error", `Card/Cheque/Trans. No. is mandatory for Bank payment mode (${mode}).`);
+          return;
+        }
+        if (!transDate) {
+          showAlert("danger", "Validation Error", `Cheque/Card/Trans Date is mandatory for Bank payment mode (${mode}).`);
+          return;
+        }
       }
     }
 
@@ -6610,6 +6685,7 @@ export default function IPDBill() {
           custom_bank_name: p.custom_bank_name || p.bankName || "",
           custom_branch_name: p.custom_branch_name || p.branchName || "",
           custom_transaction_no: p.custom_transaction_no || p.transactionNo || "",
+          clearance_date: p.transactionDate || p.custom_transaction_date || p.paymentDate || "",
         })),
         // Add Pricing Rule Detail child table if any pricing rules were applied
         pricing_rule_details: items
@@ -7470,6 +7546,7 @@ export default function IPDBill() {
               totalPatientAmount={totalPatientAmount}
               totalPayerAmount={totalPayerAmount}
               coPay={globalCoPayPercent}
+              modeOfPaymentTypes={modeOfPaymentTypes}
               showAlert={showAlert}
             />
           </div>

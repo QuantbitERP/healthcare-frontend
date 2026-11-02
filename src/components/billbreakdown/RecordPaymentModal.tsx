@@ -7,6 +7,7 @@ interface Payment {
   id: number;
   paymentMode: string;
   transactionNo: string;
+  transactionDate?: string;
   bankName: string;
   branchName: string;
   paidAmount: string;
@@ -15,6 +16,7 @@ interface Payment {
   custom_bank_name?: string;
   custom_branch_name?: string;
   custom_transaction_no?: string;
+  custom_transaction_date?: string;
 }
 
 interface RecordPaymentModalProps {
