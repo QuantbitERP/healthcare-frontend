@@ -126,16 +126,28 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
       accessorKey: 'customer',
       header: 'Customer',
       cell: ({ getValue }: any) => (
-        <TableCellComponents type="user" value={getValue()} />
+        <span className="max-w-[200px] 2xl:max-w-[300px] truncate block" title={getValue()}>
+          <TableCellComponents type="user" value={getValue()} />
+        </span>
       ),
     },
     {
       accessorKey: 'custom_patient_name',
       header: 'Patient Name',
+      cell: ({ getValue }: any) => (
+        <span className="max-w-[150px] 2xl:max-w-[220px] truncate block" title={getValue()}>
+          {getValue() || '-'}
+        </span>
+      ),
     },
     {
       accessorKey: 'custom_doctor_name',
       header: 'Doctor Name',
+      cell: ({ getValue }: any) => (
+        <span className="max-w-[150px] 2xl:max-w-[220px] truncate block" title={getValue()}>
+          {getValue() || '-'}
+        </span>
+      ),
     },
     {
       accessorKey: 'posting_date',
@@ -167,6 +179,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
     {
       accessorKey: 'grand_total',
       header: 'Amount',
+      cell: ({ row }: any) => `₹${Number(row.original.grand_total || 0).toFixed(2)}`,
     },
     {
       accessorKey: 'visit_type',
@@ -557,17 +570,17 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[95vh] flex flex-col shadow-2xl">
+    <div className="fixed top-[56px] inset-x-0 bottom-0 z-50 flex items-center justify-center p-2 sm:px-4 sm:py-3 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-[98vw] max-w-[1850px] max-h-[calc(100vh-4.5rem)] flex flex-col my-auto overflow-hidden modal-enter">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 sticky top-0 z-10 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <FileText className="w-6 h-6 text-blue-600" />
+              <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Select Invoice for Return</h2>
-              <p className="text-xs text-gray-600 mt-1">Choose a paid invoice to create a return entry</p>
+              <h2 className="text-xl font-bold text-gray-800">Select Invoice for Return</h2>
+              <p className="text-xs text-gray-600 mt-0.5">Choose a paid invoice to create a return entry</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
@@ -587,27 +600,27 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
 
         {/* Table Container */}
         {!loading && (
-          <div className="flex-grow overflow-hidden flex flex-col">
-            <div className="flex-grow overflow-y-auto">
-              <DataTableComponent
-                columns={columns}
-                data={invoices}
-                loading={loading}
-                columnNames={columnNames}
-                onSearch={(term) => {
-                  handleSearchChange(term);
-                }}
-                onDataChange={(dates) => {
-                  if (dates) {
-                    const newDateRange: [Date | null, Date | null] = [dates.from || null, dates.to || null];
-                    setDateRange(newDateRange);
-                    fetchInvoices(searchTerm, newDateRange);
-                  }
-                }}
-                searchPlaceholder='Search by Invoice No, Patient Name, or Doctor Name...'
-                hideFilters={false}
-              />
-            </div>
+          <div className="flex-1 overflow-hidden p-4 min-h-0 flex flex-col">
+            <DataTableComponent
+              columns={columns}
+              data={invoices}
+              loading={loading}
+              columnNames={columnNames}
+              onSearch={(term) => {
+                handleSearchChange(term);
+              }}
+              onDataChange={(dates) => {
+                if (dates) {
+                  const newDateRange: [Date | null, Date | null] = [dates.from || null, dates.to || null];
+                  setDateRange(newDateRange);
+                  fetchInvoices(searchTerm, newDateRange);
+                }
+              }}
+              searchPlaceholder='Search by Invoice No, Patient Name, or Doctor Name...'
+              hideFilters={false}
+              autoSize={true}
+              className="h-full"
+            />
 
             {/* Empty State */}
             {invoices.length === 0 && !loading && (
@@ -623,14 +636,14 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 gap-3 bg-white">
+        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 gap-3 bg-white flex-shrink-0">
           <div className="text-sm text-gray-600">
             {selectedInvoices.size > 0 && (
-              <span className="font-medium">{selectedInvoices.size} invoice(s) selected</span>
+              <span className="font-medium text-blue-600">{selectedInvoices.size} invoice(s) selected</span>
             )}
           </div>
           <div className="flex gap-3">
-            <Button onClick={onClose} type='secondary-button' className="px-6 py-2.5">Close</Button>
+            <Button onClick={onClose} type='secondary-button' size="button-small">Close</Button>
             <Button
               onClick={async () => {
                 if (selectedInvoices.size === 0) {
@@ -683,7 +696,7 @@ const SelectInvoiceModal: React.FC<SelectInvoiceModalProps> = ({ isOpen, onClose
                 setLoading(false);
               }}
               type='primary-button'
-              className="px-6 py-2.5"
+              size="button-small"
               disabled={selectedInvoices.size === 0 || loading}
             >
               {loading ? 'Loading...' : `Process ${selectedInvoices.size} Invoice(s)`}

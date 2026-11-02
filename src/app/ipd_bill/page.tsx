@@ -4972,6 +4972,7 @@ export default function NewBill() {
         <POSProfileSelector
           isOpen={showPosProfileSelector}
           onSelect={handlePOSProfileSelect}
+          onClose={() => setShowPosProfileSelector(false)}
         />
       )}
 

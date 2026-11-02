@@ -154,6 +154,22 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
     securePrintPdf(url, getAuthHeaders, showAlert);
   };
 
+  const handleCompanyPrintInvoice = (invoice: Invoice) => {
+    const invoiceName = invoice.name;
+    const company = invoice.company;
+    console.log('Printing company invoice:', invoiceName);
+    const url = 'https://gmcerp.quantcloud.in/printview?' +
+      'doctype=IPD BIll&' +
+      'name=' + encodeURIComponent(invoiceName) + '&' +
+      'format=' + encodeURIComponent('Sale Bill Company Print') + '&' +
+      'trigger_print=1&' +
+      'no_letterhead=0&' +
+      'letterhead=' + encodeURIComponent(company || '') + '&' +
+      'settings=' + encodeURIComponent('{}') + '&' +
+      '_lang=en';
+    securePrintPdf(url, getAuthHeaders, showAlert);
+  };
+
   const handleSubmitInvoice = async (invoice: Invoice) => {
     try {
       // Use the same authentication logic as other functions
@@ -270,7 +286,7 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
       {/* Invoice Details Mini-Popup */}
       {showDetailsModal && selectedInvoice && (
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-[1001] p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto relative">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto relative">
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
               onClick={() => setShowDetailsModal(false)}
@@ -304,7 +320,7 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="flex flex-wrap justify-end gap-2 mt-6">
               {selectedInvoice.status === 'Draft' && (
                 <Button
                   type="primary-button"
@@ -328,7 +344,10 @@ const ViewIPDInvoicesModal: React.FC<ViewIPDInvoicesModalProps> = ({ isOpen, onC
                 </Button>
               )}
               <Button type="primary-button" size="button-medium" onClick={() => handlePrintInvoice(selectedInvoice)}>
-                Print Invoice
+                Patient Invoice Print
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={() => handleCompanyPrintInvoice(selectedInvoice)}>
+                Company Print
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={() => setShowDetailsModal(false)}>
                 Close

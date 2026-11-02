@@ -3594,7 +3594,7 @@ export default function IPDBill() {
       return;
     }
 
-    if (transactionType === 'credit') {
+    if (transactionType === 'credit' || (transactionType === 'cash' && Number(totalPayerAmount || 0) > 0)) {
       const maxAllowed = totalPatientAmount !== undefined ? totalPatientAmount : 0;
       const totalPaid = recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
       if (totalPaid > maxAllowed + 0.01) {
@@ -5882,7 +5882,7 @@ export default function IPDBill() {
       return;
     }
 
-    if (transactionType === 'credit') {
+    if (transactionType === 'credit' || (transactionType === 'cash' && Number(totalPayerAmount || 0) > 0)) {
       const maxAllowed = totalPatientAmount !== undefined ? totalPatientAmount : 0;
       const totalPaid = recordedPayments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
       if (totalPaid > maxAllowed + 0.01) {
@@ -7069,6 +7069,7 @@ export default function IPDBill() {
               roundedGrandTotal={roundedGrandTotal}
               isLoadedInvoice={!!loadedInvoiceName}
               totalPatientAmount={totalPatientAmount}
+              totalPayerAmount={totalPayerAmount}
               coPay={globalCoPayPercent}
               showAlert={showAlert}
             />
@@ -7172,6 +7173,7 @@ export default function IPDBill() {
           <POSProfileSelector
             isOpen={showPosProfileSelector}
             onSelect={handlePOSProfileSelect}
+            onClose={() => setShowPosProfileSelector(false)}
           />
         )}
 

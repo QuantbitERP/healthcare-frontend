@@ -47,9 +47,14 @@ export default function POS() {
     { label: "Status", value: "status" },
   ];
 
+  const getTodayRange = (): DateRange => {
+    const today = new Date();
+    return { from: today, to: today };
+  };
+
   const [searchValue, setSearchValue] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("name");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(getTodayRange);
   const [isMeMode, setIsMeMode] = useState<boolean>(false);
   const [showFilterBar, setShowFilterBar] = useState<boolean>(false);
 
@@ -269,12 +274,21 @@ export default function POS() {
 
     // 2. Date Range Filter
     if (dateRange?.from) {
-      const fromStr = dateRange.from.toISOString().split("T")[0];
-      result = result.filter((inv) => inv.posting_date >= fromStr);
-    }
-    if (dateRange?.to) {
-      const toStr = dateRange.to.toISOString().split("T")[0];
-      result = result.filter((inv) => inv.posting_date <= toStr);
+      const fromYear = dateRange.from.getFullYear();
+      const fromMonth = String(dateRange.from.getMonth() + 1).padStart(2, "0");
+      const fromDay = String(dateRange.from.getDate()).padStart(2, "0");
+      const fromStr = `${fromYear}-${fromMonth}-${fromDay}`;
+
+      const toDate = dateRange.to || dateRange.from;
+      const toYear = toDate.getFullYear();
+      const toMonth = String(toDate.getMonth() + 1).padStart(2, "0");
+      const toDay = String(toDate.getDate()).padStart(2, "0");
+      const toStr = `${toYear}-${toMonth}-${toDay}`;
+
+      result = result.filter((inv) => {
+        const pDate = inv.posting_date ? inv.posting_date.split("T")[0] : "";
+        return pDate >= fromStr && pDate <= toStr;
+      });
     }
 
     // 3. Me Mode Filter (Filter by current user's created/modified invoices)
@@ -367,6 +381,32 @@ export default function POS() {
       encodeURIComponent(
         invoice.status === "Return" ? "IP SALE RETURN INVOICE" : "Pos Invoice print Format"
       ) +
+      "&" +
+      "trigger_print=1&" +
+      "no_letterhead=0&" +
+      "letterhead=" +
+      encodeURIComponent(company) +
+      "&" +
+      "settings=" +
+      encodeURIComponent("{}") +
+      "&" +
+      "_lang=en";
+    securePrintPdf(url, getAuthHeaders, (variant, heading, content) =>
+      console.log(variant, heading, content)
+    );
+  };
+
+  const handleCompanyPrintInvoice = (invoice: Invoice) => {
+    const invoiceName = invoice.name;
+    const company = invoice.company || "GMC";
+    const url =
+      "https://gmcerp.quantcloud.in/printview?" +
+      "doctype=Sale Bill&" +
+      "name=" +
+      encodeURIComponent(invoiceName) +
+      "&" +
+      "format=" +
+      encodeURIComponent("Sale Bill Company Print") +
       "&" +
       "trigger_print=1&" +
       "no_letterhead=0&" +
@@ -549,6 +589,7 @@ export default function POS() {
           loading={loading}
           filterCount={showFilterBar ? 1 : 0}
           onSearch={(term) => setSearchValue(term)}
+          defaultDate={dateRange}
           onDataChange={(dates) => setDateRange(dates)}
           onToggleMe={(meMode) => setIsMeMode(meMode)}
           meKeyAccesser="owner"
@@ -633,7 +674,7 @@ export default function POS() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="flex flex-wrap justify-end gap-2 mt-6">
               <Button
                 type="primary-button"
                 size="button-medium"
@@ -646,7 +687,14 @@ export default function POS() {
                 size="button-medium"
                 onClick={() => handlePrintInvoice(selectedInvoice)}
               >
-                Print Invoice
+                Patient Invoice Print
+              </Button>
+              <Button
+                type="primary-button"
+                size="button-medium"
+                onClick={() => handleCompanyPrintInvoice(selectedInvoice)}
+              >
+                Company Print
               </Button>
               <Button
                 type="secondary-button"
@@ -759,6 +807,7 @@ export default function POS() {
         <POSProfileSelector
           isOpen={showPosProfileSelector}
           onSelect={handlePOSProfileSelect}
+          onClose={() => setShowPosProfileSelector(false)}
         />
       )}
     </div>

@@ -6432,6 +6432,7 @@ export default function SalesBill() {
         <POSProfileSelector
           isOpen={showPosProfileSelector}
           onSelect={handlePOSProfileSelect}
+          onClose={() => setShowPosProfileSelector(false)}
         />
       )}
 

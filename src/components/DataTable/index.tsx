@@ -118,6 +118,7 @@ interface DataTableComponentProps {
   onRowClick?: (row: any) => void;
   extraFilterActions?: ReactNode;
   footerRightActions?: ReactNode;
+  defaultDate?: DateRange;
 }
 
 export default function DataTableComponent({
@@ -153,6 +154,7 @@ export default function DataTableComponent({
   onRowClick,
   extraFilterActions,
   footerRightActions,
+  defaultDate,
 }: DataTableComponentProps) {
   const [tableData, setTableData] = useState(data);
   const [sorting, setSorting] = useState(defaultSort || []);
@@ -169,7 +171,7 @@ export default function DataTableComponent({
 
   // const [date] = useState({ from: new Date(), to: undefined });
 
-  const [date, setDate] = useState<DateRange | undefined>();
+  const [date, setDate] = useState<DateRange | undefined>(defaultDate);
   const memoizedData = useMemo(() => tableData, [tableData]);
   const memoizedColumns = useMemo(() => {
     if (!columns || columns.length === 0) return [];
@@ -213,7 +215,6 @@ export default function DataTableComponent({
   }, [data]);
 
   useEffect(() => {
-    if (!date?.from || !date?.to) return;
     const timeout = setTimeout(() => {
       onDataChange?.(date);
     }, 300); // short debounce

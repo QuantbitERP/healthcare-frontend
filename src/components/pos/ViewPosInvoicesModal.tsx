@@ -8,7 +8,7 @@ import Button from "@/components/buttons/Button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button as UIButton } from "@/components/ui/button";
 import DataTableComponent, { TableCellComponents } from '../DataTable';
-import { Eye, Search, X } from 'lucide-react';
+import { Eye, X } from 'lucide-react';
 
 interface AlertState {
   show: boolean;
@@ -356,6 +356,22 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
     securePrintPdf(url, getAuthHeaders, showAlert);
   };
 
+  const handleCompanyPrintInvoice = (invoice: Invoice) => {
+    const invoiceName = invoice.name;
+    const company = invoice.company;
+    console.log('Printing company invoice:', invoiceName);
+    const url = 'https://gmcerp.quantcloud.in/printview?' +
+      'doctype=Sale Bill&' +
+      'name=' + encodeURIComponent(invoiceName) + '&' +
+      'format=' + encodeURIComponent('Sale Bill Company Print') + '&' +
+      'trigger_print=1&' +
+      'no_letterhead=0&' +
+      'letterhead=' + encodeURIComponent(company || '') + '&' +
+      'settings=' + encodeURIComponent('{}') + '&' +
+      '_lang=en';
+    securePrintPdf(url, getAuthHeaders, showAlert);
+  };
+
   const handleSubmitInvoice = async (invoice: Invoice) => {
     try {
       // Use the same authentication logic as other functions
@@ -397,8 +413,8 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[calc(100vh-5rem)] flex flex-col my-auto overflow-hidden modal-enter">
+    <div className="fixed top-[56px] inset-x-0 bottom-0 z-40 flex items-center justify-center p-2 sm:px-4 sm:py-3 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-[98vw] max-w-[1850px] max-h-[calc(100vh-4.5rem)] flex flex-col my-auto overflow-hidden modal-enter">
         {/* Header */}
         <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
           <CardTitle className="text-lg font-semibold text-gray-900">
@@ -497,14 +513,21 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             columns={[
               { accessorKey: 'idx', header: 'IDX', cell: ({ row }: any) => row.index + 1 },
               { accessorKey: 'name', header: 'Invoice No' },
-              { accessorKey: 'customer', header: 'Customer' },
+              {
+                accessorKey: 'customer',
+                header: 'Customer',
+                cell: ({ getValue }: any) => (
+                  <span className="max-w-[220px] 2xl:max-w-[320px] truncate block" title={getValue()}>
+                    {getValue() || '-'}
+                  </span>
+                ),
+              },
               {
                 accessorKey: 'custom_patient_name', header: 'Patient', cell: ({ getValue }: any) => (
                   <TableCellComponents type="user" value={getValue()} />
                 ),
               },
               { accessorKey: 'posting_date', header: 'Date', cell: ({ row }: any) => new Date(row.original.posting_date).toLocaleDateString() },
-              { id: 'posting_time', header: 'Time', cell: ({ row }: any) => row.original.posting_time ? row.original.posting_time.substring(0, 5) : '' },
               { accessorKey: 'rounded_total', header: 'Amount', cell: ({ row }: any) => `₹${Number(row.original.rounded_total || 0).toFixed(2)}` },
               { accessorKey: 'status', header: 'Status', cell: ({ row }: any) => <span className={`status-badge ${row.original.status?.toLowerCase()}`}>{row.original.status}</span> },
               { accessorKey: 'visit_type', header: 'Visit Type', cell: ({ row }: any) => row.original.visit_type || '-' },
@@ -539,13 +562,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                   );
                 }
               },
-              { accessorKey: 'modified', header: 'Modified Date', cell: ({ row }: any) => new Date(row.original.modified).toLocaleDateString() },
-              {
-                accessorKey: 'modified_by', header: 'Modified By', cell: ({ getValue }: any) => (
-                  <TableCellComponents type="user" value={getValue()} />
-                ),
-              },
-              { id: 'action', header: 'Actions', cell: ({ row }: any) => <Button type="secondary-button" size="button-medium" onClick={() => handleViewDetails(row.original)}>View</Button> },
+              { id: 'action', header: 'Actions', cell: ({ row }: any) => <Button type="secondary-button" size="button-small" onClick={() => handleViewDetails(row.original)}>View</Button> },
             ]}
             data={invoices}
             loading={loading}
@@ -555,13 +572,10 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
               customer: 'Customer',
               custom_patient_name: 'Patient',
               posting_date: 'Date',
-              posting_time: 'Time',
               rounded_total: 'Amount',
               status: 'Status',
               visit_type: 'Visit Type',
               ...(isIPDPage ? { ipd_effect: 'IPD Effect' } : { opd_effect: 'OPD Effect' }),
-              modified: 'Modified Date',
-              modified_by: 'Modified By',
               action: 'Actions',
             }}
             hideFilters={true}
@@ -572,21 +586,19 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
             hideShowColumns={true}
             autoSize={true}
             className="h-full"
+            footerRightActions={
+              <Button type="secondary-button" size="button-small" onClick={onClose}>
+                Close
+              </Button>
+            }
           />
-        </div>
-
-        {/* Footer Actions */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end sticky bottom-0 z-10">
-          <Button type="secondary-button" size="button-medium" onClick={onClose}>
-            Close
-          </Button>
         </div>
       </div>
 
       {/* Invoice Details Mini-Popup */}
       {showDetailsModal && selectedInvoice && (
         <div className="fixed top-[56px] inset-x-0 bottom-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto relative">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto relative">
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
               onClick={() => setShowDetailsModal(false)}
@@ -626,7 +638,7 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="flex flex-wrap justify-end gap-2 mt-6">
               {selectedInvoice.status === 'Draft' && (
                 <Button
                   type="primary-button"
@@ -650,7 +662,10 @@ const ViewPosInvoicesModal: React.FC<ViewPosInvoicesModalProps> = ({ isOpen, onC
                 </Button>
               )}
               <Button type="primary-button" size="button-medium" onClick={() => handlePrintInvoice(selectedInvoice)}>
-                Print Invoice
+                Patient Invoice Print
+              </Button>
+              <Button type="primary-button" size="button-medium" onClick={() => handleCompanyPrintInvoice(selectedInvoice)}>
+                Company Print
               </Button>
               <Button type="secondary-button" size="button-medium" onClick={() => setShowDetailsModal(false)}>
                 Close

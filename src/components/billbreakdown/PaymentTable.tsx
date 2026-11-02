@@ -32,6 +32,7 @@ interface PaymentTableProps {
   roundedGrandTotal?: number;
   isLoadedInvoice?: boolean; // Flag to indicate if invoice is loaded from draft
   totalPatientAmount?: number;
+  totalPayerAmount?: number;
   coPay?: number;
   showAlert?: (variant: any, heading: string, content: string) => void;
 }
@@ -47,6 +48,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
   roundedGrandTotal,
   isLoadedInvoice,
   totalPatientAmount,
+  totalPayerAmount,
   coPay,
   showAlert,
 }) => {
@@ -55,10 +57,13 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
   const [manuallyEdited, setManuallyEdited] = useState<boolean>(false);
 
   const isCredit = transactionType === 'credit';
+  const hasCustomerAmount = (Number(totalPayerAmount || 0) > 0);
+  const isCashWithCustomer = transactionType === 'cash' && hasCustomerAmount;
+  const isCappedAtPatientAmount = isCredit || isCashWithCustomer;
 
-  // Clamp payments if totalPatientAmount decreases below current total paid on credit bills
+  // Clamp payments if totalPatientAmount decreases below current total paid on credit bills or cash bills with customer amount > 0
   useEffect(() => {
-    if (isCredit && totalPatientAmount !== undefined && totalPatientAmount >= 0) {
+    if (isCappedAtPatientAmount && totalPatientAmount !== undefined && totalPatientAmount >= 0) {
       const currentTotalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
       if (currentTotalPaid > totalPatientAmount + 0.01) {
         let remainingAllowed = totalPatientAmount;
@@ -75,7 +80,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         );
       }
     }
-  }, [totalPatientAmount, isCredit]);
+  }, [totalPatientAmount, isCappedAtPatientAmount]);
 
   // Auto-set paid amount based on transaction type (only for new invoices, not loaded ones)
   useEffect(() => {
@@ -93,8 +98,10 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         }))
       );
     } else if (transactionType === 'cash') {
-      // For cash transactions, set paid amount to rounded grand total
-      const paidAmount = (roundedGrandTotal ?? totalBillAmount).toString();
+      // For cash transactions: if customer amount > 0, cash paid should not be greater than patient amount
+      const paidAmount = isCashWithCustomer
+        ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2)
+        : (roundedGrandTotal ?? totalBillAmount).toString();
       setPayments(prev =>
         prev.map(payment => ({
           ...payment,
@@ -102,7 +109,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         }))
       );
     }
-  }, [transactionType, roundedGrandTotal, totalBillAmount, setPayments, isLoadedInvoice]);
+  }, [transactionType, roundedGrandTotal, totalBillAmount, isCashWithCustomer, totalPatientAmount, setPayments, isLoadedInvoice]);
 
   useEffect(() => {
     const initializePaymentMethods = async () => {
@@ -195,13 +202,18 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
 
       // Automatically add first payment row if payments array is empty
       if (payments.length === 0 && methods.length > 0) {
+        const initialPaid = transactionType === 'credit'
+          ? '0'
+          : isCashWithCustomer
+            ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2)
+            : Number(totalBillAmount || 0).toFixed(2);
         setPayments([{
           id: Date.now(),
           paymentMode: methods[0].mode_of_payment,
           transactionNo: '',
           bankName: '',
           branchName: '',
-          paidAmount: transactionType === 'credit' ? '0' : Number(totalBillAmount || 0).toFixed(2),
+          paidAmount: initialPaid,
           paymentDate: new Date().toISOString().split('T')[0],
           approvalNo: '',
           custom_bank_name: '',
@@ -223,6 +235,10 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
       return; // Skip auto-update for loaded invoices, manually edited, or credit bills
     }
 
+    const targetAmount = isCashWithCustomer
+      ? Math.max(0, Number(totalPatientAmount || 0)).toFixed(2)
+      : Number(totalBillAmount || 0).toFixed(0);
+
     // Update the paidAmount of the last payment entry when totalBillAmount changes
     if (payments.length > 0) {
       setPayments(prevPayments => {
@@ -230,7 +246,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         const updatedPayments = [...prevPayments];
         updatedPayments[lastPaymentIndex] = {
           ...updatedPayments[lastPaymentIndex],
-          paidAmount: Number(totalBillAmount || 0).toFixed(0),
+          paidAmount: targetAmount,
         };
         return updatedPayments;
       });
@@ -242,7 +258,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         transactionNo: '',
         bankName: '',
         branchName: '',
-        paidAmount: Number(totalBillAmount || 0).toFixed(0),
+        paidAmount: targetAmount,
         paymentDate: new Date().toISOString().split('T')[0],
         approvalNo: '',
         custom_bank_name: '',
@@ -250,7 +266,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         custom_transaction_no: ''
       }]);
     }
-  }, [totalBillAmount, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited, transactionType]);
+  }, [totalBillAmount, totalPatientAmount, isCashWithCustomer, payments.length, paymentMethods, isLoadedInvoice, manuallyEdited, transactionType]);
 
   const handleCellClick = (paymentId: number, field: string) => {
     setExpandedCells(prev => ({ ...prev, [`${paymentId}-${field}`]: !prev[`${paymentId}-${field}`] }));
@@ -259,7 +275,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
   const handleAddPayment = () => {
     const defaultPaymentMode = paymentMethods.length > 0 ? paymentMethods[0].mode_of_payment : '';
     let initialAmount = '0';
-    if (isCredit) {
+    if (isCappedAtPatientAmount) {
       const currentPaid = payments.reduce((sum, p) => sum + (parseFloat(p.paidAmount) || 0), 0);
       const remaining = Math.max(0, Number(totalPatientAmount || 0) - currentPaid);
       initialAmount = remaining > 0 ? remaining.toFixed(2) : '0';
@@ -288,8 +304,8 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
     if (field === 'paidAmount') {
       setManuallyEdited(true);
 
-      // Validation for Credit transactions
-      if (isCredit) {
+      // Validation for Credit transactions or Cash with customer amount > 0
+      if (isCappedAtPatientAmount) {
         // Only allow numbers and at most one decimal point
         if (value !== '' && !/^\d*\.?\d*$/.test(value)) {
           return;

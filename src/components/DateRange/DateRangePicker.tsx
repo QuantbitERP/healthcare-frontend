@@ -134,6 +134,27 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             onSelect={setDate}
             numberOfMonths={1}
           />
+          <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50/70">
+            <button
+              type="button"
+              onClick={() => {
+                const now = new Date();
+                setDate({ from: now, to: now });
+              }}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 hover:bg-blue-50 rounded transition-colors"
+            >
+              Today
+            </button>
+            {date?.from && (
+              <button
+                type="button"
+                onClick={() => setDate(undefined)}
+                className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </PopoverContent>
       </Popover>
     </div>

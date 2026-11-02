@@ -6649,6 +6649,7 @@ export default function IPDBill() {
           <POSProfileSelector
             isOpen={showPosProfileSelector}
             onSelect={handlePOSProfileSelect}
+            onClose={() => setShowPosProfileSelector(false)}
           />
         )}
 

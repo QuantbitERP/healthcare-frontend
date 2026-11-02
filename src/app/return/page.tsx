@@ -6486,7 +6486,7 @@ export default function Return() {
                   disabled={isSaving}
                   onClick={() => setShowSelectInvoiceModal(true)}
                 >
-                  Sale Bill
+                  Return Against Sale Bill
                 </Button>
                 <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
                   Closing Entry
@@ -6542,7 +6542,7 @@ export default function Return() {
                   onClick={() => setShowSelectInvoiceModal(true)}
                   disabled={isReturn}
                 >
-                  Sale Bill
+                  Return Against Sale Bill
                 </Button>
                 <Button type="primary-button" size="button-medium" disabled={isSaving} onClick={() => setShowClosingEntryModal(true)}>
                   Closing Entry
@@ -6559,6 +6559,7 @@ export default function Return() {
           <POSProfileSelector
             isOpen={showPosProfileSelector}
             onSelect={handlePOSProfileSelect}
+            onClose={() => setShowPosProfileSelector(false)}
           />
         )}
 

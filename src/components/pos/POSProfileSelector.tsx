@@ -34,6 +34,7 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
   onSelect,
   onClose,
 }) => {
+  const [internalOpen, setInternalOpen] = useState(isOpen);
   const [posProfiles, setPosProfiles] = useState<POSProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +43,10 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
   const { isAuthenticated, apiKey, apiSecret, currentUser, setPosProfile, csrfToken, isInitialized } =
     useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    setInternalOpen(isOpen);
+  }, [isOpen]);
 
   useEffect(() => {
     // Wait for initialization before checking authentication
@@ -271,9 +276,12 @@ const POSProfileSelector: React.FC<POSProfileSelectorProps> = ({
 
       {/* Profile Selection Dialog */}
       <Dialog
-        open={isOpen && !showConflictDialog}
+        open={internalOpen && isOpen && !showConflictDialog}
         onOpenChange={(open) => {
-          if (!open && onClose) onClose();
+          if (!open) {
+            setInternalOpen(false);
+            if (onClose) onClose();
+          }
         }}
       >
         <DialogContent className="sm:max-w-[480px]">
